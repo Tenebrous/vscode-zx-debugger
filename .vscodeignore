@@ -1,0 +1,10 @@
+*
+**
+**/.DS_Store
+**/.mdb
+!attach.js
+!package.json
+!bin/**
+!Changelog.txt
+!README.md
+!Images/unity-logo128x128.png

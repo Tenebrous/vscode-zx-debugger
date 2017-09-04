@@ -1,0 +1,74 @@
+{
+  "name": "vscode-zesarux-debug",
+  "displayName": "Debugger for ZEsarUX",
+  "version": "0.0.1",
+  "publisher": "Tenebrous",
+  "description": "ZEsarUX debugger extension",
+  "engines": {
+    "vscode": "^0.10.1"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "keywords": [
+    "zesarux",
+    "debugger",
+    "debug"
+  ],
+  "-homepage": "https://github.com/Unity-Technologies/vscode-unity-debug",
+  "-bugs": {
+    "url": "https://github.com/Unity-Technologies/vscode-unity-debug/issues"
+  },
+
+  "-repository": {
+    "type": "git",
+    "url": "https://github.com/Unity-Technologies/vscode-unity-debug.git"
+  },
+
+  "-icon" : "Images/unity-logo128x128.png",
+
+  "main": "./attach",
+  "activationEvents": [
+        "onCommand:attach.attachToDebugger"
+    ],
+    "scripts": {
+        "postinstall": "node ./node_modules/vscode/bin/install"
+    },
+  "contributes": {
+    "commands": [{
+            "command": "attach.attachToDebugger",
+            "title": "ZEsarUX Attach Debugger"
+        }],
+    "debuggers": [
+      {
+        "type": "zesarux",
+        "label": "ZEsarUX Debugger",
+        "configurationAttributes": {
+          "launch": {},
+          "attach": {}
+        },
+        "enableBreakpointsFor": {
+          "languageIds": [
+            "z80",
+            "Z80 Assembly",
+            "c"
+          ]
+        },
+        "program": "./bin/vscode-zesarux-debug.exe",
+        "osx": {
+          "runtime": "mono"
+        },
+        "linux": {
+          "runtime": "mono"
+        },
+        "initialConfigurations": [
+          {
+            "name": "ZEsarUX",
+            "type": "zesarux",
+            "request": "launch"
+          }
+        ]
+      }
+    ]
+  }
+}
