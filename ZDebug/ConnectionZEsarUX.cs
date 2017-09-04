@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -8,31 +7,36 @@ namespace ZDebug
 {
     public class ConnectionZEsarUX
     {
+        public Action OnPaused;
+        public Action OnContinued;
+
         TcpClient _client;
         NetworkStream _stream;
-
-        bool _step = false;
-
+        bool _connected;
+        bool _paused;
+        
         public bool Start()
         {
+            if( _connected )
+                return true;
+
             _client = new TcpClient();
 
             try
             {
                 ZMain.Log( "zesarux: connecting..." );
                 _client.Connect( "127.0.0.1", 10000 );
+                _stream = _client.GetStream();
+                _connected = true;
+                ZMain.Log( "zesarux: connected." );
             }
-            catch (Exception e)
+            catch ( Exception e )
             {
                 ZMain.Log( "zesarux: error " + e );
                 return false;
             }
 
-            _stream = _client.GetStream();
-
-            ZMain.Log( "zesarux: connected." );
-
-            return true;
+            return _connected;
         }
 
         public void Stop()
@@ -56,20 +60,30 @@ namespace ZDebug
             ZMain.Log("zesarux: disconnecting.");
         }
 
-        StringBuilder s = new StringBuilder();
+        public void Pause()
+        {
+            Send("enter-cpu-step");
+        }
+
+        public void Continue()
+        {
+            Send("exit-cpu-step");
+        }
+
+
+        StringBuilder _s = new StringBuilder();
 
         public bool Read()
         {
-            if( _client == null || _stream == null )
-                if( !Start() )
-                    return false;
+            if( !Start() )
+                return false;
 
             while( _stream.DataAvailable )
-                s.Append((char)_stream.ReadByte());
+                _s.Append((char)_stream.ReadByte());
 
-            if( s.Length > 0 )
+            if( _s.Length > 0 )
             {
-                var data = s.ToString().Split( '\n' );
+                var data = _s.ToString().Split( '\n' );
 
                 foreach( var line in data )
                 {
@@ -77,7 +91,7 @@ namespace ZDebug
                     Process( line );
                 }
 
-                s.Clear();
+                _s.Clear();
             }
 
             return true;
@@ -88,28 +102,39 @@ namespace ZDebug
             switch( pResult )
             {
                 case "command> ":
-                    _step = false;
+
+                    if( _paused )
+                        OnContinued?.Invoke();
+
+                    _paused = false;
+                    ZMain.Log( "zesarux: is running" );
+
                     break;
 
                 case "command@cpu-step> ":
-                    _step = true;
+
+                    if( !_paused )
+                        OnPaused?.Invoke();
+
+                    _paused = true;
+                    ZMain.Log("zesarux: is paused");
+
                     break;
             }
         }
 
         public bool Send( string pMessage )
         {
-            if (_client == null || _stream == null)
-                if (!Start())
-                    return false;
+            if (!Start())
+                return false;
 
             ZMain.Log("zesarux: -> [" + pMessage + "]");
 
-            var bytes = System.Text.Encoding.ASCII.GetBytes( pMessage + "\n\r" );
+            var bytes = System.Text.Encoding.ASCII.GetBytes( pMessage + "\n\n" );
             _stream.Write( bytes, 0, bytes.Length );
             _stream.Flush();
 
-            Thread.Sleep( 100 );
+            Thread.Sleep( 150 );
 
             Read();
 

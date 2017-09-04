@@ -8,7 +8,6 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using ZDebug;
 
 namespace VSCodeDebug
 {
@@ -58,11 +57,14 @@ namespace VSCodeDebug
         public string command { get; }
         public ResponseBody body { get; private set; }
 
-        public Response(Request req) : base("response")
+        public Response( Request pRequest, ResponseBody pResponse = null ) : base("response")
         {
             success = true;
-            request_seq = req.seq;
-            command = req.command;
+            request_seq = pRequest.seq;
+            command = pRequest.command;
+
+            if ( pResponse != null )
+                body = pResponse;
         }
 
         public void SetBody(ResponseBody bdy)

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace ZDebug
 {
@@ -10,9 +11,9 @@ namespace ZDebug
 
             var debug = new Session();
 
-            debug.Start().Wait();
+		    debug.Run();
 
-		    Log("finished");
+		    Log("exit");
         }
 
 	    static object logLock = new object();

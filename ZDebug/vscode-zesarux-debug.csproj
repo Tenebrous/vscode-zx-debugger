@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="ConnectionZEsarUX.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VSCodeDebug\ConnectionVSCode.cs" />
     <Compile Include="VSCodeDebug\Protocol.cs" />
     <Compile Include="VSCodeDebug\DebugSession.cs" />
     <Compile Include="Main.cs" />

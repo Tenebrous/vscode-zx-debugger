@@ -133,8 +133,7 @@ namespace VSCodeDebug
 
     public class InitializedEvent : Event
     {
-        public InitializedEvent()
-            : base("initialized") { }
+        public InitializedEvent() : base("initialized") { }
     }
 
     public class StoppedEvent : Event
@@ -149,27 +148,38 @@ namespace VSCodeDebug
         { }
     }
 
+    public class ContinuedEvent : Event
+    {
+        public ContinuedEvent( bool all ) : base( "continued", new { allThreadsContinued = all } ) { }
+    }
+
     public class ExitedEvent : Event
     {
-        public ExitedEvent(int exCode)
-            : base("exited", new { exitCode = exCode }) { }
+        public ExitedEvent(int exCode) : base("exited", new { exitCode = exCode }) { }
     }
 
     public class TerminatedEvent : Event
     {
-        public TerminatedEvent()
-            : base("terminated") { }
+        public TerminatedEvent() : base("terminated") { }
+    }
+
+    public class BreakpointEvent : Event
+    {
+        public BreakpointEvent() : base("breakpoint") { }
     }
 
     public class ThreadEvent : Event
     {
-        public ThreadEvent(string reasn, int tid)
-            : base("thread", new
+        public ThreadEvent( string reasn, int tid ) : 
+            base( "thread",
+            new
             {
                 reason = reasn,
                 threadId = tid
-            })
-        { }
+            } )
+        {
+            
+        }
     }
 
     public class OutputEvent : Event
