@@ -34,18 +34,20 @@ namespace VSCodeDebug
     public class StackFrame
     {
         public int id { get; }
+        public string name { get; }
         public Source source { get; }
         public int line { get; }
         public int column { get; }
-        public string name { get; }
+        public string presentationHint { get;  }
 
-        public StackFrame(int id, string name, Source source, int line, int column)
+        public StackFrame(int id, string name, Source source, int line, int column, string presentationHint = null )
         {
             this.id = id;
             this.name = name;
             this.source = source;
             this.line = line;
             this.column = column;
+            this.presentationHint = presentationHint;
         }
     }
 
@@ -67,13 +69,31 @@ namespace VSCodeDebug
     {
         public string name { get; }
         public string value { get; }
+        public string type { get; }
         public int variablesReference { get; }
+        public VariablePresentationHint presentationHint;
 
-        public Variable(string name, string value, int variablesReference = 0)
+        public Variable(string name, string value, string type = null, int variablesReference = 0, VariablePresentationHint presentationHint = null)
         {
             this.name = name;
+            this.type = type;
             this.value = value;
             this.variablesReference = variablesReference;
+            this.presentationHint = presentationHint;
+        }
+    }
+
+    public class VariablePresentationHint
+    {
+        public string kind { get; }
+        public string[] attributes { get; }
+        public string visibility { get; }
+
+        public VariablePresentationHint( string kind, string[] attributes = null, string visibility = null )
+        {
+            this.kind = kind;
+            this.attributes = attributes;
+            this.visibility = visibility;
         }
     }
 
@@ -101,19 +121,14 @@ namespace VSCodeDebug
         public string name { get; }
         public string path { get; }
         public int sourceReference { get; }
+        public string presentationHint { get; }
 
-        public Source(string name, string path, int sourceReference = 0)
+        public Source(string name = null , string path = null, int sourceReference = 0, string presentationHint = null )
         {
             this.name = name;
             this.path = path;
             this.sourceReference = sourceReference;
-        }
-
-        public Source(string path, int sourceReference = 0)
-        {
-            this.name = Path.GetFileName(path);
-            this.path = path;
-            this.sourceReference = sourceReference;
+            this.presentationHint = presentationHint;
         }
     }
 
@@ -191,6 +206,11 @@ namespace VSCodeDebug
                 output = outpt
             })
         { }
+    }
+
+    public class LoadedSourceEvent : Event
+    {
+        public LoadedSourceEvent(string pReason, Source pSource) : base("loadedSource", new { reason = pReason, source = pSource }) { }
     }
 
     // ---- Response -------------------------------------------------------------------------
@@ -301,6 +321,19 @@ namespace VSCodeDebug
         }
     }
 
+    public class LoadedSourcesResponseBody : ResponseBody
+    {
+        public Source[] sources { get; }
+
+        public LoadedSourcesResponseBody(List<Source> sources = null)
+        {
+            if (sources == null)
+                this.sources = new Source[0];
+            else
+                this.sources = sources.ToArray<Source>();
+        }
+    }
+
     public class VariablesResponseBody : ResponseBody
     {
         public Variable[] variables { get; }
@@ -324,6 +357,18 @@ namespace VSCodeDebug
                 threads = new Thread[0];
             else
                 threads = vars.ToArray<Thread>();
+        }
+    }
+
+    public class SourceResponseBody : ResponseBody
+    {
+        public string content { get; }
+        public string mimeType { get; }
+
+        public SourceResponseBody( string content, string mimeType = null )
+        {
+            this.content = content;
+            this.mimeType = mimeType;
         }
     }
 
@@ -368,23 +413,6 @@ namespace VSCodeDebug
             _debuggerPathsAreURI = debuggerPathsAreURI;
         }
 
-        public void SendResponse(Response response, dynamic body = null)
-        {
-            if (body != null)
-            {
-                response.SetBody(body);
-            }
-            SendMessage(response);
-        }
-
-        public void SendErrorResponse(Response response, int id, string format, dynamic arguments = null, bool user = true, bool telemetry = false)
-        {
-            var msg = new Message(id, format, arguments, user, telemetry);
-            var message = Utilities.ExpandVariables(msg.format, msg.variables);
-            response.SetErrorBody(message, new ErrorResponseBody(msg));
-            SendMessage(response);
-        }
-
         protected override void DispatchRequest(string command, dynamic args, Response response)
         {
             ZMain.Log( "vscode: <- [" + command + "]" );
@@ -417,7 +445,6 @@ namespace VSCodeDebug
                                     _clientPathsAreURI = false;
                                     break;
                                 default:
-                                    SendErrorResponse(response, 1015, "initialize: bad value '{_format}' for pathFormat", new { _format = pathFormat });
                                     return;
                             }
                         }
@@ -497,13 +524,11 @@ namespace VSCodeDebug
                         break;
 
                     default:
-                        SendErrorResponse(response, 1014, "unrecognized request: {_request}", new { _request = command });
                         break;
                 }
             }
             catch (Exception e)
             {
-                SendErrorResponse(response, 1104, "error while processing request '{_request}' (exception: {_exception})", new { _request = command, _exception = e.Message });
             }
 
             if (command == "disconnect")
@@ -552,7 +577,6 @@ namespace VSCodeDebug
 
         public virtual void Source(Response response, dynamic arguments)
         {
-            SendErrorResponse(response, 1020, "Source not supported");
         }
 
         public abstract void Threads(Response response, dynamic arguments);

@@ -30,6 +30,9 @@ namespace VSCodeDebug
 
     public class Request : ProtocolMessage
     {
+        [JsonIgnore]
+        public bool responded;
+
         public string command;
         public dynamic arguments;
 
@@ -57,27 +60,20 @@ namespace VSCodeDebug
         public string command { get; }
         public ResponseBody body { get; private set; }
 
-        public Response( Request pRequest, ResponseBody pResponse = null ) : base("response")
+        public Response(Request pRequest, ResponseBody pResponse = null, string pErrorMessage = null) : base("response")
         {
             success = true;
             request_seq = pRequest.seq;
             command = pRequest.command;
 
-            if ( pResponse != null )
+            if (pResponse != null)
                 body = pResponse;
-        }
 
-        public void SetBody(ResponseBody bdy)
-        {
-            success = true;
-            body = bdy;
-        }
-
-        public void SetErrorBody(string msg, ResponseBody bdy = null)
-        {
-            success = false;
-            message = msg;
-            body = bdy;
+            if( pErrorMessage != null )
+            {
+                success = false;
+                message = pErrorMessage;
+            }
         }
     }
 

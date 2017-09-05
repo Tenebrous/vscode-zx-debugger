@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace ZDebug
@@ -9,11 +12,29 @@ namespace ZDebug
     {
         public Action OnPaused;
         public Action OnContinued;
+        public Action OnStepped;
+        public Action<string, string> OnRegisterChange;
 
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
-        bool _paused;
+
+        bool _requestedPause;
+        bool _requestedStep;
+        bool _requestedContinue;
+
+        bool _requestedDisassembly;
+        DisassemblySection _disassembling;
+        string _disassemblyFilePath;
+        List<DisassemblySection> _disassembledSections = new List<DisassemblySection>();
+
+        bool _requestedMachine;
+        string _machine;
+
+        Dictionary<string, string> _registers = new Dictionary<string, string>();
+
+        bool _requestedStack;
+        List<string> _stack = new List<string>();
         
         public bool Start()
         {
@@ -43,6 +64,7 @@ namespace ZDebug
         {
             ZMain.Log("zesarux: disconnecting...");
 
+            Send( "exit" );
             Read();
 
             if ( _stream != null )
@@ -57,26 +79,107 @@ namespace ZDebug
                 _client = null;
             }
 
-            ZMain.Log("zesarux: disconnecting.");
+            ZMain.Log("zesarux: disconnected.");
         }
 
         public void Pause()
         {
-            Send("enter-cpu-step");
+            _requestedPause = true;
+            Send( "enter-cpu-step" );
         }
 
         public void Continue()
         {
-            Send("exit-cpu-step");
+            _requestedPause = false;
+            _requestedStep = false;
+            Send( "exit-cpu-step" );
+        }
+
+        public void Step()
+        {
+            _requestedStep = true;
+            Send( "cpu-step" );
+        }
+
+        public void StepOver()
+        {
+            _requestedStep = true;
+            Send( "cpu-step-over" );
+        }
+
+        public void GetStackTrace()
+        {
+            // [15E6H 15E1H 0F3BH 107FH FF54H ]
+            _requestedStack = true;
+            Send( "get-stack-backtrace" );
+            Read();
+        }
+
+        public void GetRegisters()
+        {
+            // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
+            Send( "get-registers" );
+            Read();
+        }
+
+        public void Disassemble( string pAddress, int pCount )
+        {
+            if( _disassemblyFilePath == null )
+                _disassemblyFilePath = Path.Combine( Path.GetTempPath(), "Disassembly.z80" );
+
+            _requestedDisassembly = true;
+            Send( "disassemble " + pAddress + " " + pCount );
+            Read();
+            _requestedDisassembly = false;
+
+            _disassembling = new DisassemblySection() { Start = 0xFFFFF };
+            ParseDisassembly();
+        }
+
+        public string GetMachine()
+        {
+            _requestedMachine = true;
+            Send( "get-current-machine" );
+            Read();
+            return _machine;
+        }
+
+
+        public Dictionary<string, string> Registers
+        {
+            get { return _registers; }
+        }
+
+        public string DisassemblyFilePath
+        {
+            get { return _disassemblyFilePath; }
+        }
+
+        //public string Disassembly
+        //{
+        //    get { return _disassembly.ToString(); }
+        //}
+
+        public string Machine
+        {
+            get { return _machine; }
+        }
+
+        public List<string> Stack
+        {
+            get { return _stack; }
         }
 
 
         StringBuilder _s = new StringBuilder();
+        string _lastCommand;
 
         public bool Read()
         {
-            if( !Start() )
+            if( !IsConnected )
                 return false;
+
+            var result = _stream.DataAvailable;
 
             while( _stream.DataAvailable )
                 _s.Append((char)_stream.ReadByte());
@@ -87,40 +190,129 @@ namespace ZDebug
 
                 foreach( var line in data )
                 {
-                    ZMain.Log( "zesarux: <- [" + line + "]" );
+                    ZMain.Log( "zesarux: <- (" + _lastCommand + ") = [" + line + "]" );
                     Process( line );
                 }
 
                 _s.Clear();
             }
 
-            return true;
+            return result;
         }
 
-        public void Process( string pResult )
+        void Process( string pResult )
         {
             switch( pResult )
             {
                 case "command> ":
 
-                    if( _paused )
+                    if(_requestedContinue)
+                    {
+                        _requestedContinue = false;
+                        ZMain.Log("zesarux: cpu is now running");
                         OnContinued?.Invoke();
+                    }
 
-                    _paused = false;
-                    ZMain.Log( "zesarux: is running" );
+                    _lastCommand = null;
 
                     break;
 
                 case "command@cpu-step> ":
 
-                    if( !_paused )
-                        OnPaused?.Invoke();
+                    if( _requestedPause )
+                    {
+                        _requestedPause = false;
+                        _requestedStep = false;
 
-                    _paused = true;
-                    ZMain.Log("zesarux: is paused");
+                        ZMain.Log( "zesarux: cpu is now stopped (pause)" );
+                        OnPaused?.Invoke();
+                    }
+
+                    if( _requestedStep )
+                    {
+                        _requestedStep = false;
+
+                        ZMain.Log("zesarux: cpu is now stopped (step)");
+                        OnStepped?.Invoke();
+                    }
+
+                    _lastCommand = null;
+
+                    break;
+
+                default:
+
+                    if( pResult.StartsWith( "PC=" ) )
+                        ParseRegisters( pResult );
+                    else if( _requestedStack )
+                    {
+                        ParseStack( pResult );
+                        _requestedStack = false;
+                    }
+                    else if( _requestedDisassembly && _disassemblyFilePath != null )
+                        ParseDisassemblyLine( pResult );
+                    else if( _requestedMachine )
+                    {
+                        _machine = pResult;
+                        _requestedMachine = false;
+                    }
 
                     break;
             }
+        }
+
+        void ParseRegisters( string pData )
+        {
+            // [PC=15f8 SP=ff4a BC=0b21 A=00 HL=5cb8 DE=5ca8 IX=ffff IY=5c3a A'=00 BC'=174b HL'=107f DE'=0006 I=3f R=3a  F= Z P3H   F'= Z P     MEMPTR=15f7 EI IM1 VPS: 0 
+            Regex r = new Regex( "(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) " );
+
+            var matches = r.Matches( pData );
+            foreach( Match match in matches )
+            {
+                var register = match.Groups[1].ToString();
+                var value = match.Groups[2].ToString();
+
+                if( _registers.ContainsKey( register ) )
+                    if( _registers[register] != value )
+                        if( OnRegisterChange != null )
+                            OnRegisterChange( register, value );
+
+                _registers[register] = value;
+            }
+        }
+
+        void ParseStack( string pData )
+        {
+            // [15E6H 15E1H 0F3BH 107FH FF54H]
+            var split = pData.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+
+            _stack.Clear();
+            foreach( var frame in split )
+                if( frame.EndsWith( "H" ) )
+                    _stack.Add( frame.Substring( 0, frame.Length-1 ) );
+                else
+                    _stack.Add( frame );
+        }
+
+        void ParseDisassemblyLine( string pLine )
+        {
+            var data = pLine.Split( new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries );
+
+            var address = UnHex( data[0] );
+
+            _disassembling.Lines.Add(  new DisassemblyLine() { Address = address, Code = data[1] } );
+            _disassembling.Start = Math.Min( _disassembling.Start, address );
+            _disassembling.End   = Math.Max( _disassembling.End,   address );
+        }
+
+        void ParseDisassembly()
+        {
+            // todo: merge the freshly-disassembled stuff into the list and write to file
+        }
+
+        int UnHex( string pHex )
+        {
+            return Convert.ToInt32( pHex, 16 );
         }
 
         public bool Send( string pMessage )
@@ -129,6 +321,8 @@ namespace ZDebug
                 return false;
 
             ZMain.Log("zesarux: -> [" + pMessage + "]");
+
+            _lastCommand = pMessage;
 
             var bytes = System.Text.Encoding.ASCII.GetBytes( pMessage + "\n\n" );
             _stream.Write( bytes, 0, bytes.Length );
@@ -145,5 +339,18 @@ namespace ZDebug
         {
             get { return _client != null && _client.Connected; }
         }
+    }
+
+    class DisassemblySection
+    {
+        public int Start;
+        public int End;
+        public List<DisassemblyLine> Lines;
+    }
+
+    class DisassemblyLine
+    {
+        public int Address;
+        public string Code;
     }
 }

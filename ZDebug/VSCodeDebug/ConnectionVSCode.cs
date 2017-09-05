@@ -10,8 +10,22 @@ namespace VSCodeDebug
     public class ConnectionVSCode
     {
         public Action<Request> OnInitialize;
+        public Action<Request> OnLaunch;
+        public Action<Request> OnAttach;
+        public Action<Request> OnDisconnect;
         public Action<Request> OnPause;
         public Action<Request> OnContinue;
+        public Action<Request> OnNext;
+        public Action<Request> OnStepIn;
+        public Action<Request> OnStepOut;
+        public Action<Request> OnGetStackTrace;
+        public Action<Request> OnGetVariables;
+        public Action<Request> OnGetThreads;
+        public Action<Request> OnGetScopes;
+        public Action<Request> OnGetSource;
+        public Action<Request> OnGetLoadedSources;
+        public Action<Request> OnConfigurationDone;
+
 
         protected const int BufferSize = 4096;
         protected const string TwoCRLF = "\r\n\r\n";
@@ -32,70 +46,40 @@ namespace VSCodeDebug
             _output = Console.OpenStandardOutput();
         }
 
-        public void Paused()
+        // commands/events sent to vscode
+
+        public void Initialized()
         {
-            
+            Send( new InitializedEvent() );
         }
 
-        public void Continued()
+        public void Stopped( int pThread, string pReason )
         {
-            
+            Send( new StoppedEvent( pThread, pReason ) );
         }
 
-        public bool Read()
+        public void Continued( bool pAllThreads )
         {
-            if( _inputReader.HasData )
-            {
-                var data = Encoding.ASCII.GetString( _inputReader.GetData() );
-                _rawData.Append( data );
-                //ZMain.Log( "vscode: -> [" + data + "]" );    
-                ProcessData();
-            }
-
-            return true;
+            Send( new ContinuedEvent( pAllThreads ) );
         }
 
-        void ProcessData()
+
+        public void SourceAdded( Source pSource )
         {
-            var data = _rawData.ToString();
-
-            while( true )
-            {
-                // find end of message
-                var twocrlf = data.IndexOf( TwoCRLF, StringComparison.Ordinal );
-
-                if( twocrlf == -1 )
-                    break;
-
-                // find size text
-                var match = ContentLengthMatcher.Match( data );
-
-                if( !match.Success || match.Groups.Count != 2 )
-                    break;
-
-                var size = Convert.ToInt32( match.Groups[1].ToString() );
-
-                if ( data.Length < twocrlf + size + TwoCRLF.Length )
-                    break;
-
-                var message = data.Substring( twocrlf + TwoCRLF.Length, size );
-                ProcessMessage(message);
-
-                data = data.Substring(twocrlf + TwoCRLF.Length + size);
-            }
-
-            _rawData.Append( data );
+            Send( new LoadedSourceEvent( "new", pSource ) );
         }
 
-        void ProcessMessage( string pMessage )
+        public void SourceRemoved( Source pSource )
         {
-            var request = JsonConvert.DeserializeObject<Request>( pMessage );
-
-            if (request != null && request.type == "request")
-            {
-                HandleMessage( request.command, request.arguments, request );
-            }
+            Send( new LoadedSourceEvent( "removed", pSource ) );
         }
+
+        public void SourceChanged( Source pSource )
+        {
+            Send( new LoadedSourceEvent( "changed", pSource )  );
+        }
+
+        // commands/events from vscode
 
         void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
         {
@@ -109,90 +93,86 @@ namespace VSCodeDebug
                 switch( pCommand )
                 {
                     case "initialize":
-
-                        if( OnInitialize != null )
-                            OnInitialize(pRequest);
-
-                        //if( pArgs.linesStartAt1 != null )
-                        //{
-                        //    _clientLinesStartAt1 = (bool) pArgs.linesStartAt1;
-                        //}
-                        //var pathFormat = (string) pArgs.pathFormat;
-                        //if( pathFormat != null )
-                        //{
-                        //    switch( pathFormat )
-                        //    {
-                        //        case "uri":
-                        //            _clientPathsAreURI = true;
-                        //            break;
-                        //        case "path":
-                        //            _clientPathsAreURI = false;
-                        //            break;
-                        //        default:
-                        //            SendErrorResponse( pResponse, 1015, "initialize: bad value '{_format}' for pathFormat", new { _format = pathFormat } );
-                        //            return;
-                        //    }
-                        //}
-                        // 
-                        //Initialize( pResponse, pArgs );
+                        OnInitialize?.Invoke(pRequest);
                         break;
 
+                    //if( pArgs.linesStartAt1 != null )
+                    //{
+                    //    _clientLinesStartAt1 = (bool) pArgs.linesStartAt1;
+                    //}
+                    //var pathFormat = (string) pArgs.pathFormat;
+                    //if( pathFormat != null )
+                    //{
+                    //    switch( pathFormat )
+                    //    {
+                    //        case "uri":
+                    //            _clientPathsAreURI = true;
+                    //            break;
+                    //        case "path":
+                    //            _clientPathsAreURI = false;
+                    //            break;
+                    //        default:
+                    //            SendErrorResponse( pResponse, 1015, "initialize: bad value '{_format}' for pathFormat", new { _format = pathFormat } );
+                    //            return;
+                    //    }
+                    //}
+                    // 
+                    //Initialize( pResponse, pArgs );
+
                     case "launch":
-//                        Launch( pResponse, pArgs );
+                        OnLaunch?.Invoke( pRequest );
                         break;
 
                     case "attach":
-//                        Attach( pResponse, pArgs );
+                        OnAttach?.Invoke( pRequest );
                         break;
 
                     case "disconnect":
-//                        Disconnect( pResponse, pArgs );
+                        OnDisconnect?.Invoke( pRequest );
                         break;
 
                     case "next":
-//                        Next( pResponse, pArgs );
+                        OnNext?.Invoke( pRequest );
                         break;
 
                     case "continue":
-
-                        if( OnContinue != null )
-                            OnContinue(pRequest);
-
+                        OnContinue?.Invoke( pRequest );
                         break;
 
                     case "stepIn":
-//                        StepIn( pResponse, pArgs );
+                        OnStepIn?.Invoke( pRequest );
                         break;
 
                     case "stepOut":
-//                        StepOut( pResponse, pArgs );
+                        OnStepOut?.Invoke( pRequest );
                         break;
 
                     case "pause":
-
-                        if ( OnPause != null )
-                            OnPause(pRequest);
-
+                        OnPause?.Invoke( pRequest );
                         break;
 
                     case "stackTrace":
-//                        StackTrace( pResponse, pArgs );
+                        OnGetStackTrace?.Invoke( pRequest );
                         break;
 
                     case "scopes":
-//                        Scopes( pResponse, pArgs );
+                        OnGetScopes?.Invoke(pRequest);
                         break;
 
                     case "variables":
-//                        Variables( pResponse, pArgs );
+                        OnGetVariables?.Invoke( pRequest );
+                        break;
+
+                    case "loadedSources":
+                        OnGetLoadedSources?.Invoke( pRequest );
                         break;
 
                     case "source":
-//                        Source( pResponse, pArgs );
+                        OnGetSource?.Invoke( pRequest );
                         break;
 
                     case "threads":
-//                        Threads( pResponse, pArgs );
+                        OnGetThreads?.Invoke( pRequest );
                         break;
 
                     case "setBreakpoints":
@@ -212,7 +192,7 @@ namespace VSCodeDebug
                         break;
 
                     case "configurationDone":
-//                        ConfigurationDone( pResponse, pArgs );
+                        OnConfigurationDone?.Invoke( pRequest );
                         break;
 
                     default:
@@ -224,24 +204,98 @@ namespace VSCodeDebug
             {
 //                SendErrorResponse( pResponse, 1104, "error while processing request '{_request}' (exception: {_exception})", new { _request = pCommand, _exception = e.Message } );
             }
+        }
 
-            if( pCommand == "disconnect" )
+        //
+
+        public bool Read()
+        {
+            if (_inputReader.HasData)
             {
-//                Stop();
+                var data = Encoding.ASCII.GetString(_inputReader.GetData());
+                _rawData.Append(data);
+                ProcessData();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        void ProcessData()
+        {
+            var data = _rawData.ToString();
+            _rawData.Clear();
+
+            while (true)
+            {
+                // find end of message
+                var twocrlf = data.IndexOf(TwoCRLF, StringComparison.Ordinal);
+
+                if (twocrlf == -1)
+                    break;
+
+                // find size text
+                var match = ContentLengthMatcher.Match(data);
+
+                if (!match.Success || match.Groups.Count != 2)
+                    break;
+
+                var size = Convert.ToInt32(match.Groups[1].ToString());
+
+                if (data.Length < twocrlf + size + TwoCRLF.Length)
+                    break;
+
+                var message = data.Substring(twocrlf + TwoCRLF.Length, size);
+                ProcessMessage(message);
+
+                data = data.Substring(twocrlf + TwoCRLF.Length + size);
+            }
+
+            _rawData.Append( data );
+        }
+
+        void ProcessMessage(string pMessage)
+        {
+            var request = JsonConvert.DeserializeObject<Request>(pMessage);
+
+            if (request != null && request.type == "request")
+            {
+                HandleMessage(request.command, request.arguments, request);
+
+                if( !request.responded )
+                    Send( request );
             }
         }
 
-        private int _sequenceNumber;
-        public void Send( Request pRequest, ResponseBody pResponse )
+        // send response to request
+        public void Send( Request pRequest, ResponseBody pResponse = null, string pErrorMessage = null )
         {
-            var message = new Response( pRequest, pResponse );
-            ZMain.Log("vscode: -> (response) " + pRequest.command + " " + pResponse.ToString());
+            var message = new Response( pRequest, pResponse, pErrorMessage );
 
+            ZMain.Log("vscode: -> (response) " +
+                        pRequest.command
+                        + (pResponse == null ? "" : " response:" + pResponse.ToString())
+                        + (pErrorMessage == null ? "" : " error:'" + pErrorMessage + "'")
+                     );
+
+            pRequest.responded = true;
             Send( message );
         }
 
-        void Send( ProtocolMessage pMessage )
+        // send event
+        public void Send(Event pEvent)
         {
+            ZMain.Log("vscode: -> (event) " + pEvent.eventType );
+
+            Send((ProtocolMessage)pEvent);
+        }
+
+        private int _sequenceNumber = 1;
+        void Send( ProtocolMessage pMessage)
+        {
+            pMessage.seq = _sequenceNumber++;
+
             var data = ConvertToBytes( pMessage );
             try
             {
@@ -251,16 +305,8 @@ namespace VSCodeDebug
             catch( Exception e )
             {
                 // ignore
-                ZMain.Log( "Send error " + e );
+//                ZMain.Log( "Send error " + e );
             }
-        }
-
-        public void Send( Event pEvent )
-        {
-            pEvent.seq = _sequenceNumber++;
-            ZMain.Log("vscode: -> (event) " + pEvent.eventType );
-
-            Send( (ProtocolMessage) pEvent );
         }
 
         static byte[] ConvertToBytes( ProtocolMessage pMessage )
@@ -270,6 +316,8 @@ namespace VSCodeDebug
 
             var header = string.Format( "Content-Length: {0}{1}", jsonBytes.Length, TwoCRLF );
             var headerBytes = Encoding.GetBytes(header);
+
+//ZMain.Log( "vscode: -> [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
             System.Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);

@@ -60,7 +60,6 @@
     <Compile Include="VSCodeDebug\DebugSession.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="VSCodeDebug\Utilities.cs" />
-    <Compile Include="Session.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
