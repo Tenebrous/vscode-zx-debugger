@@ -45,7 +45,8 @@ namespace ZDebug
 	        var continuous = false;
 
 	        // event loop
-	        while (_running)
+	        while( _running )
+	        {
 	            if( _vscode.Read() || _zesarux.Read() )
 	                continuous = true;
 	            else
@@ -56,10 +57,11 @@ namespace ZDebug
 	                    continuous = false;
 	                }
 
-	                Thread.Sleep(10);
+	                Thread.Sleep( 10 );
 	            }
+	        }
 
-            ZMain.Log("main: stopped.");
+	        ZMain.Log("main: stopped.");
 	    }
 
 
@@ -72,8 +74,7 @@ namespace ZDebug
 	            new Capabilities()
 	            {
 	                supportsConfigurationDoneRequest = true,
-	                supportsConditionalBreakpoints = true,
-                    //supportsLoadedSourcesRequest = true
+	                supportsConditionalBreakpoints = true
 	            }
 	        );
 
@@ -140,7 +141,7 @@ namespace ZDebug
 
 	    static Source DisassemblySource()
 	    {
-	        return new Source( "Z80 Disassembly", _zesarux.DisassemblyFilePath, 0, "deemphasize" );
+	        return new Source( "Disassembly", _zesarux.DisassemblyFilePath, 0, "deemphasize" );
 
 	    }
 
@@ -235,6 +236,8 @@ namespace ZDebug
                         presentationHint: new VariablePresentationHint("data")
                     ) 
                 );
+
+            _variables.Sort( ( pLeft, pRight ) => String.Compare( pLeft.name, pRight.name, StringComparison.Ordinal ) );
 
             _vscode.Send(
                 pRequest,

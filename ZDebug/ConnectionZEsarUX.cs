@@ -261,23 +261,52 @@ namespace ZDebug
             }
         }
 
+        void SetRegister( string pRegister, string pValue )
+        {
+            if (_registers.ContainsKey(pRegister))
+                if (_registers[pRegister] != pValue)
+                    if (OnRegisterChange != null)
+                        OnRegisterChange(pRegister, pValue);
+
+            _registers[pRegister] = pValue;
+        }
+
         void ParseRegisters( string pData )
         {
-            // [PC=15f8 SP=ff4a BC=0b21 A=00 HL=5cb8 DE=5ca8 IX=ffff IY=5c3a A'=00 BC'=174b HL'=107f DE'=0006 I=3f R=3a  F= Z P3H   F'= Z P     MEMPTR=15f7 EI IM1 VPS: 0 
-            Regex r = new Regex( "(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) " );
+            // [PC=15f8 SP=ff4a BC=0b21 A=00 HL=5cb8 DE=5ca8 IX=ffff IY=5c3a A'=00 BC'=174b HL'=107
+            //  DE'=0006 I=3f R=3a  F= Z P3H   F'= Z P     MEMPTR=15f7 EI IM1 VPS: 0 ]
+            var registers = new Regex(
+                "(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) "
+            );
 
-            var matches = r.Matches( pData );
-            foreach( Match match in matches )
+            var matches = registers.Matches(pData);
+            foreach (Match match in matches)
             {
+                ZMain.Log(match.ToString());
+                foreach (var g in match.Groups)
+                    ZMain.Log("   [" + g.ToString() + "]");
+
                 var register = match.Groups[1].ToString();
                 var value = match.Groups[2].ToString();
 
-                if( _registers.ContainsKey( register ) )
-                    if( _registers[register] != value )
-                        if( OnRegisterChange != null )
-                            OnRegisterChange( register, value );
+                SetRegister(register, value);
+            }
 
-                _registers[register] = value;
+            var flags = new Regex(
+                "(F'|F)=(.{8}) "
+            );
+
+            matches = flags.Matches(pData);
+            foreach (Match match in matches)
+            {
+                ZMain.Log(match.ToString());
+                foreach (var g in match.Groups)
+                    ZMain.Log("   [" + g.ToString() + "]");
+
+                var register = match.Groups[1].ToString();
+                var value = match.Groups[2].ToString().Trim();
+
+                SetRegister(register, value);
             }
         }
 
