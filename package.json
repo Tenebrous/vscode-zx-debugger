@@ -44,7 +44,14 @@
         "type": "zesarux",
         "label": "ZEsarUX Debugger",
         "configurationAttributes": {
-          "launch": {},
+          "launch": {
+            "properties": {
+                "valuesInHex": {
+                    "type": "boolean",
+                    "description": "Show values in hex"
+                }
+            }            
+          },
           "attach": {}
         },
         "enableBreakpointsFor": {

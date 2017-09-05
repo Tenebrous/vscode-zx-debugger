@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -31,7 +32,7 @@ namespace ZDebug
         bool _requestedMachine;
         string _machine;
 
-        Dictionary<string, string> _registers = new Dictionary<string, string>();
+        Dictionary<string, int> _registers = new Dictionary<string, int>();
 
         bool _requestedStack;
         List<string> _stack = new List<string>();
@@ -86,6 +87,7 @@ namespace ZDebug
         {
             _requestedPause = true;
             Send( "enter-cpu-step" );
+            Read();
         }
 
         public void Continue()
@@ -93,18 +95,21 @@ namespace ZDebug
             _requestedPause = false;
             _requestedStep = false;
             Send( "exit-cpu-step" );
+            Read();
         }
 
         public void Step()
         {
             _requestedStep = true;
             Send( "cpu-step" );
+            Read();
         }
 
         public void StepOver()
         {
             _requestedStep = true;
             Send( "cpu-step-over" );
+            Read();
         }
 
         public void GetStackTrace()
@@ -122,18 +127,21 @@ namespace ZDebug
             Read();
         }
 
-        public void Disassemble( string pAddress, int pCount )
+        public void Disassemble( int pAddress, int pCount )
         {
             if( _disassemblyFilePath == null )
                 _disassemblyFilePath = Path.Combine( Path.GetTempPath(), "Disassembly.z80" );
 
+            _disassembling = new DisassemblySection() { Start = 0xFFFFF };
+
             _requestedDisassembly = true;
-            Send( "disassemble " + pAddress + " " + pCount );
+            Send("disassemble " + pAddress + " " + pCount);
             Read();
             _requestedDisassembly = false;
 
-            _disassembling = new DisassemblySection() { Start = 0xFFFFF };
-            ParseDisassembly();
+            IncorporateDisassembly( _disassembling );
+
+            File.WriteAllText( _disassemblyFilePath, "hello" );
         }
 
         public string GetMachine()
@@ -145,7 +153,7 @@ namespace ZDebug
         }
 
 
-        public Dictionary<string, string> Registers
+        public Dictionary<string, int> Registers
         {
             get { return _registers; }
         }
@@ -249,7 +257,7 @@ namespace ZDebug
                         ParseStack( pResult );
                         _requestedStack = false;
                     }
-                    else if( _requestedDisassembly && _disassemblyFilePath != null )
+                    else if( _requestedDisassembly )
                         ParseDisassemblyLine( pResult );
                     else if( _requestedMachine )
                     {
@@ -261,12 +269,12 @@ namespace ZDebug
             }
         }
 
-        void SetRegister( string pRegister, string pValue )
+        void SetRegister( string pRegister, int pValue )
         {
-            if (_registers.ContainsKey(pRegister))
-                if (_registers[pRegister] != pValue)
-                    if (OnRegisterChange != null)
-                        OnRegisterChange(pRegister, pValue);
+            //if (_registers.ContainsKey(pRegister))
+            //    if (_registers[pRegister] != pValue)
+            //        if (OnRegisterChange != null)
+            //            OnRegisterChange(pRegister, pValue);
 
             _registers[pRegister] = pValue;
         }
@@ -275,9 +283,7 @@ namespace ZDebug
         {
             // [PC=15f8 SP=ff4a BC=0b21 A=00 HL=5cb8 DE=5ca8 IX=ffff IY=5c3a A'=00 BC'=174b HL'=107
             //  DE'=0006 I=3f R=3a  F= Z P3H   F'= Z P     MEMPTR=15f7 EI IM1 VPS: 0 ]
-            var registers = new Regex(
-                "(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) "
-            );
+            var registers = new Regex( "(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) " );
 
             var matches = registers.Matches(pData);
             foreach (Match match in matches)
@@ -285,21 +291,19 @@ namespace ZDebug
                 var register = match.Groups[1].ToString();
                 var value = match.Groups[2].ToString();
 
-                SetRegister(register, value);
+                SetRegister(register, UnHex(value));
             }
 
-            var flags = new Regex(
-                "(F'|F)=(.{8}) "
-            );
-
-            matches = flags.Matches(pData);
-            foreach (Match match in matches)
-            {
-                var register = match.Groups[1].ToString();
-                var value = match.Groups[2].ToString().Trim();
-
-                SetRegister(register, value);
-            }
+            //var flags = new Regex( "(F'|F)=(.{8}) " );
+            //
+            //matches = flags.Matches(pData);
+            //foreach (Match match in matches)
+            //{
+            //    var register = match.Groups[1].ToString();
+            //    var value = match.Groups[2].ToString().Trim();
+            //
+            //    SetRegister(register, value);
+            //}
         }
 
         void ParseStack( string pData )
@@ -326,9 +330,9 @@ namespace ZDebug
             _disassembling.End   = Math.Max( _disassembling.End,   address );
         }
 
-        void ParseDisassembly()
+        void IncorporateDisassembly( DisassemblySection pSection )
         {
-            // todo: merge the freshly-disassembled stuff into the list and write to file
+            //_disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
         }
 
         int UnHex( string pHex )
@@ -366,7 +370,7 @@ namespace ZDebug
     {
         public int Start;
         public int End;
-        public List<DisassemblyLine> Lines;
+        public List<DisassemblyLine> Lines = new List<DisassemblyLine>();
     }
 
     class DisassemblyLine

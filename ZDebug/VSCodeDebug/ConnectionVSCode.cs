@@ -257,6 +257,8 @@ namespace VSCodeDebug
 
         void ProcessMessage(string pMessage)
         {
+//            ZMain.Log( "vscode: <- " + pMessage );
+
             var request = JsonConvert.DeserializeObject<Request>(pMessage);
 
             if (request != null && request.type == "request")

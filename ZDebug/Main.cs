@@ -73,9 +73,8 @@ namespace ZDebug
 	            pRequest,
 	            new Capabilities()
 	            {
-	                supportsConfigurationDoneRequest = true,
-	                supportsConditionalBreakpoints = true
-	            }
+	                supportsConfigurationDoneRequest = true
+                }
 	        );
 
 	        _vscode.Initialized();
@@ -98,7 +97,6 @@ namespace ZDebug
 	        _vscode.Send(pRequest);
 
             _zesarux.StepOver();
-	        _zesarux.Read();
 	    }
 
 	    static void VSCode_OnStepIn( Request pRequest )
@@ -107,7 +105,6 @@ namespace ZDebug
 	        _vscode.Send(pRequest);
 
             _zesarux.Step();
-	        _zesarux.Read();
         }
 
         static void VSCode_OnLaunch( Request pRequest )
@@ -152,6 +149,8 @@ namespace ZDebug
 
             _zesarux.GetStackTrace();
 
+            _zesarux.GetRegisters();
+
 	        DisassemblePC();
 
             _stackFrames.Clear();
@@ -184,22 +183,22 @@ namespace ZDebug
 
 	    static void VSCode_OnGetLoadedSources( Request pRequest )
 	    {
-	        _vscode.Send(
-                pRequest,
-                new LoadedSourcesResponseBody(
-                    new List<Source>()
-                    {
-                        DisassemblySource()
-                    }
-                )
-            );
+	     //   _vscode.Send(
+         //       pRequest,
+         //       new LoadedSourcesResponseBody(
+         //           new List<Source>()
+         //           {
+         //               DisassemblySource()
+         //           }
+         //       )
+         //   );
 	    }
 
 	    static void VSCode_OnGetSource( Request pRequest )
 	    {
-            _zesarux.GetRegisters();
-
-            DisassemblePC();
+         //   _zesarux.GetRegisters();
+         //
+         //   DisassemblePC();
 
 	     //   _vscode.Send( 
          //       pRequest,
@@ -213,10 +212,10 @@ namespace ZDebug
 
 	    static void DisassemblePC()
 	    {
-	        string pc;
+            int pc;
 
-	        if (_zesarux.Registers.TryGetValue("PC", out pc))
-	            _zesarux.Disassemble(Convert.ToInt32(pc, 16).ToString(), 30);
+	        _zesarux.Registers.TryGetValue( "PC", out pc );
+	        _zesarux.Disassemble(pc, 30);
         }
 
 	    static List<Variable> _variables = new List<Variable>();
@@ -230,7 +229,7 @@ namespace ZDebug
             foreach( var kp in _zesarux.Registers )
                 _variables.Add( 
                     new Variable(
-                        kp.Key, kp.Value,
+                        kp.Key, kp.Value.ToString(),
                         type: "register",
                         variablesReference: -1,
                         presentationHint: new VariablePresentationHint("data")
@@ -337,15 +336,11 @@ namespace ZDebug
 	    public static void Log(string pMessage)
 	    {
             // don't log the fact that we're logging a log message
-	        if( _inLog )
-	            return;
+	        if( _inLog ) return;
 
             // send the log message to VSCode
 	        _inLog = true;
-
-	        if( _vscode != null )
-	            _vscode.Send( new OutputEvent( "console", pMessage + "\n" ) );
-
+	        _vscode?.Send( new OutputEvent( "console", pMessage + "\n" ) );
 	        _inLog = false;
 	    }
     }
