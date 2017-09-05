@@ -282,10 +282,6 @@ namespace ZDebug
             var matches = registers.Matches(pData);
             foreach (Match match in matches)
             {
-                ZMain.Log(match.ToString());
-                foreach (var g in match.Groups)
-                    ZMain.Log("   [" + g.ToString() + "]");
-
                 var register = match.Groups[1].ToString();
                 var value = match.Groups[2].ToString();
 
@@ -299,10 +295,6 @@ namespace ZDebug
             matches = flags.Matches(pData);
             foreach (Match match in matches)
             {
-                ZMain.Log(match.ToString());
-                foreach (var g in match.Groups)
-                    ZMain.Log("   [" + g.ToString() + "]");
-
                 var register = match.Groups[1].ToString();
                 var value = match.Groups[2].ToString().Trim();
 
