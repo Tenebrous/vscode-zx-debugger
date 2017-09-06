@@ -35,15 +35,18 @@ namespace ZDebug
 
             try
             {
-                ZMain.Log( "zesarux: connecting..." );
+                ZMain.Log( LogLevel.Message, "zesarux: connecting..." );
                 _client.Connect( "127.0.0.1", 10000 );
                 _stream = _client.GetStream();
                 _connected = true;
-                ZMain.Log( "zesarux: connected." );
+                ZMain.Log(LogLevel.Message, "zesarux: connected.");
+
+                ReadAll();
+                Setup();
             }
             catch ( Exception e )
             {
-                ZMain.Log( "zesarux: connection error: " + e );
+                ZMain.Log( LogLevel.Error, "zesarux: connection error: " + e );
                 return false;
             }
 
@@ -53,7 +56,7 @@ namespace ZDebug
 
         public void Stop()
         {
-            ZMain.Log("zesarux: disconnecting...");
+            ZMain.Log( LogLevel.Message, "zesarux: disconnecting..." );
 
             if( _stream != null )
                 SimpleCommand( "exit" );
@@ -70,7 +73,7 @@ namespace ZDebug
                 _client = null;
             }
 
-            ZMain.Log("zesarux: disconnected.");
+            ZMain.Log( LogLevel.Message, "zesarux: disconnected." );
         }
 
 
@@ -100,6 +103,12 @@ namespace ZDebug
         }
 
 
+        public void Setup()
+        {
+            var version = SimpleCommand("get-version");
+            SimpleCommand("set-debug-settings 8");
+        }
+
         public string GetMachine()
         {
             return _machine = SimpleCommand("get-current-machine");
@@ -119,9 +128,9 @@ namespace ZDebug
 
             foreach (var frame in split)
                 if( frame.EndsWith("H") )
-                    _stack.Add( UnHex(frame.Substring(0, frame.Length - 1)) );
+                    _stack.Add( UnHex(frame.Substring(0, frame.Length - 1)) - 3 );
                 else
-                    _stack.Add( UnHex(frame) );
+                    _stack.Add( UnHex(frame) - 3 );
 
             return _stack;
         }
@@ -182,12 +191,13 @@ namespace ZDebug
                 foreach( var line in lines )
                 {
                     var parts = line.Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-                    var address = UnHex( parts[0] );
 
-                    newSection.Start = Math.Min( newSection.Start, address );
-                    newSection.End   = Math.Max( newSection.End,   address );
+                    var address = UnHex(parts[0]);
 
-                    newSection.Lines.Add( 
+                    newSection.Start = Math.Min(newSection.Start, address);
+                    newSection.End = Math.Max(newSection.End, address);
+
+                    newSection.Lines.Add(
                         new DisassemblyLine()
                         {
                             Address = address,
@@ -250,7 +260,6 @@ namespace ZDebug
             var tmp = new List<string>();
             foreach( var section in _disassembledSections )
             {
-                tmp.Add( string.Format( "-{0:X4}-{1:X4}-", section.Start, section.End ) );
                 foreach( var line in section.Lines )
                 {
                     tmp.Add( string.Format( "{0:X4} {1}", line.Address, line.Code ) );
@@ -369,7 +378,7 @@ namespace ZDebug
 
 
             // send command to zesarux
-            ZMain.Log("zesarux: -> [" + pCommand + "]");
+            ZMain.Log( LogLevel.Debug, "zesarux: (out) [" + pCommand + "]" );
 
             var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
             _stream.Write(bytes, 0, bytes.Length);
@@ -387,7 +396,7 @@ namespace ZDebug
             
             if( !_stream.DataAvailable )
             {
-                ZMain.Log( "zesarux: timed out waiting for data" );
+                ZMain.Log( LogLevel.Debug, "zesarux: timed out waiting for data" );
                 return null;
             }
 
@@ -416,7 +425,6 @@ namespace ZDebug
 
                 do
                 {
-
                     // read all the data until none left
                     if( _stream.DataAvailable )
                     {
@@ -424,17 +432,16 @@ namespace ZDebug
                         _tempReadString.Append( Encoding.ASCII.GetString( _tempReadBytes, 0, read ) );
                         wait.Restart();
                     }
-
                 }
                 while( wait.ElapsedMilliseconds < 10 );
 
-                _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n' }, StringSplitOptions.RemoveEmptyEntries));
+                _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
 
 
                 // look for magic words
                 foreach( var line in _tempReadProcessLines )
                 {
-                    ZMain.Log( "zesarux: <- [" + line + "]" );
+                    ZMain.Log( LogLevel.Debug, "zesarux: (in) [" + line + "]" );
 
                     if( line.StartsWith( "command> " ) )
                         _isRunning = true;

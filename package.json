@@ -13,45 +13,24 @@
   "keywords": [
     "zesarux",
     "debugger",
-    "debug"
+    "debug",
+    "z80",
+    "spectrum"
   ],
-  "-homepage": "https://github.com/Unity-Technologies/vscode-unity-debug",
-  "-bugs": {
-    "url": "https://github.com/Unity-Technologies/vscode-unity-debug/issues"
-  },
-
-  "-repository": {
-    "type": "git",
-    "url": "https://github.com/Unity-Technologies/vscode-unity-debug.git"
-  },
-
-  "-icon" : "Images/unity-logo128x128.png",
-
   "main": "./attach",
   "activationEvents": [
-        "onCommand:attach.attachToDebugger"
-    ],
-    "scripts": {
-        "postinstall": "node ./node_modules/vscode/bin/install"
-    },
+    "onCommand:attach.attachToDebugger"
+  ],
+  "scripts": {
+    "postinstall": "node ./node_modules/vscode/bin/install"
+  },
   "contributes": {
-    "commands": [{
-            "command": "attach.attachToDebugger",
-            "title": "ZEsarUX Attach Debugger"
-        }],
     "debuggers": [
       {
         "type": "zesarux",
         "label": "ZEsarUX Debugger",
         "configurationAttributes": {
-          "launch": {
-            "properties": {
-                "valuesInHex": {
-                    "type": "boolean",
-                    "description": "Show values in hex"
-                }
-            }            
-          },
+          "launch": {},
           "attach": {}
         },
         "enableBreakpointsFor": {

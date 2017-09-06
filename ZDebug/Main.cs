@@ -14,7 +14,7 @@ namespace ZDebug
 
     	static void Main(string[] argv)
 	    {
-	        ZMain.Log("main: starting...");
+	        ZMain.Log( LogLevel.Message, "main: starting...");
 
 	        // set up 
 	        _vscode = new ConnectionVSCode();
@@ -52,20 +52,18 @@ namespace ZDebug
 	            switch( _zesarux.StateChange )
 	            {
 	                case ConnectionZEsarUX.RunningStateChangeEnum.Started:
-                        Log( "stopped -> started"  );
                         _vscode.Continued( true );
 	                    break;
 
                     case ConnectionZEsarUX.RunningStateChangeEnum.Stopped:
-                        Log("started -> stopped");
-                        _vscode.Stopped( 1, "step" );
+                        _vscode.Stopped( 1, "step", "step" );
                         break;
 	            }
 
 	            if( !active )
 	            {
 	                if( active != wasActive )
-	                    ZMain.Log( "" );
+	                    ZMain.Log( LogLevel.Debug, "" );
 
 	                Thread.Sleep( 10 );
 	            }
@@ -73,7 +71,7 @@ namespace ZDebug
 	            wasActive = active;
 	        }
 
-	        ZMain.Log("main: stopped.");
+	        ZMain.Log( LogLevel.Message, "main: stopped." );
 	    }
 
 
@@ -81,6 +79,8 @@ namespace ZDebug
 
 	    static void VSCode_OnInitialize( Request pRequest )
 	    {
+	        //Log( LogLevel.Message, pRequest.arguments.ToString() );
+
 	        _vscode.Send(
 	            pRequest,
 	            new Capabilities()
@@ -150,33 +150,36 @@ namespace ZDebug
 
 	    static Source DisassemblySource()
 	    {
-	        return new Source( "Disassembly", _zesarux.DisassemblyFilePath, 0, "deemphasize" );
+	        return new Source( "Disassembly", _zesarux.DisassemblyFilePath, 0, "normal" );
 
 	    }
 
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
-	        _zesarux.GetMachine();
-            _zesarux.GetPorts();
+	        _zesarux.GetPorts();
             _zesarux.GetRegisters();
-            _zesarux.GetStackTrace();
+	        _zesarux.GetStackTrace();
             _zesarux.UpdateDisassembly( _zesarux.PC );
 
             _stackFrames.Clear();
 
 	        var stack = _zesarux.Stack;
-            for( int i = 0; i < stack.Count; i++ )
-                _stackFrames.Add( 
-                    new StackFrame( 
-                        i+1,
-                        string.Format( "{0:X4} / {0}", stack[i] ), 
-                        DisassemblySource(), 
-                        _zesarux.FindLine(stack[i]), 0, "normal" 
-                    ) 
-                );
+	        for( int i = 0; i < stack.Count; i++ )
+	        {   
+	            _stackFrames.Add(
+	                new StackFrame(
+	                    i + 1,
+	                    string.Format( "{0:X4} / {0}", stack[i] ),
+	                    DisassemblySource(),
+	                    _zesarux.FindLine( stack[i] ),
+	                    0,
+	                    "normal"
+                    )
+	            );
+	        }
 
-            _vscode.Send(
+	        _vscode.Send(
                 pRequest,
                 new StackTraceResponseBody(
                     _stackFrames
@@ -188,7 +191,7 @@ namespace ZDebug
         {
             int frameId = pRequest.arguments.frameId;
 
-            _zesarux.UpdateDisassembly( _zesarux.Stack[frameId] );
+            _zesarux.UpdateDisassembly( _zesarux.Stack[frameId-1] );
 
             _vscode.Send(
                 pRequest,
@@ -234,20 +237,17 @@ namespace ZDebug
 	    static List<Variable> _variables = new List<Variable>();
         static void VSCode_OnGetVariables( Request pRequest )
         {
-
-
-            Log( "**** " + pRequest.arguments.variablesReference );
-
             _variables.Clear();
 
+            var cls = new VariablePresentationHint( "class" );
             var data = new VariablePresentationHint( "data" );
             var index = 0;
 
             switch( (int)pRequest.arguments.variablesReference )
             {
                 case 10000:     // registers
-                    _variables.Add(new Variable("Dec", "", "data", 11000, data));
-                    _variables.Add(new Variable("Hex", "", "data", 12000, data));
+                    _variables.Add(new Variable("Dec", "", "data", 11000, cls));
+                    _variables.Add(new Variable("Hex", "", "data", 12000, cls));
                     break;
 
                 case 11000:     // registers - dec
@@ -267,8 +267,8 @@ namespace ZDebug
                     break;
 
                 case 20000:     // ports
-                    _variables.Add(new Variable("Dec", "", "data", 21000, data));
-                    _variables.Add(new Variable("Hex", "", "data", 22000, data));
+                    _variables.Add(new Variable("Dec", "", "data", 21000, cls));
+                    _variables.Add(new Variable("Hex", "", "data", 22000, cls));
                     break;
 
                 case 21000:     // ports - dec
@@ -360,18 +360,32 @@ namespace ZDebug
         //    ZMain.Log("vscode: source");
         //}
 
-
+	    static LogLevel _log = LogLevel.Message;
         static bool _inLog = false;
-	    public static void Log(string pMessage)
+	    public static void Log( LogLevel pLevel, string pMessage )
 	    {
+	        if( pLevel > _log ) return;
+
             // don't log the fact that we're logging a log message
 	        if( _inLog ) return;
 
             // send the log message to VSCode
 	        _inLog = true;
-	        _vscode?.Send( new OutputEvent( "console", pMessage + "\n" ) );
+
+            if( pLevel == LogLevel.Error )
+	            _vscode?.Send( new OutputEvent( OutputEvent.OutputEventType.stderr, pMessage + "\n" ) );
+            else
+                _vscode?.Send( new OutputEvent( OutputEvent.OutputEventType.stdout, pMessage + "\n" ) );
+
 	        _inLog = false;
 	    }
+    }
+
+    public enum LogLevel
+    {
+        Error,
+        Message,
+        Debug
     }
 }
 

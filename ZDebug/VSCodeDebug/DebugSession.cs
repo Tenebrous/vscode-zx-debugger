@@ -199,10 +199,18 @@ namespace VSCodeDebug
 
     public class OutputEvent : Event
     {
-        public OutputEvent(string cat, string outpt)
+        public enum OutputEventType
+        {
+            console,
+            stdout,
+            stderr,
+            telemetry
+        }
+
+        public OutputEvent(OutputEventType cat, string outpt)
             : base("output", new
             {
-                category = cat,
+                category = cat.ToString(),
                 output = outpt
             })
         { }
@@ -415,7 +423,7 @@ namespace VSCodeDebug
 
         protected override void DispatchRequest(string command, dynamic args, Response response)
         {
-            ZMain.Log( "vscode: <- [" + command + "]" );
+            ZMain.Log( LogLevel.Debug, "vscode: <- [" + command + "]" );
 
             if (args == null)
             {

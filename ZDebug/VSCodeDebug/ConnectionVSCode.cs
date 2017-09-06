@@ -53,9 +53,9 @@ namespace VSCodeDebug
             Send( new InitializedEvent() );
         }
 
-        public void Stopped( int pThread, string pReason )
+        public void Stopped( int pThread, string pReason, string pDescription )
         {
-            Send( new StoppedEvent( pThread, pReason ) );
+            Send( new StoppedEvent( pThread, pReason, pDescription ) );
         }
 
         public void Continued( bool pAllThreads )
@@ -83,7 +83,7 @@ namespace VSCodeDebug
 
         void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
         {
-            ZMain.Log( "vscode: <- [" + pCommand + "]" );
+            ZMain.Log( LogLevel.Debug, "vscode: (in) [" + pCommand + "]" );
 
             pArgs = pArgs ?? new { };
 
@@ -93,6 +93,7 @@ namespace VSCodeDebug
                 switch( pCommand )
                 {
                     case "initialize":
+                        ZMain.Log( LogLevel.Message, Directory.GetCurrentDirectory() );
                         OnInitialize?.Invoke(pRequest);
                         break;
 
@@ -118,6 +119,10 @@ namespace VSCodeDebug
                     //}
                     // 
                     //Initialize( pResponse, pArgs );
+
+                    case "configurationDone":
+                        OnConfigurationDone?.Invoke(pRequest);
+                        break;
 
                     case "launch":
                         OnLaunch?.Invoke( pRequest );
@@ -151,12 +156,16 @@ namespace VSCodeDebug
                         OnPause?.Invoke( pRequest );
                         break;
 
-                    case "stackTrace":
-                        OnGetStackTrace?.Invoke( pRequest );
+                    case "threads":
+                        OnGetThreads?.Invoke(pRequest);
                         break;
 
                     case "scopes":
                         OnGetScopes?.Invoke(pRequest);
+                        break;
+
+                    case "stackTrace":
+                        OnGetStackTrace?.Invoke(pRequest);
                         break;
 
                     case "variables":
@@ -171,38 +180,36 @@ namespace VSCodeDebug
                         OnGetSource?.Invoke( pRequest );
                         break;
 
-                    case "threads":
-                        OnGetThreads?.Invoke( pRequest );
-                        break;
-
-                    case "setBreakpoints":
+//                    case "setBreakpoints":
 //                        SetBreakpoints( pResponse, pArgs );
-                        break;
+//                        break;
 
-                    case "setFunctionBreakpoints":
+//                    case "setFunctionBreakpoints":
 //                        SetFunctionBreakpoints( pResponse, pArgs );
-                        break;
+//                        break;
 
-                    case "setExceptionBreakpoints":
+//                    case "setExceptionBreakpoints":
 //                        SetExceptionBreakpoints( pResponse, pArgs );
-                        break;
+//                        break;
 
-                    case "evaluate":
+//                    case "evaluate":
 //                        Evaluate( pResponse, pArgs );
-                        break;
-
-                    case "configurationDone":
-                        OnConfigurationDone?.Invoke( pRequest );
-                        break;
+//                        break;
 
                     default:
-//                        SendErrorResponse( pResponse, 1014, "unrecognized request: {_request}", new { _request = pCommand } );
+                        ZMain.Log( 
+                            LogLevel.Error,
+                            string.Format( "VSCode request not handled: {0}", pCommand )
+                        );
                         break;
                 }
             }
             catch( Exception e )
             {
-//                SendErrorResponse( pResponse, 1104, "error while processing request '{_request}' (exception: {_exception})", new { _request = pCommand, _exception = e.Message } );
+                ZMain.Log(
+                    LogLevel.Error,
+                    string.Format( "Error during request '{0}' (exception: {1})", pCommand, e.Message )
+                );
             }
         }
 
@@ -275,7 +282,7 @@ namespace VSCodeDebug
         {
             var message = new Response( pRequest, pResponse, pErrorMessage );
 
-            ZMain.Log("vscode: -> (response) " +
+            ZMain.Log( LogLevel.Debug, "vscode: (out) response " +
                         pRequest.command
                         + (pResponse == null ? "" : " response:" + pResponse.ToString())
                         + (pErrorMessage == null ? "" : " error:'" + pErrorMessage + "'")
@@ -288,7 +295,7 @@ namespace VSCodeDebug
         // send event
         public void Send(Event pEvent)
         {
-            ZMain.Log("vscode: -> (event) " + pEvent.eventType );
+            ZMain.Log( LogLevel.Debug, "vscode: (out) event " + pEvent.eventType );
 
             Send((ProtocolMessage)pEvent);
         }
