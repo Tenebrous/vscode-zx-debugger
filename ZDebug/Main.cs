@@ -10,7 +10,7 @@ namespace ZDebug
 	{
 	    static ConnectionZEsarUX _zesarux;
 	    static ConnectionVSCode _vscode;
-	    static bool _running;
+	    static bool _active;
 
     	static void Main(string[] argv)
 	    {
@@ -35,30 +35,42 @@ namespace ZDebug
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 
             _zesarux = new ConnectionZEsarUX();
-	        _zesarux.OnPaused += Z_OnPaused;
-	        _zesarux.OnContinued += Z_OnContinued;
-	        _zesarux.OnStepped += Z_OnStepped;
+	        // _zesarux.OnPaused += Z_OnPaused;
+	        // _zesarux.OnContinued += Z_OnContinued;
+	        // _zesarux.OnStepped += Z_OnStepped;
             // _zesarux.OnRegisterChange += Z_OnRegisterChange;
 
-	        _running = true;
+	        _active = true;
 
-	        var continuous = false;
+	        var wasActive = false;
 
 	        // event loop
-	        while( _running )
+	        while( _active )
 	        {
-	            if( _vscode.Read() || _zesarux.Read() )
-	                continuous = true;
-	            else
+	            var active = _vscode.Read() || _zesarux.Read();
+
+	            switch( _zesarux.StateChange )
 	            {
-	                if( continuous )
-	                {
+	                case ConnectionZEsarUX.RunningStateChangeEnum.Started:
+                        Log( "stopped -> started"  );
+                        _vscode.Continued( true );
+	                    break;
+
+                    case ConnectionZEsarUX.RunningStateChangeEnum.Stopped:
+                        Log("started -> stopped");
+                        _vscode.Stopped( 1, "step" );
+                        break;
+	            }
+
+	            if( !active )
+	            {
+	                if( active != wasActive )
 	                    ZMain.Log( "" );
-	                    continuous = false;
-	                }
 
 	                Thread.Sleep( 10 );
 	            }
+
+	            wasActive = active;
 	        }
 
 	        ZMain.Log("main: stopped.");
@@ -146,19 +158,23 @@ namespace ZDebug
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
 	        _zesarux.GetMachine();
-
-            _zesarux.GetStackTrace();
-
+            _zesarux.GetPorts();
             _zesarux.GetRegisters();
-
-	        DisassemblePC();
+            _zesarux.GetStackTrace();
+            _zesarux.UpdateDisassembly( _zesarux.PC );
 
             _stackFrames.Clear();
-            _stackFrames.Add( new StackFrame (0, "Current", DisassemblySource(), 0, 0, "normal" ) );
 
 	        var stack = _zesarux.Stack;
             for( int i = 0; i < stack.Count; i++ )
-                _stackFrames.Add( new StackFrame( i+1, stack[i], DisassemblySource(), 0, 0, "normal" ) );
+                _stackFrames.Add( 
+                    new StackFrame( 
+                        i+1,
+                        string.Format( "{0:X4} / {0}", stack[i] ), 
+                        DisassemblySource(), 
+                        _zesarux.FindLine(stack[i]), 0, "normal" 
+                    ) 
+                );
 
             _vscode.Send(
                 pRequest,
@@ -170,12 +186,17 @@ namespace ZDebug
 
         static void VSCode_OnGetScopes( Request pRequest )
         {
+            int frameId = pRequest.arguments.frameId;
+
+            _zesarux.UpdateDisassembly( _zesarux.Stack[frameId] );
+
             _vscode.Send(
                 pRequest,
                 new ScopesResponseBody(
                     new List<Scope>()
                     {
-                        new Scope( "Registers", 1, false )
+                        new Scope( "Registers", 10000, false ),
+                        new Scope( "Ports", 20000, false )
                     }
                 )
             );
@@ -210,31 +231,61 @@ namespace ZDebug
 	    }
 
 
-	    static void DisassemblePC()
-	    {
-            int pc;
-
-	        _zesarux.Registers.TryGetValue( "PC", out pc );
-	        _zesarux.Disassemble(pc, 30);
-        }
-
 	    static List<Variable> _variables = new List<Variable>();
         static void VSCode_OnGetVariables( Request pRequest )
         {
-            _zesarux.GetRegisters();
+
+
+            Log( "**** " + pRequest.arguments.variablesReference );
 
             _variables.Clear();
 
-            int i = 0;
-            foreach( var kp in _zesarux.Registers )
-                _variables.Add( 
-                    new Variable(
-                        kp.Key, kp.Value.ToString(),
-                        type: "register",
-                        variablesReference: -1,
-                        presentationHint: new VariablePresentationHint("data")
-                    ) 
-                );
+            var data = new VariablePresentationHint( "data" );
+            var index = 0;
+
+            switch( (int)pRequest.arguments.variablesReference )
+            {
+                case 10000:     // registers
+                    _variables.Add(new Variable("Dec", "", "data", 11000, data));
+                    _variables.Add(new Variable("Hex", "", "data", 12000, data));
+                    break;
+
+                case 11000:     // registers - dec
+
+                    _zesarux.GetRegisters();
+                    foreach ( var kp in _zesarux.Registers )
+                        _variables.Add( new Variable( kp.Key, kp.Value.ToString(), "register", -1, data ) );
+
+                    break;
+
+                case 12000:     // registers - hex
+
+                    _zesarux.GetRegisters();
+                    foreach (var kp in _zesarux.Registers)
+                        _variables.Add( new Variable(kp.Key, string.Format( "{0:X4}", kp.Value, "register", -1, data) ) );
+
+                    break;
+
+                case 20000:     // ports
+                    _variables.Add(new Variable("Dec", "", "data", 21000, data));
+                    _variables.Add(new Variable("Hex", "", "data", 22000, data));
+                    break;
+
+                case 21000:     // ports - dec
+
+                    _zesarux.GetPorts();
+
+                    break;
+
+                case 22000:     // ports - hex
+
+                    _zesarux.GetPorts();
+
+                    break;
+
+                default:
+                    break;
+            }
 
             _variables.Sort( ( pLeft, pRight ) => String.Compare( pLeft.name, pRight.name, StringComparison.Ordinal ) );
 
@@ -244,34 +295,12 @@ namespace ZDebug
             );
         }
 
-
         static void VSCode_OnDisconnect( Request pRequest )
 	    {
 	        _zesarux.Stop();
-	        _running = false;
+	        _active = false;
 	    }
 
-
-
-
-	    // events coming in from ZEsarUX
-
-	    static void Z_OnContinued()
-	    {
-	        _vscode.Continued( true );
-	    }
-
-	    static void Z_OnPaused()
-	    {
-	        _vscode.Stopped( 1, "pause" );
-	        _vscode.SourceChanged( DisassemblySource() );
-        }
-
-	    static void Z_OnStepped()
-	    {
-	        _vscode.Stopped( 1, "step" );
-            _vscode.SourceChanged( DisassemblySource() );
-	    }
 
         //static void Z_OnRegisterChange( string pRegister, string pValue )
         //{
