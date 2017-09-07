@@ -35,7 +35,6 @@ namespace VSCodeDebugAdapter
         Stream _input;
         Reader _inputReader;
         Stream _output;
-
         StringBuilder _rawData = new StringBuilder();
 
         public VSCodeConnection()
@@ -93,7 +92,6 @@ namespace VSCodeDebugAdapter
                 switch( pCommand )
                 {
                     case "initialize":
-                        ZMain.Log( LogLevel.Message, Directory.GetCurrentDirectory() );
                         OnInitialize?.Invoke(pRequest);
                         break;
 
@@ -264,7 +262,7 @@ namespace VSCodeDebugAdapter
 
         void ProcessMessage(string pMessage)
         {
-//            ZMain.Log( "vscode: <- " + pMessage );
+            ZMain.Log( LogLevel.Verbose, "vscode: (in) " + pMessage );
 
             var request = JsonConvert.DeserializeObject<Request>(pMessage);
 
@@ -326,7 +324,7 @@ namespace VSCodeDebugAdapter
             var header = string.Format( "Content-Length: {0}{1}", jsonBytes.Length, TwoCRLF );
             var headerBytes = Encoding.GetBytes(header);
 
-//ZMain.Log( "vscode: -> [" + asJson + "]" );
+            ZMain.Log( LogLevel.Debug, "vscode: (out) [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
             System.Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);

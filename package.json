@@ -5,7 +5,7 @@
   "publisher": "Tenebrous",
   "description": "ZEsarUX debugger extension",
   "engines": {
-    "vscode": "^0.10.1"
+    "vscode": "^1.16.0"
   },
   "categories": [
     "Debuggers"
@@ -29,10 +29,6 @@
       {
         "type": "zesarux",
         "label": "ZEsarUX Debugger",
-        "configurationAttributes": {
-          "launch": {},
-          "attach": {}
-        },
         "enableBreakpointsFor": {
           "languageIds": [
             "z80",
@@ -47,11 +43,22 @@
         "linux": {
           "runtime": "mono"
         },
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "folder": {
+                "type": "string",
+                "description": "Project folder"
+              }
+            }
+          }
+        },
         "initialConfigurations": [
           {
             "name": "ZEsarUX",
             "type": "zesarux",
-            "request": "launch"
+            "request": "launch",
+            "folder": "${workspaceRoot}"
           }
         ]
       }

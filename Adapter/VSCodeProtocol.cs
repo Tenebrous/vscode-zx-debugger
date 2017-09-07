@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace VSCodeDebugAdapter
 {
@@ -189,12 +190,21 @@ namespace VSCodeDebugAdapter
 
     public class Source
     {
+        public enum SourcePresentationHintEnum
+        {
+            normal,
+            emphasize,
+            deemphasize
+        }
+
         public string name { get; }
         public string path { get; }
         public int sourceReference { get; }
-        public string presentationHint { get; }
 
-        public Source( string name = null, string path = null, int sourceReference = 0, string presentationHint = null )
+        [JsonConverter( typeof( StringEnumConverter ) )]
+        public SourcePresentationHintEnum presentationHint { get; }
+
+        public Source( string name = null, string path = null, int sourceReference = 0, SourcePresentationHintEnum presentationHint = SourcePresentationHintEnum.normal )
         {
             this.name = name;
             this.path = path;

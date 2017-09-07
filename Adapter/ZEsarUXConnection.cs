@@ -18,12 +18,10 @@ namespace ZEsarUXDebugger
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
-
-        string _disassemblyFilePath;
+        
         List<DisassemblySection> _disassembledSections = new List<DisassemblySection>();
 
         Dictionary<string, int> _registers = new Dictionary<string, int>();
-
         
         public bool Start()
         {
@@ -174,8 +172,7 @@ namespace ZEsarUXDebugger
 
         public void UpdateDisassembly( int pAddress )
         {
-            if( _disassemblyFilePath == null )
-                _disassemblyFilePath = Path.Combine( Path.GetTempPath(), "Disassembly.z80" );
+            var file = Path.Combine( Path.GetTempPath(), "Disassembly.z80" );
 
             foreach( var section in _disassembledSections )
                 if( pAddress >= section.Start && pAddress <= section.End - 10 )
@@ -203,7 +200,12 @@ namespace ZEsarUXDebugger
                             Code = parts[1]
                         }
                     );
+
+                    // stop disassembling at hard RET (just testing to see if that makes things clearer)
+                    if( parts[1].Substring( 0, 2 ) == "C9" )
+                        break;
                 }
+
 
                 // look to see if we cover two existing sections, whereby we'll merge them
                 for( int i = 0; i < _disassembledSections.Count - 1; i++ )
@@ -268,7 +270,7 @@ namespace ZEsarUXDebugger
                 tmp.Add( "" );
             }
 
-            File.WriteAllLines( _disassemblyFilePath, tmp );
+            File.WriteAllLines( DisassemblyFile, tmp );
         }
 
         public int FindLine( int pAddress )
@@ -335,12 +337,10 @@ namespace ZEsarUXDebugger
             }
         }
 
-
-        public string DisassemblyFilePath
+        public string DisassemblyFile
         {
-            get { return _disassemblyFilePath; }
+            get { return Path.Combine( _tempFolder, "disasm.z80" ); }
         }
-
 
         string _machine;
         public string Machine
@@ -354,6 +354,12 @@ namespace ZEsarUXDebugger
             get { return _stack; }
         }
 
+        string _tempFolder;
+        public string TempFolder
+        {
+            set { _tempFolder = value; }
+            get { return _tempFolder; }
+        }
 
         public bool Read()
         {
@@ -388,14 +394,13 @@ namespace ZEsarUXDebugger
             var x = new Stopwatch();
             x.Start();
 
-
             // wait for data to start coming back
             while ( !_stream.DataAvailable && x.Elapsed.Seconds < 2 )
                 ;
             
             if( !_stream.DataAvailable )
             {
-                ZMain.Log( LogLevel.Debug, "zesarux: timed out waiting for data" );
+                ZMain.Log( LogLevel.Message, "zesarux: timed out waiting for data" );
                 return null;
             }
 

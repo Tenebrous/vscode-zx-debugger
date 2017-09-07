@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using VSCodeDebugAdapter;
 using Thread = System.Threading.Thread;
 
@@ -11,12 +12,14 @@ namespace ZEsarUXDebugger
 	    static VSCodeConnection _vscode;
 	    static bool _active;
 
+	    static string _folder;
+
     	static void Main(string[] argv)
 	    {
-	        ZMain.Log( LogLevel.Message, "main: starting...");
+            ZMain.Log( LogLevel.Message, "main: starting... " );
 
-	        // set up 
-	        _vscode = new VSCodeConnection();
+            // set up 
+            _vscode = new VSCodeConnection();
 	        _vscode.OnPause += VSCode_OnPause;
 	        _vscode.OnContinue += VSCode_OnContinue;
 	        _vscode.OnNext += VSCode_OnNext;
@@ -78,8 +81,6 @@ namespace ZEsarUXDebugger
 
 	    static void VSCode_OnInitialize( Request pRequest )
 	    {
-	        //Log( LogLevel.Message, pRequest.arguments.ToString() );
-
 	        _vscode.Send(
 	            pRequest,
 	            new Capabilities()
@@ -119,8 +120,25 @@ namespace ZEsarUXDebugger
         }
 
         static void VSCode_OnLaunch( Request pRequest )
-	    {
-	        if (!_zesarux.Start())
+        {
+            _folder = DynString( pRequest.arguments, "folder" );
+
+            if( string.IsNullOrWhiteSpace( _folder ) )
+            {
+                Log( LogLevel.Error, "Property 'folder' is missing or empty." );
+                return;
+            }
+
+            if( !Directory.Exists( _folder ) )
+            {
+                Log( LogLevel.Error, "Property 'folder' refers to a folder that could not be found." );
+                return;
+            }
+
+            _zesarux.TempFolder = Path.Combine( _folder, ".debug" );
+            Directory.CreateDirectory( _zesarux.TempFolder );
+
+            if( !_zesarux.Start())
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
@@ -149,7 +167,7 @@ namespace ZEsarUXDebugger
 
 	    static Source DisassemblySource()
 	    {
-	        return new Source( "Disassembly", _zesarux.DisassemblyFilePath, 0, "normal" );
+	        return new Source( "-", _zesarux.DisassemblyFile, 0, Source.SourcePresentationHintEnum.deemphasize );
 
 	    }
 
@@ -340,7 +358,22 @@ namespace ZEsarUXDebugger
         //    ZMain.Log("vscode: source");
         //}
 
-	    static LogLevel _log = LogLevel.Message;
+        static string DynString( dynamic pArgs, string pName, string pDefault = null )
+	    {
+	        var result = (string)pArgs[pName];
+
+	        if( result == null )
+	            return pDefault;
+
+	        result = result.Trim();
+
+	        if( result.Length == 0 )
+	            return pDefault;
+
+	        return result;
+	    }
+
+        static LogLevel _log = LogLevel.Message;
         static bool _inLog = false;
 	    public static void Log( LogLevel pLevel, string pMessage )
 	    {
@@ -363,9 +396,10 @@ namespace ZEsarUXDebugger
 
     public enum LogLevel
     {
-        Error,
-        Message,
-        Debug
+        Error = 0,
+        Message = 1,
+        Debug = 2,
+        Verbose = 3
     }
 }
 
