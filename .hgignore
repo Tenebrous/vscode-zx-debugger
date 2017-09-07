@@ -3,5 +3,4 @@ syntax: glob
 *.DotSettings.user
 packages/
 ZDebug/obj/
-bin/
 .vs/
