@@ -2,5 +2,5 @@ syntax: glob
 *.csproj.user
 *.DotSettings.user
 packages/
-ZDebug/obj/
+Adapter/obj/
 .vs/

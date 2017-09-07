@@ -3,11 +3,11 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using ZDebug;
+using ZEsarUXDebugger;
 
-namespace VSCodeDebug
+namespace VSCodeDebugAdapter
 {
-    public class ConnectionVSCode
+    public class VSCodeConnection
     {
         public Action<Request> OnInitialize;
         public Action<Request> OnLaunch;
@@ -38,7 +38,7 @@ namespace VSCodeDebug
 
         StringBuilder _rawData = new StringBuilder();
 
-        public ConnectionVSCode()
+        public VSCodeConnection()
         {
             _input = Console.OpenStandardInput();
             _inputReader = new Reader( _input );

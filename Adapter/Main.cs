@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using VSCodeDebug;
+using VSCodeDebugAdapter;
 using Thread = System.Threading.Thread;
 
-namespace ZDebug
+namespace ZEsarUXDebugger
 {
     public class ZMain
 	{
-	    static ConnectionZEsarUX _zesarux;
-	    static ConnectionVSCode _vscode;
+	    static ZEsarUXConnection _zesarux;
+	    static VSCodeConnection _vscode;
 	    static bool _active;
 
     	static void Main(string[] argv)
@@ -16,7 +16,7 @@ namespace ZDebug
 	        ZMain.Log( LogLevel.Message, "main: starting...");
 
 	        // set up 
-	        _vscode = new ConnectionVSCode();
+	        _vscode = new VSCodeConnection();
 	        _vscode.OnPause += VSCode_OnPause;
 	        _vscode.OnContinue += VSCode_OnContinue;
 	        _vscode.OnNext += VSCode_OnNext;
@@ -33,7 +33,7 @@ namespace ZDebug
 	        _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 
-            _zesarux = new ConnectionZEsarUX();
+            _zesarux = new ZEsarUXConnection();
 	        // _zesarux.OnPaused += Z_OnPaused;
 	        // _zesarux.OnContinued += Z_OnContinued;
 	        // _zesarux.OnStepped += Z_OnStepped;
@@ -50,11 +50,11 @@ namespace ZDebug
 
 	            switch( _zesarux.StateChange )
 	            {
-	                case ConnectionZEsarUX.RunningStateChangeEnum.Started:
+	                case ZEsarUXConnection.RunningStateChangeEnum.Started:
                         _vscode.Continued( true );
 	                    break;
 
-                    case ConnectionZEsarUX.RunningStateChangeEnum.Stopped:
+                    case ZEsarUXConnection.RunningStateChangeEnum.Stopped:
                         _vscode.Stopped( 1, "step", "step" );
                         break;
 	            }
@@ -139,9 +139,9 @@ namespace ZDebug
             _vscode.Send( 
                 pRequest,
                 new ThreadsResponseBody( 
-                    new List<VSCodeDebug.Thread>()
+                    new List<VSCodeDebugAdapter.Thread>()
                     {
-                        new VSCodeDebug.Thread( 1, "Main" )
+                        new VSCodeDebugAdapter.Thread( 1, "Main" )
                     }
                 )
             );

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ZDebug
+namespace ZEsarUXDebugger
 {
-    public class ConnectionZEsarUX
+    public class ZEsarUXConnection
     {
         public Action OnPaused;
         public Action OnContinued;

@@ -53,13 +53,11 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConnectionZEsarUX.cs" />
+    <Compile Include="ZEsarUXConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="VSCodeDebug\ConnectionVSCode.cs" />
-    <Compile Include="VSCodeDebug\Protocol.cs" />
-    <Compile Include="VSCodeDebug\DebugSession.cs" />
+    <Compile Include="VSCodeConnection.cs" />
+    <Compile Include="VSCodeProtocol.cs" />
     <Compile Include="Main.cs" />
-    <Compile Include="VSCodeDebug\Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
