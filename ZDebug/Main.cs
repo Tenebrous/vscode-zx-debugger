@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using VSCodeDebug;
 using Thread = System.Threading.Thread;
 
@@ -62,7 +61,7 @@ namespace ZDebug
 
 	            if( !active )
 	            {
-	                if( active != wasActive )
+	                if( wasActive )
 	                    ZMain.Log( LogLevel.Debug, "" );
 
 	                Thread.Sleep( 10 );
@@ -170,7 +169,7 @@ namespace ZDebug
 	            _stackFrames.Add(
 	                new StackFrame(
 	                    i + 1,
-	                    string.Format( "{0:X4} / {0}", stack[i] ),
+	                    string.Format( "${0:X4} / {0}", stack[i] ),
 	                    DisassemblySource(),
 	                    _zesarux.FindLine( stack[i] ),
 	                    0,
@@ -239,48 +238,29 @@ namespace ZDebug
         {
             _variables.Clear();
 
-            var cls = new VariablePresentationHint( "class" );
             var data = new VariablePresentationHint( "data" );
             var index = 0;
 
             switch( (int)pRequest.arguments.variablesReference )
             {
                 case 10000:     // registers
-                    _variables.Add(new Variable("Dec", "", "data", 11000, cls));
-                    _variables.Add(new Variable("Hex", "", "data", 12000, cls));
-                    break;
-
-                case 11000:     // registers - dec
 
                     _zesarux.GetRegisters();
                     foreach ( var kp in _zesarux.Registers )
-                        _variables.Add( new Variable( kp.Key, kp.Value.ToString(), "register", -1, data ) );
-
-                    break;
-
-                case 12000:     // registers - hex
-
-                    _zesarux.GetRegisters();
-                    foreach (var kp in _zesarux.Registers)
-                        _variables.Add( new Variable(kp.Key, string.Format( "{0:X4}", kp.Value, "register", -1, data) ) );
+                        _variables.Add( 
+                            new Variable( 
+                                kp.Key,
+                                string.Format( "${0:X4} / {0}", kp.Value ), 
+                                "register", 
+                                -1, 
+                                data ) 
+                        );
 
                     break;
 
                 case 20000:     // ports
-                    _variables.Add(new Variable("Dec", "", "data", 21000, cls));
-                    _variables.Add(new Variable("Hex", "", "data", 22000, cls));
-                    break;
-
-                case 21000:     // ports - dec
 
                     _zesarux.GetPorts();
-
-                    break;
-
-                case 22000:     // ports - hex
-
-                    _zesarux.GetPorts();
-
                     break;
 
                 default:
