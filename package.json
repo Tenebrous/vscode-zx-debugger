@@ -44,7 +44,7 @@
           "runtime": "mono"
         },
         "configurationAttributes": {
-          "launch": {
+          "attach": {
             "properties": {
               "folder": {
                 "type": "string",
@@ -57,7 +57,7 @@
           {
             "name": "ZEsarUX",
             "type": "zesarux",
-            "request": "launch",
+            "request": "attach",
             "folder": "${workspaceRoot}"
           }
         ]
