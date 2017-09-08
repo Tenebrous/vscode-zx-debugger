@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using VSCodeDebugAdapter;
 
 namespace ZEsarUXDebugger
 {
@@ -21,8 +22,6 @@ namespace ZEsarUXDebugger
         
         List<DisassemblySection> _disassembledSections = new List<DisassemblySection>();
 
-        Dictionary<string, int> _registers = new Dictionary<string, int>();
-        
         public bool Start()
         {
             if( _connected )
@@ -32,18 +31,22 @@ namespace ZEsarUXDebugger
 
             try
             {
-                ZMain.Log( LogLevel.Message, "zesarux: connecting..." );
+                Log.Write( Log.Severity.Message, "zesarux: connecting..." );
                 _client.Connect( "127.0.0.1", 10000 );
                 _stream = _client.GetStream();
                 _connected = true;
-                ZMain.Log(LogLevel.Message, "zesarux: connected.");
+
+                ReadAll();
+
+                var version = SimpleCommand("get-version");
+                Log.Write( Log.Severity.Message, "zesarux: connected (" + version + ")." );
 
                 ReadAll();
                 Setup();
             }
             catch ( Exception e )
             {
-                ZMain.Log( LogLevel.Error, "zesarux: connection error: " + e );
+                Log.Write( Log.Severity.Error, "zesarux: connection error: " + e );
                 return false;
             }
 
@@ -53,7 +56,7 @@ namespace ZEsarUXDebugger
 
         public void Stop()
         {
-            ZMain.Log( LogLevel.Message, "zesarux: disconnecting..." );
+            Log.Write( Log.Severity.Message, "zesarux: disconnecting..." );
 
             if( _stream != null )
                 SimpleCommand( "exit" );
@@ -70,7 +73,7 @@ namespace ZEsarUXDebugger
                 _client = null;
             }
 
-            ZMain.Log( LogLevel.Message, "zesarux: disconnected." );
+            Log.Write( Log.Severity.Message, "zesarux: disconnected." );
         }
 
 
@@ -102,7 +105,14 @@ namespace ZEsarUXDebugger
 
         public void Setup()
         {
-            var version = SimpleCommand("get-version");
+            // from https://sourceforge.net/p/zesarux/code/ci/master/tree/remote.c#l766
+            //
+            // "Set debug settings on remote command protocol.It's a numeric value with bitmask with different meaning:
+            //   Bit 0: show all cpu registers on cpu stepping or only pc+opcode.
+            //   Bit 1: show 8 next opcodes on cpu stepping.
+            //   Bit 2: Do not add a L preffix when searching source code labels.
+            //   Bit 3: Show bytes when debugging opcodes"
+
             SimpleCommand("set-debug-settings 8");
         }
 
@@ -121,7 +131,7 @@ namespace ZEsarUXDebugger
 
             _stack.Clear();
 
-            _stack.Add( PC );
+            _stack.Add( _registers.PC );
 
             foreach (var frame in split)
                 if( frame.EndsWith("H") )
@@ -132,22 +142,102 @@ namespace ZEsarUXDebugger
             return _stack;
         }
 
-
-        public Dictionary<string,int> GetRegisters()
+        public class RegistersClass
         {
-            var registers = SimpleCommand( "get-registers" );
+            public ushort PC;
+            public ushort SP;
 
+            public byte A;
+            public ushort BC;
+            public ushort DE;
+            public ushort HL;
+
+            public byte AltA;
+            public ushort AltBC;
+            public ushort AltDE;
+            public ushort AltHL;
+
+            public ushort IX;
+            public ushort IY;
+
+            public byte I;
+            public byte R;
+        }
+
+        public RegistersClass GetRegisters()
+        {
+            var reg = _registers;
+
+            var regString = SimpleCommand( "get-registers" );
             // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
 
             var regMatch = new Regex("(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) ");
 
-            var matches = regMatch.Matches(registers);
+            var matches = regMatch.Matches(regString);
             foreach (Match match in matches)
             {
                 var register = match.Groups[1].ToString();
-                var value = match.Groups[2].ToString();
+                var value = UnHex(match.Groups[2].ToString());
 
-                SetRegister(register, UnHex(value));
+                switch( register )
+                {
+                    case "PC":
+                        reg.PC = value;
+                        break;
+
+                    case "SP":
+                        reg.SP = value;
+                        break;
+
+                    case "BC":
+                        reg.BC = value;
+                        break;
+
+                    case "A":
+                        reg.A = (byte)value;
+                        break;
+
+                    case "HL":
+                        reg.HL = value;
+                        break;
+
+                    case "DE":
+                        reg.DE = value;
+                        break;
+
+                    case "IX":
+                        reg.IX = value;
+                        break;
+
+                    case "IY":
+                        reg.IY = value;
+                        break;
+
+                    case "A'":
+                        reg.AltA = (byte)value;
+                        break;
+
+                    case "BC'":
+                        reg.AltBC = value;
+                        break;
+
+                    case "HL'":
+                        reg.AltHL = value;
+                        break;
+
+                    case "DE'":
+                        reg.AltDE = value;
+                        break;
+
+                    case "I":
+                        reg.I = (byte)value;
+                        break;
+
+                    case "R":
+                        reg.R = (byte)value;
+                        break;
+
+                }
             }
 
             //var flags = new Regex( "(F'|F)=(.{8}) " );
@@ -164,9 +254,20 @@ namespace ZEsarUXDebugger
             return _registers;
         }
 
+        public void Dump( Value pValue )
+        {
+
+        }
+
         public void GetPorts()
         {
             var ports = Command( "get-io-ports" );
+        }
+
+        public string GetMemory( ushort pAddress, int pLength )
+        {
+            var memory = SimpleCommand( "read-memory " + pAddress + " " + pLength );
+            return memory;
         }
 
 
@@ -283,6 +384,7 @@ namespace ZEsarUXDebugger
             return 0;
         }
 
+
         public bool IsConnected
         {
             get { return _client != null && _client.Connected; }
@@ -321,20 +423,10 @@ namespace ZEsarUXDebugger
         }
 
 
-        public Dictionary<string, int> Registers
+        RegistersClass _registers = new RegistersClass();
+        public RegistersClass Registers
         {
             get { return _registers; }
-        }
-
-
-        public int PC
-        {
-            get
-            {
-                int pc;
-                _registers.TryGetValue("PC", out pc);
-                return pc;
-            }
         }
 
         public string DisassemblyFile
@@ -383,7 +475,7 @@ namespace ZEsarUXDebugger
 
 
             // send command to zesarux
-            ZMain.Log( LogLevel.Debug, "zesarux: (out) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Debug, "zesarux: (out) [" + pCommand + "]" );
 
             var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
             _stream.Write(bytes, 0, bytes.Length);
@@ -400,14 +492,14 @@ namespace ZEsarUXDebugger
             
             if( !_stream.DataAvailable )
             {
-                ZMain.Log( LogLevel.Message, "zesarux: timed out waiting for data" );
+                Log.Write( Log.Severity.Message, "zesarux: timed out waiting for data" );
                 return null;
             }
 
             var lines = ReadAll();
 
             // log the received data
-            // _tempReceiveLines.ForEach( pLine => ZMain.Log( "zesarux: <- [" + pLine + "]" ) );
+            // _tempReceiveLines.ForEach( pLine => Log.Write( "zesarux: <- [" + pLine + "]" ) );
 
             return _tempReceiveLines;
         }
@@ -445,7 +537,7 @@ namespace ZEsarUXDebugger
                 // look for magic words
                 foreach( var line in _tempReadProcessLines )
                 {
-                    ZMain.Log( LogLevel.Debug, "zesarux: (in) [" + line + "]" );
+                    Log.Write( Log.Severity.Debug, "zesarux: (in) [" + line + "]" );
 
                     if( line.StartsWith( "command> " ) )
                         _isRunning = true;
@@ -470,19 +562,9 @@ namespace ZEsarUXDebugger
             return result[0];
         }
 
-        void SetRegister( string pRegister, int pValue )
+        ushort UnHex( string pHex )
         {
-            //if (_registers.ContainsKey(pRegister))
-            //    if (_registers[pRegister] != pValue)
-            //        if (OnRegisterChange != null)
-            //            OnRegisterChange(pRegister, pValue);
-
-            _registers[pRegister] = pValue;
-        }
-
-        int UnHex( string pHex )
-        {
-            return Convert.ToInt32( pHex, 16 );
+            return Convert.ToUInt16( pHex, 16 );
         }
     }
 

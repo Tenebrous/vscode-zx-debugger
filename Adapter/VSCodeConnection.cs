@@ -25,6 +25,7 @@ namespace VSCodeDebugAdapter
         public Action<Request> OnGetSource;
         public Action<Request> OnGetLoadedSources;
         public Action<Request> OnConfigurationDone;
+        public Action<Request> OnEvaluate;
 
 
         protected const int BufferSize = 4096;
@@ -82,7 +83,7 @@ namespace VSCodeDebugAdapter
 
         void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
         {
-            ZMain.Log( LogLevel.Debug, "vscode: (in) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Debug, "vscode: (in) [" + pCommand + "]" );
 
             pArgs = pArgs ?? new { };
 
@@ -178,6 +179,10 @@ namespace VSCodeDebugAdapter
                         OnGetSource?.Invoke( pRequest );
                         break;
 
+                    case "evaluate":
+                        OnEvaluate?.Invoke( pRequest );
+                        break;
+
 //                    case "setBreakpoints":
 //                        SetBreakpoints( pResponse, pArgs );
 //                        break;
@@ -190,13 +195,9 @@ namespace VSCodeDebugAdapter
 //                        SetExceptionBreakpoints( pResponse, pArgs );
 //                        break;
 
-//                    case "evaluate":
-//                        Evaluate( pResponse, pArgs );
-//                        break;
-
                     default:
-                        ZMain.Log( 
-                            LogLevel.Error,
+                        Log.Write( 
+                            Log.Severity.Error,
                             string.Format( "VSCode request not handled: {0}", pCommand )
                         );
                         break;
@@ -204,9 +205,9 @@ namespace VSCodeDebugAdapter
             }
             catch( Exception e )
             {
-                ZMain.Log(
-                    LogLevel.Error,
-                    string.Format( "Error during request '{0}' (exception: {1})", pCommand, e.Message )
+                Log.Write(
+                    Log.Severity.Error,
+                    string.Format( "Error during request '{0}' (exception: {1})\n{2}", pCommand, e.Message, e )
                 );
             }
         }
@@ -262,7 +263,7 @@ namespace VSCodeDebugAdapter
 
         void ProcessMessage(string pMessage)
         {
-            ZMain.Log( LogLevel.Verbose, "vscode: (in) " + pMessage );
+            Log.Write( Log.Severity.Verbose, "vscode: (in) " + pMessage );
 
             var request = JsonConvert.DeserializeObject<Request>(pMessage);
 
@@ -280,7 +281,7 @@ namespace VSCodeDebugAdapter
         {
             var message = new Response( pRequest, pResponse, pErrorMessage );
 
-            ZMain.Log( LogLevel.Debug, "vscode: (out) response " +
+            Log.Write( Log.Severity.Debug, "vscode: (out) response " +
                         pRequest.command
                         + (pResponse == null ? "" : " response:" + pResponse.ToString())
                         + (pErrorMessage == null ? "" : " error:'" + pErrorMessage + "'")
@@ -293,7 +294,7 @@ namespace VSCodeDebugAdapter
         // send event
         public void Send(Event pEvent)
         {
-            ZMain.Log( LogLevel.Debug, "vscode: (out) event " + pEvent.eventType );
+            Log.Write( Log.Severity.Debug, "vscode: (out) event " + pEvent.eventType );
 
             Send((ProtocolMessage)pEvent);
         }
@@ -312,7 +313,7 @@ namespace VSCodeDebugAdapter
             catch( Exception e )
             {
                 // ignore
-//                ZMain.Log( "Send error " + e );
+//                Log.Write( "Send error " + e );
             }
         }
 
@@ -324,7 +325,7 @@ namespace VSCodeDebugAdapter
             var header = string.Format( "Content-Length: {0}{1}", jsonBytes.Length, TwoCRLF );
             var headerBytes = Encoding.GetBytes(header);
 
-            ZMain.Log( LogLevel.Debug, "vscode: (out) [" + asJson + "]" );
+            Log.Write( Log.Severity.Debug, "vscode: (out) [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
             System.Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);

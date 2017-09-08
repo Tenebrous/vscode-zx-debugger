@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using VSCodeDebugAdapter;
 using Thread = System.Threading.Thread;
 
@@ -14,11 +15,27 @@ namespace ZEsarUXDebugger
 
 	    static string _folder;
 
+	    static Value _values = new Value();
+	    static Value _registers;
+	    static Value _settings;
+
     	static void Main(string[] argv)
 	    {
-            ZMain.Log( LogLevel.Message, "main: starting... " );
+	        // set up 
 
-            // set up 
+            Log.OnLog += Log_SendToVSCode;
+	        Log.MaxSeverity = Log.Severity.Message;
+            Log.Write( Log.Severity.Message, "main: starting... " );
+
+            
+	        _registers = _values.Create("Registers");
+	        _registers.Refresher = Registers_Refresh;
+
+	        _settings = _values.Create( "Settings" );
+
+
+            // vscode events
+
             _vscode = new VSCodeConnection();
 	        _vscode.OnPause += VSCode_OnPause;
 	        _vscode.OnContinue += VSCode_OnContinue;
@@ -35,6 +52,10 @@ namespace ZEsarUXDebugger
 	        _vscode.OnGetSource += VSCode_OnGetSource;
 	        _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
+	        _vscode.OnEvaluate += VSCode_OnEvaluate;
+
+
+            // zesarux events
 
             _zesarux = new ZEsarUXConnection();
 	        // _zesarux.OnPaused += Z_OnPaused;
@@ -42,9 +63,11 @@ namespace ZEsarUXDebugger
 	        // _zesarux.OnStepped += Z_OnStepped;
             // _zesarux.OnRegisterChange += Z_OnRegisterChange;
 
+
 	        _active = true;
 
 	        var wasActive = false;
+
 
 	        // event loop
 	        while( _active )
@@ -65,7 +88,7 @@ namespace ZEsarUXDebugger
 	            if( !active )
 	            {
 	                if( wasActive )
-	                    ZMain.Log( LogLevel.Debug, "" );
+	                    Log.Write( Log.Severity.Debug, "" );
 
 	                Thread.Sleep( 10 );
 	            }
@@ -73,8 +96,9 @@ namespace ZEsarUXDebugger
 	            wasActive = active;
 	        }
 
-	        ZMain.Log( LogLevel.Message, "main: stopped." );
+	        Log.Write( Log.Severity.Message, "main: stopped." );
 	    }
+
 
 
 	    // events coming in from VSCode
@@ -121,30 +145,30 @@ namespace ZEsarUXDebugger
 
         static void VSCode_OnLaunch( Request pRequest )
         {
-            _folder = DynString( pRequest.arguments, "folder" );
-
-            if( string.IsNullOrWhiteSpace( _folder ) )
-            {
-                Log( LogLevel.Error, "Property 'folder' is missing or empty." );
-                return;
-            }
-
-            if( !Directory.Exists( _folder ) )
-            {
-                Log( LogLevel.Error, "Property 'folder' refers to a folder that could not be found." );
-                return;
-            }
-
-            _zesarux.TempFolder = Path.Combine( _folder, ".debug" );
-            Directory.CreateDirectory( _zesarux.TempFolder );
-
             if( !_zesarux.Start())
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
 	    static void VSCode_OnAttach( Request pRequest )
 	    {
-	        if( !_zesarux.Start() )
+	        _folder = DynString( pRequest.arguments, "folder" );
+
+	        if( string.IsNullOrWhiteSpace( _folder ) )
+	        {
+	            Log.Write( Log.Severity.Error, "Property 'folder' is missing or empty." );
+	            return;
+	        }
+
+	        if( !Directory.Exists( _folder ) )
+	        {
+	            Log.Write( Log.Severity.Error, "Property 'folder' refers to a folder that could not be found." );
+	            return;
+	        }
+
+	        _zesarux.TempFolder = Path.Combine( _folder, ".debug" );
+	        Directory.CreateDirectory( _zesarux.TempFolder );
+
+            if( !_zesarux.Start() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
@@ -177,7 +201,7 @@ namespace ZEsarUXDebugger
 	        _zesarux.GetPorts();
             _zesarux.GetRegisters();
 	        _zesarux.GetStackTrace();
-            _zesarux.UpdateDisassembly( _zesarux.PC );
+            _zesarux.UpdateDisassembly( _zesarux.Registers.PC );
 
             _stackFrames.Clear();
 
@@ -210,86 +234,195 @@ namespace ZEsarUXDebugger
 
             _zesarux.UpdateDisassembly( _zesarux.Stack[frameId-1] );
 
-            _vscode.Send(
-                pRequest,
-                new ScopesResponseBody(
-                    new List<Scope>()
-                    {
-                        new Scope( "Registers", 10000, false ),
-                        new Scope( "Ports", 20000, false )
-                    }
-                )
-            );
+            var scopes = new List<Scope>();
+
+            foreach( var value in _values.Children )
+            {
+                scopes.Add( 
+                    new Scope( 
+                        value.Name,
+                        value.ID,
+                        false
+                    ) 
+                );
+            }
+
+            _vscode.Send( pRequest, new ScopesResponseBody( scopes ) );
         }
 
 	    static void VSCode_OnGetLoadedSources( Request pRequest )
 	    {
-	     //   _vscode.Send(
-         //       pRequest,
-         //       new LoadedSourcesResponseBody(
-         //           new List<Source>()
-         //           {
-         //               DisassemblySource()
-         //           }
-         //       )
-         //   );
+	    //    _vscode.Send(
+        //        pRequest,
+        //        new LoadedSourcesResponseBody(
+        //            new List<Source>()
+        //            {
+        //                DisassemblySource()
+        //            }
+        //        )
+        //    );
 	    }
 
 	    static void VSCode_OnGetSource( Request pRequest )
 	    {
-         //   _zesarux.GetRegisters();
-         //
-         //   DisassemblePC();
-
-	     //   _vscode.Send( 
-         //       pRequest,
-         //       new SourceResponseBody(
-         //           _zesarux.Disassembly,
-         //           ""
-         //       )
-         //   );
+        //    _zesarux.GetRegisters();
+        //
+        //    DisassemblePC();
+        //
+        //    _vscode.Send( 
+        //        pRequest,
+        //        new SourceResponseBody(
+        //            _zesarux.Disassembly,
+        //            ""
+        //        )
+        //    );
 	    }
 
 
-	    static List<Variable> _variables = new List<Variable>();
-        static void VSCode_OnGetVariables( Request pRequest )
-        {
-            _variables.Clear();
+        static void VSCode_OnEvaluate( Request pRequest )
+	    {
+	        var value = "";
+            string formatted = "";
 
-            var data = new VariablePresentationHint( "data" );
-            var index = 0;
+            string expression = pRequest.arguments.expression;
 
-            switch( (int)pRequest.arguments.variablesReference )
-            {
-                case 10000:     // registers
+	        var split = expression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
+	        int parseIndex = 0;
 
-                    _zesarux.GetRegisters();
-                    foreach ( var kp in _zesarux.Registers )
-                        _variables.Add( 
-                            new Variable( 
-                                kp.Key,
-                                string.Format( "${0:X4} / {0}", kp.Value ), 
-                                "register", 
-                                -1, 
-                                data ) 
-                        );
+	        bool isReg = false;
 
-                    break;
+	        if( split[parseIndex].StartsWith( "(" ) && split[parseIndex].EndsWith( ")" ) )
+	        {
+	            int length = 2;
 
-                case 20000:     // ports
+	            var address = ParseAddress( split[parseIndex].Substring( 1, split[parseIndex].Length - 2 ) );
+	            parseIndex++;
 
-                    _zesarux.GetPorts();
-                    break;
+                if( split.Length > parseIndex )
+                    if( int.TryParse( split[parseIndex], out length ) )
+                        parseIndex++;
+                    else
+                        length = 2;
 
-                default:
-                    break;
+	            value = _zesarux.GetMemory( address, length );
+	            formatted = value;
+	        }
+	        else
+	        {
+	            if( _registers.HasAllByName( split[parseIndex] ) )
+	            {
+	                var reg = _registers.AllByName( split[parseIndex] );
+
+	                value = reg.Content;
+                    formatted = reg.Formatted;
+	                parseIndex++;
+	            }
             }
 
-            _variables.Sort( ( pLeft, pRight ) => String.Compare( pLeft.name, pRight.name, StringComparison.Ordinal ) );
+	        if( split.Length > parseIndex )
+	        {
+	            int count = 0;
+
+	            if( split[parseIndex] == "b" )
+	            {
+	                formatted = HexToBin( value, 8 );
+	                parseIndex++;
+	            }
+	            else if( split[parseIndex].StartsWith( "b" ) && int.TryParse( split[parseIndex].Substring( 1 ), out count ) )
+	            {
+	                formatted = HexToBin( value, count );
+	                parseIndex++;
+	            }
+	            else if( split[parseIndex] == "n" )
+	            {
+	                formatted = HexToBin( value, 4 );
+	                parseIndex++;
+	            }
+	        }
+
+            _vscode.Send(
+                pRequest, 
+                new EvaluateResponseBody(
+                    formatted
+                )
+            );
+	    }
+
+	    static StringBuilder _tempHexToBin = new StringBuilder();
+	    static string HexToBin( string pValue, int pSplit )
+	    {
+	        _tempHexToBin.Clear();
+
+	        int count = 0;
+	        for( int i = 0; i < pValue.Length; i+=2 )
+	        {
+	            var part = Convert.ToByte( pValue.Substring( i, 2 ), 16 );
+	            var binary = Convert.ToString( part, 2 ).PadLeft( 8, '0' );
+
+
+	            foreach( var ch in binary )
+	            {
+	                _tempHexToBin.Append( ch );
+
+	                if( ++count % pSplit == 0 )
+	                    _tempHexToBin.Append( ' ' );
+	            }
+            }
+
+            return _tempHexToBin.ToString().Trim();
+	    }
+
+	    static ushort ParseAddress( string pValue )
+	    {
+	        ushort result = 0;
+
+	        try
+	        {
+	            if( pValue.StartsWith( "$" ) )
+	                result = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
+	            else if( pValue.StartsWith( "0x" ) )
+	                result = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
+	            else
+	                result = ushort.Parse( pValue );
+            }
+            catch( Exception e )
+	        {
+	            Log.Write( Log.Severity.Error, "Can't parse address '" + pValue + "'" );
+	        }
+
+            return result;
+	    }
+
+        static List<Variable> _tempVariables = new List<Variable>();
+        static void VSCode_OnGetVariables( Request pRequest )
+        {
+            _tempVariables.Clear();
+
+            int id = pRequest.arguments.variablesReference;
+            var value = _values.All(id);
+
+            if( value != null )
+            {
+                value.Refresh();
+
+                var data = new VariablePresentationHint( "data" );
+
+                foreach( var child in value.Children )
+                {
+                    _tempVariables.Add(
+                        new Variable(
+                            child.Name,
+                            child.Formatted,
+                            "value",
+                            child.Children.Count == 0 ? -1 : child.ID,
+                            data )
+                        );
+                }
+            }
 
             _vscode.Send(
                 pRequest,
-                new VariablesResponseBody(_variables)
+                new VariablesResponseBody(_tempVariables)
             );
         }
 
@@ -297,6 +430,75 @@ namespace ZEsarUXDebugger
 	    {
 	        _zesarux.Stop();
 	        _active = false;
+	    }
+
+
+
+	    // events from values/variables
+
+	    static void Registers_Refresh( Value pValue )
+	    {
+	        var regs = _zesarux.GetRegisters();
+
+            SetReg8(  pValue, "A" ,                regs.A,     Hex8Formatter  );
+	        SetReg16( pValue, "HL",  "H",   "L",   regs.HL,    Hex16Formatter );
+	        SetReg16( pValue, "BC",  "B",   "C",   regs.BC,    Hex16Formatter );
+	        SetReg16( pValue, "DE",  "D",   "E",   regs.DE,    Hex16Formatter );
+	        SetReg8(  pValue, "A'",                regs.AltA,  Hex8Formatter  );
+	        SetReg16( pValue, "HL'", "H'",  "L'",  regs.AltHL, Hex16Formatter );
+            SetReg16( pValue, "BC'", "B'",  "C'",  regs.AltBC, Hex16Formatter );
+	        SetReg16( pValue, "DE'", "C'",  "E'",  regs.AltDE, Hex16Formatter );
+	        SetReg16( pValue, "IX",  "IXH", "IXL", regs.IX,    Hex16Formatter );
+            SetReg16( pValue, "IY",  "IYH", "IYL", regs.IY,    Hex16Formatter );
+	        SetReg16( pValue, "PC",                regs.PC,    Hex16Formatter );
+	        SetReg16( pValue, "SP",                regs.SP,    Hex16Formatter );
+            SetReg8(  pValue, "I",                 regs.I,     Hex8Formatter  );
+	        SetReg8(  pValue, "R",                 regs.R,     Hex8Formatter  );
+        }
+
+	    static void SetReg16( Value pParent, string pName, string pHigh, string pLow, int pValue, Value.ValueFormatter pFormatter )
+	    {
+	        var value = pParent.ChildByName( pName );
+	        value.Content = pValue.ToString();
+	        value.Formatter = pFormatter;
+
+	        SetReg8( value, pHigh, ( pValue & 0xFF00 ) >> 8, Hex8Formatter );
+	        SetReg8( value, pLow,  ( pValue & 0x00FF ),      Hex8Formatter );
+	    }
+
+        static void SetReg16( Value pParent, string pName, int pValue, Value.ValueFormatter pFormatter )
+	    {
+	        var value = pParent.ChildByName( pName );
+	        value.Formatter = pFormatter;
+	        value.Content = pValue.ToString();
+	    }
+
+        static void SetReg8( Value pParent, string pName, int pValue, Value.ValueFormatter pFormatter )
+	    {
+	        var value = pParent.ChildByName( pName );
+	        value.Formatter = pFormatter;
+	        value.Content = pValue.ToString();
+	    }
+
+        static string Hex16Formatter( Value pValue )
+        {
+            uint value = Convert.ToUInt16( pValue.Content );
+            return string.Format( "${0:X4} / {0}", value );
+        }
+
+        static string Hex8Formatter( Value pValue )
+        {
+            byte value = Convert.ToByte( pValue.Content );
+            return string.Format( "${0:X4} / {0}", value );
+        }
+
+
+        // events from Log
+
+        static void Log_SendToVSCode( Log.Severity pLevel, string pMessage )
+        {
+            var type = pLevel == Log.Severity.Error ? OutputEvent.OutputEventType.stderr : OutputEvent.OutputEventType.stdout;
+	        _vscode?.Send( new OutputEvent( type, pMessage + "\n" ) );
 	    }
 
 
@@ -310,52 +512,47 @@ namespace ZEsarUXDebugger
 
         //public override void SetBreakpoints( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: setbreakpoints");
+        //    Log.Write("vscode: setbreakpoints");
         //}
 
         //public override void Next( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: next");
+        //    Log.Write("vscode: next");
         //}
 
         //public override void StepIn( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: stepin");
+        //    Log.Write("vscode: stepin");
         //}
 
         //public override void StepOut( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: stepout");
+        //    Log.Write("vscode: stepout");
         //}
 
         //public override void StackTrace( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: stacktrace");
+        //    Log.Write("vscode: stacktrace");
         //}
 
         //public override void Variables( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: variables");
-        //}
-
-        //public override void Evaluate( Response response, dynamic arguments )
-        //{
-        //    ZMain.Log("vscode: evaluate");
+        //    Log.Write("vscode: variables");
         //}
 
         //public override void SetExceptionBreakpoints( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: set exception breakpoints");
+        //    Log.Write("vscode: set exception breakpoints");
         //}
 
         //public override void SetFunctionBreakpoints( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: set function breakpoints");
+        //    Log.Write("vscode: set function breakpoints");
         //}
 
         //public override void Source( Response response, dynamic arguments )
         //{
-        //    ZMain.Log("vscode: source");
+        //    Log.Write("vscode: source");
         //}
 
         static string DynString( dynamic pArgs, string pName, string pDefault = null )
@@ -372,34 +569,6 @@ namespace ZEsarUXDebugger
 
 	        return result;
 	    }
-
-        static LogLevel _log = LogLevel.Message;
-        static bool _inLog = false;
-	    public static void Log( LogLevel pLevel, string pMessage )
-	    {
-	        if( pLevel > _log ) return;
-
-            // don't log the fact that we're logging a log message
-	        if( _inLog ) return;
-
-            // send the log message to VSCode
-	        _inLog = true;
-
-            if( pLevel == LogLevel.Error )
-	            _vscode?.Send( new OutputEvent( OutputEvent.OutputEventType.stderr, pMessage + "\n" ) );
-            else
-                _vscode?.Send( new OutputEvent( OutputEvent.OutputEventType.stdout, pMessage + "\n" ) );
-
-	        _inLog = false;
-	    }
-    }
-
-    public enum LogLevel
-    {
-        Error = 0,
-        Message = 1,
-        Debug = 2,
-        Verbose = 3
     }
 }
 
