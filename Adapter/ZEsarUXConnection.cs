@@ -5,7 +5,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using VSCodeDebugAdapter;
+using Z80Machine;
 
 namespace ZEsarUXDebugger
 {
@@ -20,7 +20,6 @@ namespace ZEsarUXDebugger
         NetworkStream _stream;
         bool _connected;
         
-        List<DisassemblySection> _disassembledSections = new List<DisassemblySection>();
 
         public bool Start()
         {
@@ -113,14 +112,50 @@ namespace ZEsarUXDebugger
             //   Bit 2: Do not add a L preffix when searching source code labels.
             //   Bit 3: Show bytes when debugging opcodes"
 
-            SimpleCommand("set-debug-settings 8");
+            SimpleCommand( "set-debug-settings 8" );
+
+            SimpleCommand( "set-memory-zone -1" );
         }
 
         public string GetMachine()
         {
-            return _machine = SimpleCommand("get-current-machine");
+            return _machine = SimpleCommand( "get-current-machine" );
         }
 
+        Memory _memory = new Memory();
+        public Memory GetMemoryPages()
+        {
+            var pages = SimpleCommand( "get-memory-pages" );
+            // RO1 RA5 RA2 RA7 SCR5 PEN
+
+            var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+
+            _memory.ClearMap();
+
+            int sixteenkpage = 0;
+
+            foreach( var part in split )
+            {
+                if( part.StartsWith( "RO" ) )
+                {
+                    var page = int.Parse( part.Substring( 2 ) );
+                    _memory.AddMap( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), -1-page );
+                    sixteenkpage++;
+                }
+                else if( part.StartsWith( "RA" ) )
+                {
+                    var page = int.Parse( part.Substring( 2 ) );
+                    _memory.AddMap( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), page );
+                    sixteenkpage++;
+                }
+                else if( part == "PEN" )
+                    _memory.PagingEnabled = true;
+                else if( part == "PDI" )
+                    _memory.PagingEnabled = false;
+            }
+
+            return _memory;
+        }
 
         public List<int> GetStackTrace()
         {
@@ -142,38 +177,21 @@ namespace ZEsarUXDebugger
             return _stack;
         }
 
-        public class RegistersClass
+        Registers _registers = new Registers();
+
+        public Registers GetRegisters()
         {
-            public ushort PC;
-            public ushort SP;
+            ParseRegisters( SimpleCommand( "get-registers" ), _registers );
+            return _registers;
 
-            public byte A;
-            public ushort BC;
-            public ushort DE;
-            public ushort HL;
-
-            public byte AltA;
-            public ushort AltBC;
-            public ushort AltDE;
-            public ushort AltHL;
-
-            public ushort IX;
-            public ushort IY;
-
-            public byte I;
-            public byte R;
         }
-
-        public RegistersClass GetRegisters()
+        void ParseRegisters( string pRegisterString, Registers pRegisters )
         {
-            var reg = _registers;
-
-            var regString = SimpleCommand( "get-registers" );
             // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
 
             var regMatch = new Regex("(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) ");
 
-            var matches = regMatch.Matches(regString);
+            var matches = regMatch.Matches(pRegisterString);
             foreach (Match match in matches)
             {
                 var register = match.Groups[1].ToString();
@@ -182,59 +200,59 @@ namespace ZEsarUXDebugger
                 switch( register )
                 {
                     case "PC":
-                        reg.PC = value;
+                        pRegisters.PC = value;
                         break;
 
                     case "SP":
-                        reg.SP = value;
+                        pRegisters.SP = value;
                         break;
 
                     case "BC":
-                        reg.BC = value;
+                        pRegisters.BC = value;
                         break;
 
                     case "A":
-                        reg.A = (byte)value;
+                        pRegisters.A = (byte)value;
                         break;
 
                     case "HL":
-                        reg.HL = value;
+                        pRegisters.HL = value;
                         break;
 
                     case "DE":
-                        reg.DE = value;
+                        pRegisters.DE = value;
                         break;
 
                     case "IX":
-                        reg.IX = value;
+                        pRegisters.IX = value;
                         break;
 
                     case "IY":
-                        reg.IY = value;
+                        pRegisters.IY = value;
                         break;
 
                     case "A'":
-                        reg.AltA = (byte)value;
+                        pRegisters.AltA = (byte)value;
                         break;
 
                     case "BC'":
-                        reg.AltBC = value;
+                        pRegisters.AltBC = value;
                         break;
 
                     case "HL'":
-                        reg.AltHL = value;
+                        pRegisters.AltHL = value;
                         break;
 
                     case "DE'":
-                        reg.AltDE = value;
+                        pRegisters.AltDE = value;
                         break;
 
                     case "I":
-                        reg.I = (byte)value;
+                        pRegisters.I = (byte)value;
                         break;
 
                     case "R":
-                        reg.R = (byte)value;
+                        pRegisters.R = (byte)value;
                         break;
 
                 }
@@ -250,18 +268,31 @@ namespace ZEsarUXDebugger
             //
             //    SetRegister(register, value);
             //}
+        }
+
+        public Registers SetRegister( string pRegister, string pValue )
+        {
+            ushort value;
+
+            try
+            {
+                if( pValue.StartsWith( "$" ) )
+                    value = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
+                else if( pValue.StartsWith( "0x" ) )
+                    value = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
+                else
+                    value = Convert.ToUInt16( pValue );
+
+                var result = SimpleCommand("set-register " + pRegister + "=" + value);
+                ParseRegisters( result, _registers );
+            }
+            catch( Exception e )
+            {
+                Log.Write( Log.Severity.Error, e.ToString() );
+                throw;
+            }
 
             return _registers;
-        }
-
-        public void Dump( Value pValue )
-        {
-
-        }
-
-        public void GetPorts()
-        {
-            var ports = Command( "get-io-ports" );
         }
 
         public string GetMemory( ushort pAddress, int pLength )
@@ -270,116 +301,150 @@ namespace ZEsarUXDebugger
             return memory;
         }
 
-
         public void UpdateDisassembly( int pAddress )
         {
-            var file = Path.Combine( Path.GetTempPath(), "Disassembly.z80" );
+            var lines = Command( "disassemble " + pAddress + " " + 30 );
 
-            foreach( var section in _disassembledSections )
-                if( pAddress >= section.Start && pAddress <= section.End - 10 )
-                    return;
+            if( lines == null )
+                return;
 
-            var newSection = new DisassemblySection() { Start = 0xFFFFF };
-
-            var lines = Command("disassemble " + pAddress + " " + 30);
-
-            if( lines != null )
+            foreach( var line in lines )
             {
-                foreach( var line in lines )
-                {
-                    var parts = line.Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+                var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+                var address = UnHex(parts[0]);
+                int bank = -1;
 
-                    var address = UnHex(parts[0]);
+                if( _memory.PagingEnabled )
+                    bank = _memory.GetMapForAddress( address );
 
-                    newSection.Start = Math.Min(newSection.Start, address);
-                    newSection.End = Math.Max(newSection.End, address);
+            }
+        }
 
-                    newSection.Lines.Add(
-                        new DisassemblyLine()
-                        {
-                            Address = address,
-                            Code = parts[1]
-                        }
-                    );
+        //public void UpdateDisassembly2( int pAddress )
+        //{
+        //    foreach( var section in _disassembledSections )
+        //        if( pAddress >= section.Start && pAddress <= section.End - 10 )
+        //            return;
 
-                    // stop disassembling at hard RET (just testing to see if that makes things clearer)
-                    if( parts[1].Substring( 0, 2 ) == "C9" )
-                        break;
-                }
+        //    var lines = Command( "disassemble " + pAddress + " " + 30 );
 
+        //    if( lines != null )
+        //    {
+        //        var section = new DisassemblySection() { Start = 0xFFFFF };
 
-                // look to see if we cover two existing sections, whereby we'll merge them
-                for( int i = 0; i < _disassembledSections.Count - 1; i++ )
-                    if( newSection.Start <= _disassembledSections[i].End && newSection.End >= _disassembledSections[i+1].Start )
-                    {
-                        _disassembledSections[i].End = _disassembledSections[i + 1].End;
-                        _disassembledSections[i].Lines.AddRange( _disassembledSections[i+1].Lines );
-                        _disassembledSections.RemoveAt( i + 1 );
-                        break;
-                    }
+        //        foreach( var line in lines )
+        //        {
+        //            var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+        //            var address = UnHex(parts[0]);
+
+        //            section.Start = Math.Min( section.Start, address );
+        //            section.End   = Math.Max( section.End, address );
+
+        //            section.Lines.Add(
+        //                new DisassemblyLine()
+        //                {
+        //                    Address = address,
+        //                    Code = parts[1]
+        //                }
+        //            );
+
+        //            // stop disassembling at hard RET (just testing to see if that makes things clearer)
+        //            if( parts[1].Substring( 0, 2 ) == "C9" )
+        //                break;
+        //        }
+
+        //        // look to see if we cover two existing sections, whereby we'll merge them
+        //        for( int i = 0; i < _disassembledSections.Count - 1; i++ )
+        //            if( section.Start <= _disassembledSections[i].End 
+        //             && section.End   >= _disassembledSections[i+1].Start )
+        //            {
+        //                _disassembledSections[i].End = _disassembledSections[i + 1].End;
+        //                _disassembledSections[i].Lines.AddRange( _disassembledSections[i+1].Lines );
+        //                _disassembledSections.RemoveAt( i + 1 );
+        //                break;
+        //            }
 
                 
-                // find relevant section to add lines to
-                DisassemblySection add = null;
-                foreach( var section in _disassembledSections )
-                    if( newSection.End >= section.Start && newSection.Start <= section.End )
-                    {
-                        add = section;
-                        break;
-                    }
+        //        // find relevant section to add lines to
+        //        DisassemblySection addTo = null;
+        //        foreach( var otherSection in _disassembledSections )
+        //            if( section.End >= otherSection.Start && section.Start <= otherSection.End )
+        //            {
+        //                addTo = otherSection;
+        //                break;
+        //            }
 
-                if( add == null )
-                {
-                    // created new section
-                    _disassembledSections.Add( newSection );
-                }
-                else
-                {
-                    // merge with existing section
+        //        if( addTo == null )
+        //        {
+        //            // created new section
+        //            _disassembledSections.Add( section );
+        //        }
+        //        else
+        //        {
+        //            // merge with existing section
                     
-                    foreach( var line in newSection.Lines )
-                    {
-                        bool exists = false;
+        //            foreach( var line in section.Lines )
+        //            {
+        //                bool exists = false;
 
-                        foreach ( var otherLine in add.Lines )
-                            if( line.Address == otherLine.Address )
-                            {
-                                exists = true;
-                                break;
-                            }
+        //                foreach ( var otherLine in addTo.Lines )
+        //                    if( line.Address == otherLine.Address )
+        //                    {
+        //                        exists = true;
+        //                        break;
+        //                    }
 
-                        if( !exists )
-                            add.Lines.Add( line );
-                    }
+        //                if( !exists )
+        //                    addTo.Lines.Add( line );
+        //            }
 
-                    add.Lines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
-                }
+        //            addTo.Lines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
+        //        }
 
-                // re-sort sections
-                _disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
-            }
 
-            var tmp = new List<string>();
-            foreach( var section in _disassembledSections )
-            {
-                foreach( var line in section.Lines )
-                {
-                    tmp.Add( string.Format( "{0:X4} {1}", line.Address, line.Code ) );
-                    line.FileLine = tmp.Count;
-                }
+        //        // re-sort sections
+        //        _disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
+        //    }
 
-                tmp.Add( "" );
-            }
+        //    int lastBank = -1;
+        //    var tmp = new List<string>();
+        //    foreach( var section in _disassembledSections )
+        //    {
+        //        foreach( var line in section.Lines )
+        //        {
+        //            if( _memory.PagingEnabled )
+        //            {
+        //                var bank = _memory.GetMapForAddress( (ushort) line.Address );
+        //                if( bank != lastBank )
+        //                {
+        //                    if( bank < -1 )
+        //                        tmp.Add( string.Format( "ROM_{0:D2}", -1 - bank ) );
+        //                    else if( bank >= 0 )
+        //                        tmp.Add( string.Format( "BANK_{0:D2}", bank ) );
 
-            File.WriteAllLines( DisassemblyFile, tmp );
-        }
+        //                    lastBank = bank;
+        //                }
+        //            }
+
+        //            tmp.Add( string.Format( "  {0:X4} {1}", line.Address, line.Code ) );
+
+        //            line.FileLine = tmp.Count;
+        //        }
+
+        //        tmp.Add( "" );
+        //        lastBank = -1;
+        //    }
+
+        //    File.WriteAllLines( DisassemblyFile, tmp );
+        //}
+
 
         public int FindLine( int pAddress )
         {
-            foreach( var section in _disassembledSections )
-                foreach( var line in section.Lines )
-                    if( line.Address == pAddress )
-                        return line.FileLine;
+//            foreach( var section in _disassembledSections )
+//                foreach( var line in section.Lines )
+//                    if( line.Address == pAddress )
+//                        return line.FileLine;
 
             return 0;
         }
@@ -422,16 +487,9 @@ namespace ZEsarUXDebugger
             }
         }
 
-
-        RegistersClass _registers = new RegistersClass();
-        public RegistersClass Registers
-        {
-            get { return _registers; }
-        }
-
         public string DisassemblyFile
         {
-            get { return Path.Combine( _tempFolder, "disasm.z80" ); }
+            get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
         }
 
         string _machine;
@@ -482,7 +540,7 @@ namespace ZEsarUXDebugger
             _stream.Flush();
 
 
-            // limit how long we wait
+            // limit how long we wait for the reply to start
             var x = new Stopwatch();
             x.Start();
 
@@ -499,7 +557,7 @@ namespace ZEsarUXDebugger
             var lines = ReadAll();
 
             // log the received data
-            // _tempReceiveLines.ForEach( pLine => Log.Write( "zesarux: <- [" + pLine + "]" ) );
+            _tempReceiveLines.ForEach( pLine => Log.Write( Log.Severity.Verbose, "zesarux: <- [" + pLine + "]" ) );
 
             return _tempReceiveLines;
         }
@@ -570,6 +628,7 @@ namespace ZEsarUXDebugger
 
     class DisassemblySection
     {
+        public int Bank;
         public int Start;
         public int End;
         public List<DisassemblyLine> Lines = new List<DisassemblyLine>();

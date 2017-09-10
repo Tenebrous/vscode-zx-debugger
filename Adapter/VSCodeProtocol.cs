@@ -436,6 +436,15 @@ namespace VSCodeDebugAdapter
         }
     }
 
+    public class SetVariableResponseBody : ResponseBody
+    {
+        public string value { get; }
+        public SetVariableResponseBody( string value )
+        {
+            this.value = value;
+        }
+    }
+
     public class ThreadsResponseBody : ResponseBody
     {
         public Thread[] threads { get; }

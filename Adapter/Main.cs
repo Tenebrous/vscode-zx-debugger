@@ -1,8 +1,10 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using VSCodeDebugAdapter;
+using Z80Machine;
 using Thread = System.Threading.Thread;
 
 namespace ZEsarUXDebugger
@@ -18,6 +20,7 @@ namespace ZEsarUXDebugger
 	    static Value _values = new Value();
 	    static Value _registers;
 	    static Value _settings;
+	    static Machine _machine;
 
     	static void Main(string[] argv)
 	    {
@@ -33,6 +36,7 @@ namespace ZEsarUXDebugger
 
 	        _settings = _values.Create( "Settings" );
 
+            //todo:link vars directly to _registers items using delegates here and remove the need to refresh _values
 
             // vscode events
 
@@ -49,6 +53,7 @@ namespace ZEsarUXDebugger
 	        _vscode.OnGetStackTrace += VSCode_OnGetStackTrace;
 	        _vscode.OnGetScopes += VSCode_OnGetScopes;
 	        _vscode.OnGetVariables += VSCode_OnGetVariables;
+	        _vscode.OnSetVariable += VSCode_OnSetVariable;
 	        _vscode.OnGetSource += VSCode_OnGetSource;
 	        _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
@@ -63,6 +68,7 @@ namespace ZEsarUXDebugger
 	        // _zesarux.OnStepped += Z_OnStepped;
             // _zesarux.OnRegisterChange += Z_OnRegisterChange;
 
+            _machine = new Machine( _zesarux );
 
 	        _active = true;
 
@@ -98,7 +104,6 @@ namespace ZEsarUXDebugger
 
 	        Log.Write( Log.Severity.Message, "main: stopped." );
 	    }
-
 
 
 	    // events coming in from VSCode
@@ -175,7 +180,7 @@ namespace ZEsarUXDebugger
 	    static void VSCode_OnConfigurationDone( Request pRequest )
 	    {
 	    }
-        
+
         static void VSCode_OnGetThreads( Request pRequest )
         {
             _vscode.Send( 
@@ -192,16 +197,17 @@ namespace ZEsarUXDebugger
 	    static Source DisassemblySource()
 	    {
 	        return new Source( "-", _zesarux.DisassemblyFile, 0, Source.SourcePresentationHintEnum.deemphasize );
-
 	    }
 
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
-	        _zesarux.GetPorts();
+	        _machine.RefreshRegisters();
+
+	        _zesarux.GetMemoryPages();
             _zesarux.GetRegisters();
 	        _zesarux.GetStackTrace();
-            _zesarux.UpdateDisassembly( _zesarux.Registers.PC );
+            _zesarux.UpdateDisassembly( _machine.Registers.PC );
 
             _stackFrames.Clear();
 
@@ -285,17 +291,25 @@ namespace ZEsarUXDebugger
             string formatted = "";
 
             string expression = pRequest.arguments.expression;
+	        string prefix = "";
 
 	        var split = expression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
 	        int parseIndex = 0;
 
-	        bool isReg = false;
-
 	        if( split[parseIndex].StartsWith( "(" ) && split[parseIndex].EndsWith( ")" ) )
 	        {
-	            int length = 2;
+	            var target = split[parseIndex].Substring( 1, split[parseIndex].Length - 2 );
+	            ushort address;
 
-	            var address = ParseAddress( split[parseIndex].Substring( 1, split[parseIndex].Length - 2 ) );
+	            if( _registers.HasAllByName( target ) )
+	            {
+	                address = Convert.ToUInt16( _registers.AllByName( target ).Content );
+	                prefix = string.Format( "${0:X4}: ", address );
+	            }
+	            else
+	                address = ParseAddress( target );
+
+	            int length = 2;
 	            parseIndex++;
 
                 if( split.Length > parseIndex )
@@ -338,12 +352,22 @@ namespace ZEsarUXDebugger
 	                formatted = HexToBin( value, 4 );
 	                parseIndex++;
 	            }
+	            else if( split[parseIndex] == "w" )
+	            {
+	                formatted = HexToBin( value, 2 );
+	                parseIndex++;
+	            }
+	            else if( split[parseIndex] == "dw" )
+	            {
+	                formatted = HexToBin( value, 4 );
+	                parseIndex++;
+	            }
 	        }
 
             _vscode.Send(
                 pRequest, 
                 new EvaluateResponseBody(
-                    formatted
+                    prefix + formatted
                 )
             );
 	    }
@@ -426,6 +450,22 @@ namespace ZEsarUXDebugger
             );
         }
 
+
+	    static void VSCode_OnSetVariable( Request pRequest )
+	    {
+	        string reg = pRequest.arguments.name.ToString();
+	        string val = pRequest.arguments.value.ToString();
+
+            var regs = _zesarux.SetRegister( reg, val );
+            UpdateValues( _values, regs );
+
+            _vscode.Send(
+                pRequest,
+	            new SetVariableResponseBody( _values.AllByName( reg ).Formatted )
+            );
+	    }
+
+
         static void VSCode_OnDisconnect( Request pRequest )
 	    {
 	        _zesarux.Stop();
@@ -438,22 +478,25 @@ namespace ZEsarUXDebugger
 
 	    static void Registers_Refresh( Value pValue )
 	    {
-	        var regs = _zesarux.GetRegisters();
+	        UpdateValues( pValue, _machine.RefreshRegisters() );
+	    }
 
-            SetReg8(  pValue, "A" ,                regs.A,     Hex8Formatter  );
-	        SetReg16( pValue, "HL",  "H",   "L",   regs.HL,    Hex16Formatter );
-	        SetReg16( pValue, "BC",  "B",   "C",   regs.BC,    Hex16Formatter );
-	        SetReg16( pValue, "DE",  "D",   "E",   regs.DE,    Hex16Formatter );
-	        SetReg8(  pValue, "A'",                regs.AltA,  Hex8Formatter  );
-	        SetReg16( pValue, "HL'", "H'",  "L'",  regs.AltHL, Hex16Formatter );
-            SetReg16( pValue, "BC'", "B'",  "C'",  regs.AltBC, Hex16Formatter );
-	        SetReg16( pValue, "DE'", "C'",  "E'",  regs.AltDE, Hex16Formatter );
-	        SetReg16( pValue, "IX",  "IXH", "IXL", regs.IX,    Hex16Formatter );
-            SetReg16( pValue, "IY",  "IYH", "IYL", regs.IY,    Hex16Formatter );
-	        SetReg16( pValue, "PC",                regs.PC,    Hex16Formatter );
-	        SetReg16( pValue, "SP",                regs.SP,    Hex16Formatter );
-            SetReg8(  pValue, "I",                 regs.I,     Hex8Formatter  );
-	        SetReg8(  pValue, "R",                 regs.R,     Hex8Formatter  );
+        static void UpdateValues( Value pValue, Registers pRegs )
+        {
+            SetReg8(  pValue, "A" ,                pRegs.A,     Hex8Formatter  );
+	        SetReg16( pValue, "HL",  "H",   "L",   pRegs.HL,    Hex16Formatter );
+	        SetReg16( pValue, "BC",  "B",   "C",   pRegs.BC,    Hex16Formatter );
+	        SetReg16( pValue, "DE",  "D",   "E",   pRegs.DE,    Hex16Formatter );
+	        SetReg8(  pValue, "A'",                pRegs.AltA,  Hex8Formatter  );
+	        SetReg16( pValue, "HL'", "H'",  "L'",  pRegs.AltHL, Hex16Formatter );
+            SetReg16( pValue, "BC'", "B'",  "C'",  pRegs.AltBC, Hex16Formatter );
+	        SetReg16( pValue, "DE'", "C'",  "E'",  pRegs.AltDE, Hex16Formatter );
+	        SetReg16( pValue, "IX",  "IXH", "IXL", pRegs.IX,    Hex16Formatter );
+            SetReg16( pValue, "IY",  "IYH", "IYL", pRegs.IY,    Hex16Formatter );
+	        SetReg16( pValue, "PC",                pRegs.PC,    Hex16Formatter );
+	        SetReg16( pValue, "SP",                pRegs.SP,    Hex16Formatter );
+            SetReg8(  pValue, "I",                 pRegs.I,     Hex8Formatter  );
+	        SetReg8(  pValue, "R",                 pRegs.R,     Hex8Formatter  );
         }
 
 	    static void SetReg16( Value pParent, string pName, string pHigh, string pLow, int pValue, Value.ValueFormatter pFormatter )
@@ -489,7 +532,7 @@ namespace ZEsarUXDebugger
         static string Hex8Formatter( Value pValue )
         {
             byte value = Convert.ToByte( pValue.Content );
-            return string.Format( "${0:X4} / {0}", value );
+            return string.Format( "${0:X2} / {0}", value );
         }
 
 

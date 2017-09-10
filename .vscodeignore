@@ -5,6 +5,6 @@
 !attach.js
 !package.json
 !bin/**
+!syntax/**
 !Changelog.txt
 !README.md
-!Images/unity-logo128x128.png

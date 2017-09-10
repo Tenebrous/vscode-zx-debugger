@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Log.cs" />
+    <Compile Include="Machine.cs" />
     <Compile Include="Values.cs" />
     <Compile Include="ZEsarUXConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

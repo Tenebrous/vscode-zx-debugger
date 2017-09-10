@@ -2,5 +2,5 @@ syntax: glob
 *.csproj.user
 *.DotSettings.user
 packages/
-Adapter/obj/
+adapter/obj/
 .vs/

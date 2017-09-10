@@ -20,6 +20,7 @@ namespace VSCodeDebugAdapter
         public Action<Request> OnStepOut;
         public Action<Request> OnGetStackTrace;
         public Action<Request> OnGetVariables;
+        public Action<Request> OnSetVariable;
         public Action<Request> OnGetThreads;
         public Action<Request> OnGetScopes;
         public Action<Request> OnGetSource;
@@ -169,6 +170,10 @@ namespace VSCodeDebugAdapter
 
                     case "variables":
                         OnGetVariables?.Invoke( pRequest );
+                        break;
+
+                    case "setVariable":
+                        OnSetVariable?.Invoke( pRequest );
                         break;
 
                     case "loadedSources":
@@ -325,13 +330,19 @@ namespace VSCodeDebugAdapter
             var header = string.Format( "Content-Length: {0}{1}", jsonBytes.Length, TwoCRLF );
             var headerBytes = Encoding.GetBytes(header);
 
-            Log.Write( Log.Severity.Debug, "vscode: (out) [" + asJson + "]" );
+            Log.Write( Log.Severity.Verbose, "vscode: (out) [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
             System.Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);
             System.Buffer.BlockCopy(jsonBytes, 0, data, headerBytes.Length, jsonBytes.Length);
 
             return data;
+        }
+
+        public void Refresh()
+        {
+            Send( new ThreadEvent( "stopped", 1 ) );
+            Send( new ThreadEvent( "started", 1 ) );
         }
     }
 

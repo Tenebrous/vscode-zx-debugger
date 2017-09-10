@@ -1,67 +1,89 @@
 {
-  "name": "vscode-zesarux-debug",
-  "displayName": "Debugger for ZEsarUX",
-  "version": "0.0.1",
-  "publisher": "Tenebrous",
-  "description": "ZEsarUX debugger extension",
-  "engines": {
-    "vscode": "^1.16.0"
-  },
-  "categories": [
-    "Debuggers"
-  ],
-  "keywords": [
-    "zesarux",
-    "debugger",
-    "debug",
-    "z80",
-    "spectrum"
-  ],
-  "main": "./attach",
-  "activationEvents": [
-    "onCommand:attach.attachToDebugger"
-  ],
-  "scripts": {
-    "postinstall": "node ./node_modules/vscode/bin/install"
-  },
-  "contributes": {
-    "debuggers": [
-      {
-        "type": "zesarux",
-        "label": "ZEsarUX Debugger",
-        "enableBreakpointsFor": {
-          "languageIds": [
-            "z80",
-            "Z80 Assembly",
-            "c"
-          ]
-        },
-        "program": "./bin/vscode-zesarux-debug.exe",
-        "osx": {
-          "runtime": "mono"
-        },
-        "linux": {
-          "runtime": "mono"
-        },
-        "configurationAttributes": {
-          "attach": {
-            "properties": {
-              "folder": {
-                "type": "string",
-                "description": "Project folder"
-              }
+    "name": "vscode-zesarux-debug",
+    "displayName": "Debugger for ZEsarUX",
+    "version": "0.0.2",
+    "preview": true,
+    "publisher": "Tenebrous",
+    "description": "ZEsarUX debugger extension",
+    "author": {
+        "name": "Tenebrous",
+        "email": "m@tenebrous.co.uk"
+    },
+    "categories": [
+        "Debuggers"
+    ],
+    "keywords": [
+        "zesarux",
+        "debugger",
+        "debug",
+        "z80",
+        "spectrum"
+    ],
+    "activationEvents": [
+        "onCommand:attach.attachToDebugger"
+    ],
+    "engines": {
+        "vscode": "^1.16.0"
+    },
+    "main": "./attach",
+    "scripts": {
+        "postinstall": "node ./node_modules/vscode/bin/install"
+    },
+    "contributes": {
+        "debuggers": [
+            {
+                "type": "zesarux",
+                "label": "ZEsarUX Debugger",
+                "enableBreakpointsFor": {
+                    "languageIds": [
+                        "zesarux-disasm"
+                    ]
+                },
+                "program": "./bin/vscode-zesarux-debug.exe",
+                "osx": {
+                    "runtime": "mono"
+                },
+                "linux": {
+                    "runtime": "mono"
+                },
+                "configurationAttributes": {
+                    "attach": {
+                        "properties": {
+                            "folder": {
+                                "type": "string",
+                                "description": "Project folder"
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "name": "ZEsarUX",
+                        "type": "zesarux",
+                        "request": "attach",
+                        "folder": "${workspaceRoot}"
+                    }
+                ]
             }
-          }
-        },
-        "initialConfigurations": [
-          {
-            "name": "ZEsarUX",
-            "type": "zesarux",
-            "request": "attach",
-            "folder": "${workspaceRoot}"
-          }
+        ],
+        "languages": [
+            {
+                "id": "zesarux-disasm",
+                "aliases": [
+                    "ZEsarUX Disassembly"
+                ],
+                "extensions": [
+                    ".zdis"
+                ],
+                "configuration": ".Syntax/zesarux-disasm.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "zesarux-disasm",
+                "scopeName": "source.asm.z80",
+                "path": "./Syntax/zesarux-disasm.tmLanguage.json"
+            }
         ]
-      }
-    ]
-  }
+    }
 }
