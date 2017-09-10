@@ -75,14 +75,14 @@
                 "extensions": [
                     ".zdis"
                 ],
-                "configuration": ".Syntax/zesarux-disasm.json"
+                "configuration": "./syntax/zesarux-disasm.json"
             }
         ],
         "grammars": [
             {
                 "language": "zesarux-disasm",
                 "scopeName": "source.asm.z80",
-                "path": "./Syntax/zesarux-disasm.tmLanguage.json"
+                "path": "./syntax/zesarux-disasm.tmLanguage.json"
             }
         ]
     }
