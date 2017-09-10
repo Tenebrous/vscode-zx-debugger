@@ -3,7 +3,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace VSCodeDebugAdapter
+namespace VSCodeDebugger
 {
     public class ProtocolMessage
     {
@@ -439,9 +439,11 @@ namespace VSCodeDebugAdapter
     public class SetVariableResponseBody : ResponseBody
     {
         public string value { get; }
-        public SetVariableResponseBody( string value )
+        public int variablesReference { get; }
+        public SetVariableResponseBody( string value, int reference )
         {
-            this.value = value;
+            this.value = value;;
+            this.variablesReference = reference;
         }
     }
 

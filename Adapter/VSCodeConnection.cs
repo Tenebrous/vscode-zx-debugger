@@ -3,9 +3,8 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using ZEsarUXDebugger;
 
-namespace VSCodeDebugAdapter
+namespace VSCodeDebugger
 {
     public class VSCodeConnection
     {
@@ -205,6 +204,7 @@ namespace VSCodeDebugAdapter
                             Log.Severity.Error,
                             string.Format( "VSCode request not handled: {0}", pCommand )
                         );
+
                         break;
                 }
             }
@@ -214,6 +214,8 @@ namespace VSCodeDebugAdapter
                     Log.Severity.Error,
                     string.Format( "Error during request '{0}' (exception: {1})\n{2}", pCommand, e.Message, e )
                 );
+
+                Send( new Response( pRequest, pErrorMessage: e.Message ) );
             }
         }
 
@@ -318,7 +320,7 @@ namespace VSCodeDebugAdapter
             catch( Exception e )
             {
                 // ignore
-//                Log.Write( "Send error " + e );
+                // Log.Write( "Send error " + e );
             }
         }
 

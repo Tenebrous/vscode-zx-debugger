@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace VSCodeDebugAdapter
+namespace VSCodeDebugger
 {
     public class Value
     {
@@ -27,7 +27,7 @@ namespace VSCodeDebugAdapter
             _childrenByName = new Dictionary<string, Value>( StringComparer.InvariantCultureIgnoreCase );
         }
 
-        Value( Value pParent, Action<Value> pRefresher = null, Value.ValueFormatter pFormatter = null )
+        Value( Value pParent, Action<Value> pRefresher = null, ValueGetter pGetter = null, Value.ValueFormatter pFormatter = null )
         {
             Parent = pParent;
             _all = pParent._all;
@@ -35,13 +35,13 @@ namespace VSCodeDebugAdapter
             _children = new Dictionary<int, Value>();
             _childrenByName = new Dictionary<string, Value>();
 
-            _refresher = pRefresher;
+            _getter = pGetter;
             _formatter = pFormatter;
         }
 
-        public Value Create( string pName, Action<Value> pRefresher = null, Value.ValueFormatter pFormatter = null )
+        public Value Create( string pName, Action<Value> pRefresher = null, ValueGetter pGet = null, Value.ValueFormatter pFormat = null )
         {
-            var value = new Value( this, pRefresher, pFormatter )
+            var value = new Value( this, pRefresher, pGet, pFormat )
             {
                 ID = this._all.Count + 1,
                 Name = pName
@@ -100,6 +100,16 @@ namespace VSCodeDebugAdapter
             return result;
         }
 
+        public delegate string ValueGetter( Value pValue );
+
+        ValueGetter _getter;
+        public ValueGetter Getter
+        {
+            get { return _getter; }
+            set { _getter = value; }
+        }
+
+
         Action<Value> _refresher;
         public Action<Value> Refresher
         {
@@ -143,7 +153,13 @@ namespace VSCodeDebugAdapter
                 OnChange?.Invoke( this, old, _content );
                 _doingOnChange = false;
             }
-            get { return _content; }
+            get 
+            {
+                if( _getter != null )
+                    _content = _getter(this);
+
+                 return _content; 
+            }
         }
 
         public string Formatted

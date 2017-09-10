@@ -1,25 +1,23 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using VSCodeDebugAdapter;
 using Z80Machine;
-using Thread = System.Threading.Thread;
 
-namespace ZEsarUXDebugger
+namespace VSCodeDebugger
 {
     public class ZMain
 	{
 	    static ZEsarUXConnection _zesarux;
 	    static VSCodeConnection _vscode;
-	    static bool _active;
+	    static bool _running;
 
 	    static string _folder;
 
-	    static Value _values = new Value();
-	    static Value _registers;
-	    static Value _settings;
+	    static Value _rootValues = new Value();
+	    static Value _registerValues;
+	    static Value _settingValues;
+
 	    static Machine _machine;
 
     	static void Main(string[] argv)
@@ -28,15 +26,7 @@ namespace ZEsarUXDebugger
 
             Log.OnLog += Log_SendToVSCode;
 	        Log.MaxSeverity = Log.Severity.Message;
-            Log.Write( Log.Severity.Message, "main: starting... " );
 
-            
-	        _registers = _values.Create("Registers");
-	        _registers.Refresher = Registers_Refresh;
-
-	        _settings = _values.Create( "Settings" );
-
-            //todo:link vars directly to _registers items using delegates here and remove the need to refresh _values
 
             // vscode events
 
@@ -45,6 +35,7 @@ namespace ZEsarUXDebugger
 	        _vscode.OnContinue += VSCode_OnContinue;
 	        _vscode.OnNext += VSCode_OnNext;
 	        _vscode.OnStepIn += VSCode_OnStepIn;
+	        _vscode.OnStepOut += VSCode_OnStepOut;
             _vscode.OnInitialize += VSCode_OnInitialize;
 	        _vscode.OnLaunch += VSCode_OnLaunch;
 	        _vscode.OnAttach += VSCode_OnAttach;
@@ -62,21 +53,25 @@ namespace ZEsarUXDebugger
 
             // zesarux events
 
-            _zesarux = new ZEsarUXConnection();
-	        // _zesarux.OnPaused += Z_OnPaused;
+            _zesarux = new ZEsarUXConnection();	        
+
+            // _zesarux.OnPaused += Z_OnPaused;
 	        // _zesarux.OnContinued += Z_OnContinued;
 	        // _zesarux.OnStepped += Z_OnStepped;
             // _zesarux.OnRegisterChange += Z_OnRegisterChange;
 
             _machine = new Machine( _zesarux );
 
-	        _active = true;
 
+			// tie all the values together
+			SetupValues( _rootValues, _machine );
+
+
+	        _running = true;
 	        var wasActive = false;
 
-
 	        // event loop
-	        while( _active )
+	        while( _running )
 	        {
 	            var active = _vscode.Read() || _zesarux.Read();
 
@@ -96,19 +91,17 @@ namespace ZEsarUXDebugger
 	                if( wasActive )
 	                    Log.Write( Log.Severity.Debug, "" );
 
-	                Thread.Sleep( 10 );
+	                System.Threading.Thread.Sleep( 10 );
 	            }
 
 	            wasActive = active;
 	        }
-
-	        Log.Write( Log.Severity.Message, "main: stopped." );
 	    }
 
 
 	    // events coming in from VSCode
 
-	    static void VSCode_OnInitialize( Request pRequest )
+        static void VSCode_OnInitialize( Request pRequest )
 	    {
 	        _vscode.Send(
 	            pRequest,
@@ -124,12 +117,12 @@ namespace ZEsarUXDebugger
          
 	    static void VSCode_OnContinue( Request pRequest )
 	    {
-	        _zesarux.Continue();
+	        _machine.Continue();
 	    }
 
 	    static void VSCode_OnPause( Request pRequest )
 	    {
-	        _zesarux.Pause();
+	        _machine.Pause();
 	    }
 
         static void VSCode_OnNext( Request pRequest )
@@ -137,20 +130,24 @@ namespace ZEsarUXDebugger
 	        // must ack before sending anything else
 	        _vscode.Send(pRequest);
 
-            _zesarux.StepOver();
+            _machine.StepOver();
 	    }
 
 	    static void VSCode_OnStepIn( Request pRequest )
 	    {
 	        // must ack before sending anything else
-	        _vscode.Send(pRequest);
+	        _vscode.Send( pRequest );
+	        _machine.Step();
+	    }
 
-            _zesarux.Step();
-        }
+	    static void VSCode_OnStepOut( Request pRequest )
+	    {
+	        _vscode.Send( pRequest, pErrorMessage: "Step Out is not supported" );
+	    }
 
         static void VSCode_OnLaunch( Request pRequest )
         {
-            if( !_zesarux.Start())
+            if( !_machine.Start())
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
@@ -161,13 +158,15 @@ namespace ZEsarUXDebugger
 	        if( string.IsNullOrWhiteSpace( _folder ) )
 	        {
 	            Log.Write( Log.Severity.Error, "Property 'folder' is missing or empty." );
-	            return;
+	            _vscode.Send( pRequest, pErrorMessage: "Property 'folder' is missing or empty." );
+                return;
 	        }
 
 	        if( !Directory.Exists( _folder ) )
 	        {
 	            Log.Write( Log.Severity.Error, "Property 'folder' refers to a folder that could not be found." );
-	            return;
+	            _vscode.Send( pRequest, pErrorMessage: "Property 'folder' refers to a folder that could not be found." );
+                return;
 	        }
 
 	        _zesarux.TempFolder = Path.Combine( _folder, ".debug" );
@@ -186,9 +185,9 @@ namespace ZEsarUXDebugger
             _vscode.Send( 
                 pRequest,
                 new ThreadsResponseBody( 
-                    new List<VSCodeDebugAdapter.Thread>()
+                    new List<VSCodeDebugger.Thread>()
                     {
-                        new VSCodeDebugAdapter.Thread( 1, "Main" )
+                        new VSCodeDebugger.Thread( 1, "Main" )
                     }
                 )
             );
@@ -203,15 +202,14 @@ namespace ZEsarUXDebugger
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
 	        _machine.RefreshRegisters();
+	        _machine.RefreshMemoryPages();
+	        _machine.RefreshStack();
 
-	        _zesarux.GetMemoryPages();
-            _zesarux.GetRegisters();
-	        _zesarux.GetStackTrace();
             _zesarux.UpdateDisassembly( _machine.Registers.PC );
 
             _stackFrames.Clear();
 
-	        var stack = _zesarux.Stack;
+	        var stack = _machine.Stack;
 	        for( int i = 0; i < stack.Count; i++ )
 	        {   
 	            _stackFrames.Add(
@@ -238,11 +236,11 @@ namespace ZEsarUXDebugger
         {
             int frameId = pRequest.arguments.frameId;
 
-            _zesarux.UpdateDisassembly( _zesarux.Stack[frameId-1] );
+            _zesarux.UpdateDisassembly( _machine.Stack[frameId-1] );
 
             var scopes = new List<Scope>();
 
-            foreach( var value in _values.Children )
+            foreach( var value in _rootValues.Children )
             {
                 scopes.Add( 
                     new Scope( 
@@ -301,9 +299,9 @@ namespace ZEsarUXDebugger
 	            var target = split[parseIndex].Substring( 1, split[parseIndex].Length - 2 );
 	            ushort address;
 
-	            if( _registers.HasAllByName( target ) )
+	            if( _registerValues.HasAllByName( target ) )
 	            {
-	                address = Convert.ToUInt16( _registers.AllByName( target ).Content );
+	                address = Convert.ToUInt16( _registerValues.AllByName( target ).Content );
 	                prefix = string.Format( "${0:X4}: ", address );
 	            }
 	            else
@@ -318,14 +316,14 @@ namespace ZEsarUXDebugger
                     else
                         length = 2;
 
-	            value = _zesarux.GetMemory( address, length );
+	            value = _machine.Memory.Get( address, length );
 	            formatted = value;
 	        }
 	        else
 	        {
-	            if( _registers.HasAllByName( split[parseIndex] ) )
+	            if( _registerValues.HasAllByName( split[parseIndex] ) )
 	            {
-	                var reg = _registers.AllByName( split[parseIndex] );
+	                var reg = _registerValues.AllByName( split[parseIndex] );
 
 	                value = reg.Content;
                     formatted = reg.Formatted;
@@ -411,7 +409,7 @@ namespace ZEsarUXDebugger
             }
             catch( Exception e )
 	        {
-	            Log.Write( Log.Severity.Error, "Can't parse address '" + pValue + "'" );
+	            Log.Write( Log.Severity.Error, "Can't parse address '" + pValue + "': " + e.ToString() );
 	        }
 
             return result;
@@ -423,25 +421,14 @@ namespace ZEsarUXDebugger
             _tempVariables.Clear();
 
             int id = pRequest.arguments.variablesReference;
-            var value = _values.All(id);
+            var value = _rootValues.All(id);
 
             if( value != null )
             {
                 value.Refresh();
 
-                var data = new VariablePresentationHint( "data" );
-
                 foreach( var child in value.Children )
-                {
-                    _tempVariables.Add(
-                        new Variable(
-                            child.Name,
-                            child.Formatted,
-                            "value",
-                            child.Children.Count == 0 ? -1 : child.ID,
-                            data )
-                        );
-                }
+                    _tempVariables.Add( CreateVariableForValue( child ) );
             }
 
             _vscode.Send(
@@ -450,78 +437,99 @@ namespace ZEsarUXDebugger
             );
         }
 
+	    static Variable CreateVariableForValue( Value pValue )
+	    {
+	        return new Variable(
+	            pValue.Name,
+	            pValue.Formatted,
+	            "value",
+	            pValue.Children.Count == 0 ? -1 : pValue.ID,
+	            new VariablePresentationHint( "data" )
+            );
+	    }
+
 
 	    static void VSCode_OnSetVariable( Request pRequest )
 	    {
 	        string reg = pRequest.arguments.name.ToString();
 	        string val = pRequest.arguments.value.ToString();
 
-            var regs = _zesarux.SetRegister( reg, val );
-            UpdateValues( _values, regs );
+            _machine.Registers.Set( reg, val );
+
+	        var value = _rootValues.AllByName( reg );
+	        var var   = CreateVariableForValue( value );
 
             _vscode.Send(
                 pRequest,
-	            new SetVariableResponseBody( _values.AllByName( reg ).Formatted )
+	            new SetVariableResponseBody( var.value, var.variablesReference )
             );
 	    }
 
 
         static void VSCode_OnDisconnect( Request pRequest )
 	    {
-	        _zesarux.Stop();
-	        _active = false;
+	        _machine.Stop();
+	        _running = false;
 	    }
 
 
 
-	    // events from values/variables
+        // events from values/variables
 
-	    static void Registers_Refresh( Value pValue )
-	    {
-	        UpdateValues( pValue, _machine.RefreshRegisters() );
-	    }
 
-        static void UpdateValues( Value pValue, Registers pRegs )
+        static void SetupValues( Value pValues, Machine pMachine )
         {
-            SetReg8(  pValue, "A" ,                pRegs.A,     Hex8Formatter  );
-	        SetReg16( pValue, "HL",  "H",   "L",   pRegs.HL,    Hex16Formatter );
-	        SetReg16( pValue, "BC",  "B",   "C",   pRegs.BC,    Hex16Formatter );
-	        SetReg16( pValue, "DE",  "D",   "E",   pRegs.DE,    Hex16Formatter );
-	        SetReg8(  pValue, "A'",                pRegs.AltA,  Hex8Formatter  );
-	        SetReg16( pValue, "HL'", "H'",  "L'",  pRegs.AltHL, Hex16Formatter );
-            SetReg16( pValue, "BC'", "B'",  "C'",  pRegs.AltBC, Hex16Formatter );
-	        SetReg16( pValue, "DE'", "C'",  "E'",  pRegs.AltDE, Hex16Formatter );
-	        SetReg16( pValue, "IX",  "IXH", "IXL", pRegs.IX,    Hex16Formatter );
-            SetReg16( pValue, "IY",  "IYH", "IYL", pRegs.IY,    Hex16Formatter );
-	        SetReg16( pValue, "PC",                pRegs.PC,    Hex16Formatter );
-	        SetReg16( pValue, "SP",                pRegs.SP,    Hex16Formatter );
-            SetReg8(  pValue, "I",                 pRegs.I,     Hex8Formatter  );
-	        SetReg8(  pValue, "R",                 pRegs.R,     Hex8Formatter  );
+            Value reg16;
+
+            _registerValues = pValues.Create("Registers");
+            var r = _registerValues;
+
+            r.Create(         "A",   pGet: pValue => pMachine.Registers.A.ToString(),                                    pFormat: Hex8Formatter  );
+                                                                                                                     
+            reg16 = r.Create( "HL",  pGet: pValue => pMachine.Registers.HL.ToString(),                                   pFormat: Hex16Formatter );
+                reg16.Create(          "H",   pGet: pValue => ( ( pMachine.Registers.HL & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
+                reg16.Create(          "L",   pGet: pValue => ( pMachine.Registers.HL & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+                                                                                                                     
+            reg16 = r.Create( "BC",  pGet: pValue => pMachine.Registers.BC.ToString(),                                   pFormat: Hex16Formatter );
+                reg16.Create(          "B",   pGet: pValue => ( ( pMachine.Registers.BC & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
+                reg16.Create(          "C",   pGet: pValue => ( pMachine.Registers.BC & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+                                                                                                                     
+            reg16 = r.Create( "DE",  pGet: pValue => pMachine.Registers.DE.ToString(),                                   pFormat: Hex16Formatter );
+                reg16.Create(          "D",   pGet: pValue => ( ( pMachine.Registers.DE & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
+                reg16.Create(          "E",   pGet: pValue => ( pMachine.Registers.DE & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+
+
+            r.Create(         "A'",  pGet: pValue => pMachine.Registers.AltA.ToString(),                                 pFormat: Hex8Formatter  );
+                                                                                                                         
+            reg16 = r.Create( "HL'", pGet: pValue => pMachine.Registers.AltHL.ToString(),                                pFormat: Hex16Formatter );
+                reg16.Create(          "H'",  pGet: pValue => ( ( pMachine.Registers.AltHL & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
+                reg16.Create(          "L'",  pGet: pValue => ( pMachine.Registers.AltHL & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+
+            reg16 = r.Create( "BC'", pGet: pValue => pMachine.Registers.AltBC.ToString(),                                pFormat: Hex16Formatter );
+                reg16.Create(          "B'",  pGet: pValue => ( ( pMachine.Registers.AltBC & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
+                reg16.Create(          "C'",  pGet: pValue => ( pMachine.Registers.AltBC & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+
+            reg16 = r.Create( "DE'", pGet: pValue => pMachine.Registers.AltDE.ToString(),                                pFormat: Hex16Formatter );
+                reg16.Create(          "D'",  pGet: pValue => ( ( pMachine.Registers.AltDE & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
+                reg16.Create(          "E'",  pGet: pValue => ( pMachine.Registers.AltDE & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+
+
+            reg16 = r.Create( "IX",  pGet: pValue => pMachine.Registers.IX.ToString(),                                   pFormat: Hex16Formatter );
+                reg16.Create(          "IXH", pGet: pValue => ( ( pMachine.Registers.IX & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
+                reg16.Create(          "IXL", pGet: pValue => ( pMachine.Registers.IX & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+
+            reg16 = r.Create( "IY",  pGet: pValue => pMachine.Registers.IY.ToString(),                                   pFormat: Hex16Formatter );
+                reg16.Create(          "IYH", pGet: pValue => ( ( pMachine.Registers.IY & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
+                reg16.Create(          "IYL", pGet: pValue => ( pMachine.Registers.IY & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+
+            r.Create(         "PC",  pGet: pValue => pMachine.Registers.PC.ToString(),                                   pFormat: Hex16Formatter );
+                                                                                                                         
+            r.Create(         "SP",  pGet: pValue => pMachine.Registers.SP.ToString(),                                   pFormat: Hex16Formatter );
+                                                                                                                         
+            r.Create(         "I",   pGet: pValue => pMachine.Registers.I.ToString(),                                    pFormat: Hex8Formatter  );
+                                                                                                                         
+            r.Create(         "R",   pGet: pValue => pMachine.Registers.R.ToString(),                                    pFormat: Hex8Formatter  );
         }
-
-	    static void SetReg16( Value pParent, string pName, string pHigh, string pLow, int pValue, Value.ValueFormatter pFormatter )
-	    {
-	        var value = pParent.ChildByName( pName );
-	        value.Content = pValue.ToString();
-	        value.Formatter = pFormatter;
-
-	        SetReg8( value, pHigh, ( pValue & 0xFF00 ) >> 8, Hex8Formatter );
-	        SetReg8( value, pLow,  ( pValue & 0x00FF ),      Hex8Formatter );
-	    }
-
-        static void SetReg16( Value pParent, string pName, int pValue, Value.ValueFormatter pFormatter )
-	    {
-	        var value = pParent.ChildByName( pName );
-	        value.Formatter = pFormatter;
-	        value.Content = pValue.ToString();
-	    }
-
-        static void SetReg8( Value pParent, string pName, int pValue, Value.ValueFormatter pFormatter )
-	    {
-	        var value = pParent.ChildByName( pName );
-	        value.Formatter = pFormatter;
-	        value.Content = pValue.ToString();
-	    }
 
         static string Hex16Formatter( Value pValue )
         {

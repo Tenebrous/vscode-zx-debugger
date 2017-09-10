@@ -1,7 +1,7 @@
 {
     "name": "vscode-zesarux-debug",
     "displayName": "Debugger for ZEsarUX",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "preview": true,
     "publisher": "Tenebrous",
     "description": "ZEsarUX debugger extension",

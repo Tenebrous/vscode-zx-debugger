@@ -7,7 +7,7 @@ function activate(context) {
         var config = {
             name:string,
             type:"zesarux",
-            request:"launch"
+            request:"attach"
         };
 
         var call = vscode.commands.executeCommand("vscode.startDebug", config);

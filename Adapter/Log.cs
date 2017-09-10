@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ZEsarUXDebugger
+namespace VSCodeDebugger
 {
     public static class Log
     {

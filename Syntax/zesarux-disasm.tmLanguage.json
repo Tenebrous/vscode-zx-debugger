@@ -4,12 +4,15 @@
   "fileTypes": ["zdis"],
   "patterns": [
     {
-        "match": "(?i)^(?:(.*?)(:))([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
+        "match": "(?i)^BANK.*?$",
+        "name": "punctuation.definition.tag.asm",
+        "comment": "Memory bank"
+    },
+    {
+        "match": "(?i)^  ([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
         "captures": {
-            "1": { "comment": "Memory bank",    "name": "punctuation.definition.tag.asm" },
-            "2": { "comment": "Separator",      "name": "punctuation.definition.tag.asm" },
-            "3": { "comment": "Memory address", "name": "punctuation.definition.tag.asm" },
-            "4": { "comment": "Opcodes",        "name": "constant.numeric.asm" }
+            "1": { "comment": "Memory address", "name": "punctuation.definition.tag.asm" },
+            "2": { "comment": "Opcodes",        "name": "constant.numeric.asm" }
         },
         "comment": "Label"    
     },

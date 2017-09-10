@@ -7,9 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Z80Machine;
 
-namespace ZEsarUXDebugger
+namespace VSCodeDebugger
 {
-    public class ZEsarUXConnection
+    public class ZEsarUXConnection : IDebuggerConnection
     {
         public Action OnPaused;
         public Action OnContinued;
@@ -19,7 +19,6 @@ namespace ZEsarUXDebugger
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
-        
 
         public bool Start()
         {
@@ -43,7 +42,7 @@ namespace ZEsarUXDebugger
                 ReadAll();
                 Setup();
             }
-            catch ( Exception e )
+            catch( Exception e )
             {
                 Log.Write( Log.Severity.Error, "zesarux: connection error: " + e );
                 return false;
@@ -53,14 +52,44 @@ namespace ZEsarUXDebugger
         }
 
 
-        public void Stop()
+        public bool Pause()
+        {
+            SimpleCommand( "enter-cpu-step" );
+            return true;
+        }
+
+
+        public bool Continue()
+        {
+            SimpleCommand( "exit-cpu-step" );
+            return true;
+        }
+
+
+        public bool StepOver()
+        {
+            _wasRunning = true;
+            SimpleCommand( "cpu-step-over" );
+            return true;
+        }
+
+
+        public bool Step()
+        {
+            _wasRunning = true;
+            SimpleCommand( "cpu-step" );
+            return true;
+        }
+
+
+        public bool Stop()
         {
             Log.Write( Log.Severity.Message, "zesarux: disconnecting..." );
 
             if( _stream != null )
                 SimpleCommand( "exit" );
 
-            if ( _stream != null )
+            if( _stream != null )
             {
                 _stream.Close();
                 _stream = null;
@@ -73,33 +102,10 @@ namespace ZEsarUXDebugger
             }
 
             Log.Write( Log.Severity.Message, "zesarux: disconnected." );
+
+            return true;
         }
 
-
-        public void Pause()
-        {
-            SimpleCommand( "enter-cpu-step" );
-        }
-
-
-        public void Continue()
-        {
-            SimpleCommand( "exit-cpu-step" );
-        }
-
-
-        public void Step()
-        {
-            _wasRunning = true;
-            SimpleCommand( "cpu-step" );
-        }
-
-
-        public void StepOver()
-        {
-            _wasRunning = true;
-            SimpleCommand( "cpu-step-over" );
-        }
 
 
         public void Setup()
@@ -122,76 +128,81 @@ namespace ZEsarUXDebugger
             return _machine = SimpleCommand( "get-current-machine" );
         }
 
-        Memory _memory = new Memory();
-        public Memory GetMemoryPages()
+        public void GetMemoryPages( Memory pMemory )
         {
             var pages = SimpleCommand( "get-memory-pages" );
             // RO1 RA5 RA2 RA7 SCR5 PEN
 
             var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
 
-            _memory.ClearMap();
+            pMemory.ClearMemoryMap();
 
             int sixteenkpage = 0;
 
             foreach( var part in split )
             {
-                if( part.StartsWith( "RO" ) )
+                if( part == "PEN" )
+                    pMemory.PagingEnabled = true;
+                else if( part == "PDI" )
+                    pMemory.PagingEnabled = false;
+                else if( part.StartsWith( "RO" ) )
                 {
-                    var page = int.Parse( part.Substring( 2 ) );
-                    _memory.AddMap( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), -1-page );
+                    var bank = pMemory.ROM( int.Parse( part.Substring( 2 ) ) );
+                    pMemory.SetAddressBank( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), bank );
                     sixteenkpage++;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
-                    var page = int.Parse( part.Substring( 2 ) );
-                    _memory.AddMap( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), page );
+                    var bank = pMemory.RAM( int.Parse( part.Substring( 2 ) ) );
+                    pMemory.SetAddressBank( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), bank );
                     sixteenkpage++;
                 }
-                else if( part == "PEN" )
-                    _memory.PagingEnabled = true;
-                else if( part == "PDI" )
-                    _memory.PagingEnabled = false;
             }
-
-            return _memory;
         }
 
-        public List<int> GetStackTrace()
+        public string GetMemory( ushort pAddress, int pLength )
         {
+            var memory = SimpleCommand( "read-memory " + pAddress + " " + pLength );
+            return memory;
+        }
+
+        public void GetStack( Stack pStack )
+        {
+            pStack.Clear();
             var stack = SimpleCommand( "get-stack-backtrace" );
 
             // [15E6H 15E1H 0F3BH 107FH FF54H]
             var split = stack.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            _stack.Clear();
+            pStack.Add( _registers.PC );
 
-            _stack.Add( _registers.PC );
-
-            foreach (var frame in split)
+            foreach( var frame in split )
                 if( frame.EndsWith("H") )
-                    _stack.Add( UnHex(frame.Substring(0, frame.Length - 1)) - 3 );
+                    pStack.Add( (ushort)( UnHex( frame.Substring( 0, frame.Length - 1 ) ) - 3 ) );
                 else
-                    _stack.Add( UnHex(frame) - 3 );
-
-            return _stack;
+                    pStack.Add( (ushort)(int.Parse( frame ) - 3) );
         }
 
-        Registers _registers = new Registers();
-
-        public Registers GetRegisters()
+        Registers _registers;
+        public void GetRegisters( Registers pRegisters )
         {
-            ParseRegisters( SimpleCommand( "get-registers" ), _registers );
-            return _registers;
-
+            _registers = pRegisters;
+            ParseRegisters( pRegisters, SimpleCommand( "get-registers" ) );
         }
-        void ParseRegisters( string pRegisterString, Registers pRegisters )
+
+        public void SetRegister( Registers pRegisters, string pRegister, ushort pValue )
+        {
+            var result = SimpleCommand( "set-register " + pRegister + "=" + pValue );
+            ParseRegisters( pRegisters, result );
+        }
+
+        void ParseRegisters( Registers pRegisters, string pString )
         {
             // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
 
             var regMatch = new Regex("(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) ");
 
-            var matches = regMatch.Matches(pRegisterString);
+            var matches = regMatch.Matches(pString);
             foreach (Match match in matches)
             {
                 var register = match.Groups[1].ToString();
@@ -270,37 +281,6 @@ namespace ZEsarUXDebugger
             //}
         }
 
-        public Registers SetRegister( string pRegister, string pValue )
-        {
-            ushort value;
-
-            try
-            {
-                if( pValue.StartsWith( "$" ) )
-                    value = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
-                else if( pValue.StartsWith( "0x" ) )
-                    value = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
-                else
-                    value = Convert.ToUInt16( pValue );
-
-                var result = SimpleCommand("set-register " + pRegister + "=" + value);
-                ParseRegisters( result, _registers );
-            }
-            catch( Exception e )
-            {
-                Log.Write( Log.Severity.Error, e.ToString() );
-                throw;
-            }
-
-            return _registers;
-        }
-
-        public string GetMemory( ushort pAddress, int pLength )
-        {
-            var memory = SimpleCommand( "read-memory " + pAddress + " " + pLength );
-            return memory;
-        }
-
         public void UpdateDisassembly( int pAddress )
         {
             var lines = Command( "disassemble " + pAddress + " " + 30 );
@@ -308,16 +288,18 @@ namespace ZEsarUXDebugger
             if( lines == null )
                 return;
 
-            foreach( var line in lines )
-            {
-                var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-                var address = UnHex(parts[0]);
-                int bank = -1;
+            //var defaultBank = _memory.GetBankAtAddress( 0x0000 );
 
-                if( _memory.PagingEnabled )
-                    bank = _memory.GetMapForAddress( address );
+            //foreach( var line in lines )
+            //{
+            //    var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+            //    var address = UnHex(parts[0]);
+            //    var bank = defaultBank;
 
-            }
+            //    if( _memory.PagingEnabled )
+            //        bank = _memory.GetBankAtAddress( address );
+
+            //}
         }
 
         //public void UpdateDisassembly2( int pAddress )
@@ -498,12 +480,6 @@ namespace ZEsarUXDebugger
             get { return _machine; }
         }
 
-        List<int> _stack = new List<int>();
-        public List<int> Stack
-        {
-            get { return _stack; }
-        }
-
         string _tempFolder;
         public string TempFolder
         {
@@ -546,8 +522,9 @@ namespace ZEsarUXDebugger
 
             // wait for data to start coming back
             while ( !_stream.DataAvailable && x.Elapsed.Seconds < 2 )
-                ;
-            
+            {
+            }
+
             if( !_stream.DataAvailable )
             {
                 Log.Write( Log.Severity.Message, "zesarux: timed out waiting for data" );
@@ -557,7 +534,13 @@ namespace ZEsarUXDebugger
             var lines = ReadAll();
 
             // log the received data
-            _tempReceiveLines.ForEach( pLine => Log.Write( Log.Severity.Verbose, "zesarux: <- [" + pLine + "]" ) );
+            lines.ForEach(
+                pLine =>
+                {
+                    if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
+                    Log.Write( Log.Severity.Verbose, "zesarux: <- [" + pLine + "]" );
+                }
+            );
 
             return _tempReceiveLines;
         }
@@ -624,20 +607,5 @@ namespace ZEsarUXDebugger
         {
             return Convert.ToUInt16( pHex, 16 );
         }
-    }
-
-    class DisassemblySection
-    {
-        public int Bank;
-        public int Start;
-        public int End;
-        public List<DisassemblyLine> Lines = new List<DisassemblyLine>();
-    }
-
-    class DisassemblyLine
-    {
-        public int Address;
-        public string Code;
-        public int FileLine;
     }
 }

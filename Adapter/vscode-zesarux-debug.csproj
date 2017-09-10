@@ -53,6 +53,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IDebuggerConnection.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Values.cs" />
