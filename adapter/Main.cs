@@ -201,7 +201,7 @@ namespace VSCodeDebugger
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
-	        _machine.RefreshRegisters();
+	        _machine.Registers.Get();
 	        _machine.RefreshMemoryPages();
 	        _machine.RefreshStack();
 
@@ -378,10 +378,12 @@ namespace VSCodeDebugger
 
 	    static void VSCode_OnSetVariable( Request pRequest )
 	    {
-	        string reg = pRequest.arguments.name.ToString();
+	        string name = pRequest.arguments.name.ToString();
 	        string val = pRequest.arguments.value.ToString();
 
-	        var value = _rootValues.AllByName( reg );
+            Log.Write( Log.Severity.Message, name + " -> " + val );
+
+	        var value = _rootValues.AllByName( name );
 
 			if( value.Setter != null )
 			{
@@ -486,6 +488,7 @@ namespace VSCodeDebugger
 
         private static void RunCommand( Value pValue, string pNew )
         {
+            _vscode.Send( _vscode.CurrentRequest, pErrorMessage: "whoops" );
         }
 		
 
@@ -496,47 +499,7 @@ namespace VSCodeDebugger
 
 		static string GetReg( Value pReg )
 		{
-			switch( pReg.Name )
-			{
-				case "A":   return _machine.Registers.A.ToString();
-
-				case "HL":  return _machine.Registers.HL.ToString();
-				case "H":   return ((_machine.Registers.HL & 0xFF00) >> 8 ).ToString();
-				case "L":   return (_machine.Registers.HL & 0x00FF).ToString();
-				case "BC":  return _machine.Registers.BC.ToString();
-				case "B":   return ((_machine.Registers.BC & 0xFF00) >> 8 ).ToString();
-				case "BL":  return (_machine.Registers.BC & 0x00FF).ToString();
-				case "DE":  return _machine.Registers.DE.ToString();
-				case "D":   return ((_machine.Registers.DE & 0xFF00) >> 8 ).ToString();
-				case "E":   return (_machine.Registers.DE & 0x00FF).ToString();
-
-				case "A'":  return _machine.Registers.AltA.ToString();
-				case "HL'": return _machine.Registers.AltHL.ToString();
-				case "H'":  return ((_machine.Registers.AltHL & 0xFF00) >> 8 ).ToString();
-				case "L'":  return (_machine.Registers.AltHL & 0x00FF).ToString();
-				case "BC'": return _machine.Registers.AltBC.ToString();
-				case "B'":  return ((_machine.Registers.AltBC & 0xFF00) >> 8 ).ToString();
-				case "C'":  return (_machine.Registers.AltBC & 0x00FF).ToString();
-				case "DE'": return _machine.Registers.AltDE.ToString();
-				case "D'":  return ((_machine.Registers.AltDE & 0xFF00) >> 8 ).ToString();
-				case "E'":  return (_machine.Registers.AltDE & 0x00FF).ToString();
-
-				case "IX":  return _machine.Registers.IX.ToString();
-				case "IXH": return ((_machine.Registers.IX & 0xFF00) >> 8 ).ToString();
-				case "IXL": return (_machine.Registers.IX & 0x00FF).ToString();
-
-				case "IY":  return _machine.Registers.IY.ToString();
-				case "IYH": return ((_machine.Registers.IY & 0xFF00) >> 8 ).ToString();
-				case "IYL": return (_machine.Registers.IY & 0x00FF).ToString();
-
-				case "PC":  return _machine.Registers.PC.ToString();
-				case "SP":  return _machine.Registers.SP.ToString();
-
-				case "I":   return _machine.Registers.I.ToString();
-				case "R":   return _machine.Registers.R.ToString();
-			}
-
-			return "";
+		    return _machine.Registers[pReg.Name].ToString();
 		}
 
 

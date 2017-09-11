@@ -6,9 +6,7 @@ namespace VSCodeDebugger
     public class Value
     {
         public int ID;
-        public int Priority;
         public string Name;
-
         public Value Parent;
         public List<Value> Children = new List<Value>();
 

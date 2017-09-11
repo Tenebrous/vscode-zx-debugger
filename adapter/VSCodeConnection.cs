@@ -28,15 +28,16 @@ namespace VSCodeDebugger
         public Action<Request> OnEvaluate;
 
 
-        protected const int BufferSize = 4096;
-        protected const string TwoCRLF = "\r\n\r\n";
-        protected static readonly Regex ContentLengthMatcher = new Regex(@"Content-Length: (\d+)");
-        protected static readonly Encoding Encoding = System.Text.Encoding.UTF8;
+        const string TwoCRLF = "\r\n\r\n";
+        static readonly Regex ContentLengthMatcher = new Regex(@"Content-Length: (\d+)");
+        static readonly Encoding Encoding = System.Text.Encoding.UTF8;
 
         Stream _input;
         Reader _inputReader;
         Stream _output;
         StringBuilder _rawData = new StringBuilder();
+
+        Request _currentRequest;
 
         public VSCodeConnection()
         {
@@ -62,8 +63,7 @@ namespace VSCodeDebugger
         {
             Send( new ContinuedEvent( pAllThreads ) );
         }
-
-
+        
         public void SourceAdded( Source pSource )
         {
             Send( new LoadedSourceEvent( "new", pSource ) );
@@ -280,10 +280,14 @@ namespace VSCodeDebugger
 
             if (request != null && request.type == "request")
             {
+                _currentRequest = request;
+
                 HandleMessage(request.command, request.arguments, request);
 
                 if( !request.responded )
                     Send( request );
+
+                _currentRequest = null;
             }
         }
 
@@ -310,7 +314,7 @@ namespace VSCodeDebugger
             Send((ProtocolMessage)pEvent);
         }
 
-        private int _sequenceNumber = 1;
+        int _sequenceNumber = 1;
         void Send( ProtocolMessage pMessage)
         {
             pMessage.seq = _sequenceNumber++;
@@ -345,10 +349,10 @@ namespace VSCodeDebugger
             return data;
         }
 
-        public void Refresh()
+
+        public Request CurrentRequest
         {
-            Send( new ThreadEvent( "stopped", 1 ) );
-            Send( new ThreadEvent( "started", 1 ) );
+            get { return _currentRequest; }
         }
     }
 

@@ -196,89 +196,36 @@ namespace VSCodeDebugger
             ParseRegisters( pRegisters, result );
         }
 
+        Regex _matchRegisters = new Regex("(?i)([a-z']*)=([0-9a-f].*?)(?: )");
+        Regex _matchFlags = new Regex("(?i)(F'?)=(.{8}) ");
         void ParseRegisters( Registers pRegisters, string pString )
         {
             // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
 
-            var regMatch = new Regex("(PC|SP|BC|A|HL|DE|IX|IY|A'|BC'|HL'|DE'|I|R)=(.*?) ");
-
-            var matches = regMatch.Matches(pString);
-            foreach (Match match in matches)
+            var matches = _matchRegisters.Matches(pString);
+            foreach( Match match in matches )
             {
                 var register = match.Groups[1].ToString();
                 var value = UnHex(match.Groups[2].ToString());
 
-                switch( register )
+                try
                 {
-                    case "PC":
-                        pRegisters.PC = value;
-                        break;
-
-                    case "SP":
-                        pRegisters.SP = value;
-                        break;
-
-                    case "BC":
-                        pRegisters.BC = value;
-                        break;
-
-                    case "A":
-                        pRegisters.A = (byte)value;
-                        break;
-
-                    case "HL":
-                        pRegisters.HL = value;
-                        break;
-
-                    case "DE":
-                        pRegisters.DE = value;
-                        break;
-
-                    case "IX":
-                        pRegisters.IX = value;
-                        break;
-
-                    case "IY":
-                        pRegisters.IY = value;
-                        break;
-
-                    case "A'":
-                        pRegisters.AltA = (byte)value;
-                        break;
-
-                    case "BC'":
-                        pRegisters.AltBC = value;
-                        break;
-
-                    case "HL'":
-                        pRegisters.AltHL = value;
-                        break;
-
-                    case "DE'":
-                        pRegisters.AltDE = value;
-                        break;
-
-                    case "I":
-                        pRegisters.I = (byte)value;
-                        break;
-
-                    case "R":
-                        pRegisters.R = (byte)value;
-                        break;
-
+                    pRegisters[register] = value;
+                }
+                catch
+                {
+                    // ignore
                 }
             }
 
-            //var flags = new Regex( "(F'|F)=(.{8}) " );
-            //
-            //matches = flags.Matches(pData);
-            //foreach (Match match in matches)
-            //{
-            //    var register = match.Groups[1].ToString();
-            //    var value = match.Groups[2].ToString().Trim();
-            //
+            matches = _matchFlags.Matches(pString);
+            foreach( Match match in matches )
+            {
+                var register = match.Groups[1].ToString();
+                var value = match.Groups[2].ToString().Trim();
+            
             //    SetRegister(register, value);
-            //}
+            }
         }
 
         public void UpdateDisassembly( int pAddress )

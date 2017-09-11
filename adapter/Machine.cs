@@ -62,24 +62,6 @@ namespace Z80Machine
             get { return _registers; }
         }
 
-        public void RefreshRegisters()
-        {
-            Connection.GetRegisters( _registers );
-        }
-
-        public void SetRegister( string pRegister, string pValue )
-        {
-            try
-            {
-                Connection.SetRegister( _registers, pRegister, Format.Parse( pValue ) );
-            }
-            catch( Exception e )
-            {
-                Log.Write( Log.Severity.Error, e.ToString() );
-                throw;
-            }
-        }
-
 
 
         /////////////////
@@ -145,15 +127,101 @@ namespace Z80Machine
             _machine = pMachine;
         }
 
-        public void Refresh()
+        /// <summary>
+        /// Request an update to the registers from the device
+        /// </summary>
+        public void Get()
         {
-            _machine.RefreshRegisters();
+            _machine.Connection.GetRegisters( this );
         }
 
+
+        /// <summary>
+        /// Send a register update to the device
+        /// </summary>
+        /// <param name="pRegister"></param>
+        /// <param name="pValue"></param>
         public void Set( string pRegister, string pValue )
         {
-            _machine.SetRegister( pRegister, pValue );
+            _machine.Connection.SetRegister( this, pRegister, Format.Parse( pValue ) );
         }
+
+        /// <summary>
+        /// Get/Set the buffered value of the selected register
+        /// </summary>
+        /// <param name="pRegister"></param>
+        /// <returns></returns>
+        public ushort this[string pRegister]
+        {
+            get
+            {
+			    switch( pRegister )
+			    {
+				    case "A":   return (ushort) _machine.Registers.A;
+                                            
+				    case "HL":  return (ushort) _machine.Registers.HL;
+				    case "H":   return (ushort) ((_machine.Registers.HL & 0xFF00) >> 8 );
+				    case "L":   return (ushort) ( _machine.Registers.HL & 0x00FF);
+				    case "BC":  return (ushort) _machine.Registers.BC;
+				    case "B":   return (ushort) ( (_machine.Registers.BC & 0xFF00) >> 8 );
+				    case "BL":  return (ushort) ( _machine.Registers.BC & 0x00FF);
+				    case "DE":  return (ushort) _machine.Registers.DE;
+				    case "D":   return (ushort) ( (_machine.Registers.DE & 0xFF00) >> 8 );
+				    case "E":   return (ushort) ( _machine.Registers.DE & 0x00FF);
+                                            
+				    case "A'":  return (ushort) _machine.Registers.AltA;
+				    case "HL'": return (ushort) _machine.Registers.AltHL;
+				    case "H'":  return (ushort) ((_machine.Registers.AltHL & 0xFF00) >> 8 );
+				    case "L'":  return (ushort) (_machine.Registers.AltHL & 0x00FF);
+				    case "BC'": return (ushort) _machine.Registers.AltBC;
+				    case "B'":  return (ushort) ((_machine.Registers.AltBC & 0xFF00) >> 8 );
+				    case "C'":  return (ushort) (_machine.Registers.AltBC & 0x00FF);
+				    case "DE'": return (ushort) _machine.Registers.AltDE;
+				    case "D'":  return (ushort) ((_machine.Registers.AltDE & 0xFF00) >> 8 );
+				    case "E'":  return (ushort) (_machine.Registers.AltDE & 0x00FF);
+                                            
+				    case "IX":  return (ushort) _machine.Registers.IX;
+				    case "IXH": return (ushort) ((_machine.Registers.IX & 0xFF00) >> 8 );
+				    case "IXL": return (ushort) (_machine.Registers.IX & 0x00FF);
+                                            
+				    case "IY":  return (ushort) _machine.Registers.IY;
+				    case "IYH": return (ushort) ((_machine.Registers.IY & 0xFF00) >> 8 );
+				    case "IYL": return (ushort) (_machine.Registers.IY & 0x00FF);
+                                            
+				    case "PC":  return (ushort) _machine.Registers.PC;
+				    case "SP":  return (ushort) _machine.Registers.SP;
+                                            
+				    case "I":   return (ushort) _machine.Registers.I;
+				    case "R":   return (ushort) _machine.Registers.R;
+			    }
+
+                throw new Exception( "Unknown register '" + pRegister + "'" );
+            }
+
+            set
+            {
+                switch( pRegister )
+                {
+                    case "A":   A     = (byte)value; return;
+                    case "HL":  HL    = value;       return;
+                    case "BC":  BC    = value;       return;
+                    case "DE":  DE    = value;       return;
+                    case "A'":  AltA  = (byte)value; return;
+                    case "HL'": AltHL = value;       return;
+                    case "BC'": AltBC = value;       return;
+                    case "DE'": AltDE = value;       return;
+                    case "IX":  IX    = value;       return;
+                    case "IY":  IY    = value;       return;
+                    case "PC":  PC    = value;       return;
+                    case "SP":  SP    = value;       return;
+                    case "I":   I     = (byte)value; return;
+                    case "R":   R     = (byte)value; return;
+                }
+
+                throw new Exception( "Unknown register '" + pRegister + "'" );
+            }
+        }
+
     }
 
 
