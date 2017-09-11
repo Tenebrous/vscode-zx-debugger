@@ -27,7 +27,7 @@ namespace VSCodeDebugger
             _childrenByName = new Dictionary<string, Value>( StringComparer.InvariantCultureIgnoreCase );
         }
 
-        Value( Value pParent, Action<Value> pRefresher = null, ValueGetter pGetter = null, Value.ValueFormatter pFormatter = null )
+        Value( Value pParent, Action<Value> pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormatter = null )
         {
             Parent = pParent;
             _all = pParent._all;
@@ -35,13 +35,14 @@ namespace VSCodeDebugger
             _children = new Dictionary<int, Value>();
             _childrenByName = new Dictionary<string, Value>();
 
-            _getter = pGetter;
+            _getter = pGet;
+            _setter = pSet;
             _formatter = pFormatter;
         }
 
-        public Value Create( string pName, Action<Value> pRefresher = null, ValueGetter pGet = null, Value.ValueFormatter pFormat = null )
+        public Value Create( string pName, Action<Value> pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormat = null )
         {
-            var value = new Value( this, pRefresher, pGet, pFormat )
+            var value = new Value( this, pRefresher, pGet, pSet, pFormat )
             {
                 ID = this._all.Count + 1,
                 Name = pName
@@ -109,6 +110,15 @@ namespace VSCodeDebugger
             set { _getter = value; }
         }
 
+
+        public delegate void ValueSetter( Value pValue, string pNew );
+        
+        ValueSetter _setter;
+        public ValueSetter Setter
+        {
+            get { return _setter; }
+            set { _setter = value; }
+        }
 
         Action<Value> _refresher;
         public Action<Value> Refresher

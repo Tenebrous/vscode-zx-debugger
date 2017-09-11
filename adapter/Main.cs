@@ -15,8 +15,8 @@ namespace VSCodeDebugger
 	    static string _folder;
 
 	    static Value _rootValues = new Value();
-	    static Value _registerValues;
-	    static Value _settingValues;
+	    static Value _registersValues;
+	    static Value _settingsValues;
 
 	    static Machine _machine;
 
@@ -299,13 +299,13 @@ namespace VSCodeDebugger
 	            var target = split[parseIndex].Substring( 1, split[parseIndex].Length - 2 );
 	            ushort address;
 
-	            if( _registerValues.HasAllByName( target ) )
+	            if( _registersValues.HasAllByName( target ) )
 	            {
-	                address = Convert.ToUInt16( _registerValues.AllByName( target ).Content );
+	                address = Convert.ToUInt16( _registersValues.AllByName( target ).Content );
 	                prefix = string.Format( "${0:X4}: ", address );
 	            }
 	            else
-	                address = ParseAddress( target );
+	                address = Format.Parse( target );
 
 	            int length = 2;
 	            parseIndex++;
@@ -319,48 +319,18 @@ namespace VSCodeDebugger
 	            value = _machine.Memory.Get( address, length );
 	            formatted = value;
 	        }
-	        else
-	        {
-	            if( _registerValues.HasAllByName( split[parseIndex] ) )
-	            {
-	                var reg = _registerValues.AllByName( split[parseIndex] );
+	        else if( _registersValues.HasAllByName( split[parseIndex] ) )
+			{
+				var reg = _registersValues.AllByName( split[parseIndex] );
 
-	                value = reg.Content;
-                    formatted = reg.Formatted;
-	                parseIndex++;
-	            }
-            }
+				value = reg.Content;
+				formatted = reg.Formatted;
+				parseIndex++;
+			}
 
 	        if( split.Length > parseIndex )
-	        {
-	            int count = 0;
-
-	            if( split[parseIndex] == "b" )
-	            {
-	                formatted = HexToBin( value, 8 );
-	                parseIndex++;
-	            }
-	            else if( split[parseIndex].StartsWith( "b" ) && int.TryParse( split[parseIndex].Substring( 1 ), out count ) )
-	            {
-	                formatted = HexToBin( value, count );
-	                parseIndex++;
-	            }
-	            else if( split[parseIndex] == "n" )
-	            {
-	                formatted = HexToBin( value, 4 );
-	                parseIndex++;
-	            }
-	            else if( split[parseIndex] == "w" )
-	            {
-	                formatted = HexToBin( value, 2 );
-	                parseIndex++;
-	            }
-	            else if( split[parseIndex] == "dw" )
-	            {
-	                formatted = HexToBin( value, 4 );
-	                parseIndex++;
-	            }
-	        }
+				if( Format.ApplyRule( split[parseIndex], value, ref formatted ) )
+					parseIndex++;
 
             _vscode.Send(
                 pRequest, 
@@ -370,50 +340,7 @@ namespace VSCodeDebugger
             );
 	    }
 
-	    static StringBuilder _tempHexToBin = new StringBuilder();
-	    static string HexToBin( string pValue, int pSplit )
-	    {
-	        _tempHexToBin.Clear();
 
-	        int count = 0;
-	        for( int i = 0; i < pValue.Length; i+=2 )
-	        {
-	            var part = Convert.ToByte( pValue.Substring( i, 2 ), 16 );
-	            var binary = Convert.ToString( part, 2 ).PadLeft( 8, '0' );
-
-
-	            foreach( var ch in binary )
-	            {
-	                _tempHexToBin.Append( ch );
-
-	                if( ++count % pSplit == 0 )
-	                    _tempHexToBin.Append( ' ' );
-	            }
-            }
-
-            return _tempHexToBin.ToString().Trim();
-	    }
-
-	    static ushort ParseAddress( string pValue )
-	    {
-	        ushort result = 0;
-
-	        try
-	        {
-	            if( pValue.StartsWith( "$" ) )
-	                result = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
-	            else if( pValue.StartsWith( "0x" ) )
-	                result = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
-	            else
-	                result = ushort.Parse( pValue );
-            }
-            catch( Exception e )
-	        {
-	            Log.Write( Log.Severity.Error, "Can't parse address '" + pValue + "': " + e.ToString() );
-	        }
-
-            return result;
-	    }
 
         static List<Variable> _tempVariables = new List<Variable>();
         static void VSCode_OnGetVariables( Request pRequest )
@@ -454,9 +381,24 @@ namespace VSCodeDebugger
 	        string reg = pRequest.arguments.name.ToString();
 	        string val = pRequest.arguments.value.ToString();
 
-            _machine.Registers.Set( reg, val );
-
 	        var value = _rootValues.AllByName( reg );
+
+			if( value.Setter != null )
+			{
+				try
+				{
+					value.Setter.Invoke( value, val );
+				}
+				catch( Exception e )
+				{
+					_vscode.Send(
+						pRequest,
+						pErrorMessage: e.Message
+					);
+					return;
+				}
+			}
+
 	        var var   = CreateVariableForValue( value );
 
             _vscode.Send(
@@ -479,69 +421,124 @@ namespace VSCodeDebugger
 
         static void SetupValues( Value pValues, Machine pMachine )
         {
+            _registersValues = pValues.Create("Registers");
+			SetupValues_Registers( _registersValues, pMachine );
+
+			_settingsValues = pValues.Create("Settings");
+			SetupValues_Settings( _settingsValues );
+		}
+
+		static void SetupValues_Registers( Value pVal, Machine pMachine )
+		{
             Value reg16;
 
-            _registerValues = pValues.Create("Registers");
-            var r = _registerValues;
+            pVal.Create(         "A",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
-            r.Create(         "A",   pGet: pValue => pMachine.Registers.A.ToString(),                                    pFormat: Hex8Formatter  );
-                                                                                                                     
-            reg16 = r.Create( "HL",  pGet: pValue => pMachine.Registers.HL.ToString(),                                   pFormat: Hex16Formatter );
-                reg16.Create(          "H",   pGet: pValue => ( ( pMachine.Registers.HL & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
-                reg16.Create(          "L",   pGet: pValue => ( pMachine.Registers.HL & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
-                                                                                                                     
-            reg16 = r.Create( "BC",  pGet: pValue => pMachine.Registers.BC.ToString(),                                   pFormat: Hex16Formatter );
-                reg16.Create(          "B",   pGet: pValue => ( ( pMachine.Registers.BC & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
-                reg16.Create(          "C",   pGet: pValue => ( pMachine.Registers.BC & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
-                                                                                                                     
-            reg16 = r.Create( "DE",  pGet: pValue => pMachine.Registers.DE.ToString(),                                   pFormat: Hex16Formatter );
-                reg16.Create(          "D",   pGet: pValue => ( ( pMachine.Registers.DE & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
-                reg16.Create(          "E",   pGet: pValue => ( pMachine.Registers.DE & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+            reg16 = pVal.Create( "HL",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "H",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "L",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+
+            reg16 = pVal.Create( "BC",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "B",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "C",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+
+            reg16 = pVal.Create( "DE",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "D",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "E",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
 
-            r.Create(         "A'",  pGet: pValue => pMachine.Registers.AltA.ToString(),                                 pFormat: Hex8Formatter  );
-                                                                                                                         
-            reg16 = r.Create( "HL'", pGet: pValue => pMachine.Registers.AltHL.ToString(),                                pFormat: Hex16Formatter );
-                reg16.Create(          "H'",  pGet: pValue => ( ( pMachine.Registers.AltHL & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
-                reg16.Create(          "L'",  pGet: pValue => ( pMachine.Registers.AltHL & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+            pVal.Create(         "A'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
-            reg16 = r.Create( "BC'", pGet: pValue => pMachine.Registers.AltBC.ToString(),                                pFormat: Hex16Formatter );
-                reg16.Create(          "B'",  pGet: pValue => ( ( pMachine.Registers.AltBC & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
-                reg16.Create(          "C'",  pGet: pValue => ( pMachine.Registers.AltBC & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+            reg16 = pVal.Create( "HL'", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "H'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "L'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
-            reg16 = r.Create( "DE'", pGet: pValue => pMachine.Registers.AltDE.ToString(),                                pFormat: Hex16Formatter );
-                reg16.Create(          "D'",  pGet: pValue => ( ( pMachine.Registers.AltDE & 0xFF00 ) >> 8 ).ToString(), pFormat: Hex8Formatter  );
-                reg16.Create(          "E'",  pGet: pValue => ( pMachine.Registers.AltDE & 0x00FF).ToString(),           pFormat: Hex8Formatter  );
+            reg16 = pVal.Create( "BC'", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "B'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "C'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+
+            reg16 = pVal.Create( "DE'", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "D'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "E'",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
 
-            reg16 = r.Create( "IX",  pGet: pValue => pMachine.Registers.IX.ToString(),                                   pFormat: Hex16Formatter );
-                reg16.Create(          "IXH", pGet: pValue => ( ( pMachine.Registers.IX & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
-                reg16.Create(          "IXL", pGet: pValue => ( pMachine.Registers.IX & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+            reg16 = pVal.Create( "IX",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "IXH", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "IXL", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
-            reg16 = r.Create( "IY",  pGet: pValue => pMachine.Registers.IY.ToString(),                                   pFormat: Hex16Formatter );
-                reg16.Create(          "IYH", pGet: pValue => ( ( pMachine.Registers.IY & 0xFF00 ) >> 8 ).ToString(),    pFormat: Hex8Formatter  );
-                reg16.Create(          "IYL", pGet: pValue => ( pMachine.Registers.IY & 0x00FF).ToString(),              pFormat: Hex8Formatter  );
+            reg16 = pVal.Create( "IY",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+                reg16.Create(    "IYH", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+                reg16.Create(    "IYL", pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
-            r.Create(         "PC",  pGet: pValue => pMachine.Registers.PC.ToString(),                                   pFormat: Hex16Formatter );
-                                                                                                                         
-            r.Create(         "SP",  pGet: pValue => pMachine.Registers.SP.ToString(),                                   pFormat: Hex16Formatter );
-                                                                                                                         
-            r.Create(         "I",   pGet: pValue => pMachine.Registers.I.ToString(),                                    pFormat: Hex8Formatter  );
-                                                                                                                         
-            r.Create(         "R",   pGet: pValue => pMachine.Registers.R.ToString(),                                    pFormat: Hex8Formatter  );
+            pVal.Create(         "PC",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+
+            pVal.Create(         "SP",  pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex16 );
+
+            pVal.Create(         "I",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+
+            pVal.Create(         "R",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
         }
 
-        static string Hex16Formatter( Value pValue )
+		static void SetupValues_Settings( Value pVal )
+		{
+			pVal.Create( "Command", pSet: RunCommand );
+		}
+
+        private static void RunCommand( Value pValue, string pNew )
         {
-            uint value = Convert.ToUInt16( pValue.Content );
-            return string.Format( "${0:X4} / {0}", value );
         }
+		
 
-        static string Hex8Formatter( Value pValue )
-        {
-            byte value = Convert.ToByte( pValue.Content );
-            return string.Format( "${0:X2} / {0}", value );
-        }
+        static void SetReg( Value pReg, string pValue )
+		{
+			_machine.Registers.Set( pReg.Name, pValue );
+		}
+
+		static string GetReg( Value pReg )
+		{
+			switch( pReg.Name )
+			{
+				case "A":   return _machine.Registers.A.ToString();
+
+				case "HL":  return _machine.Registers.HL.ToString();
+				case "H":   return ((_machine.Registers.HL & 0xFF00) >> 8 ).ToString();
+				case "L":   return (_machine.Registers.HL & 0x00FF).ToString();
+				case "BC":  return _machine.Registers.BC.ToString();
+				case "B":   return ((_machine.Registers.BC & 0xFF00) >> 8 ).ToString();
+				case "BL":  return (_machine.Registers.BC & 0x00FF).ToString();
+				case "DE":  return _machine.Registers.DE.ToString();
+				case "D":   return ((_machine.Registers.DE & 0xFF00) >> 8 ).ToString();
+				case "E":   return (_machine.Registers.DE & 0x00FF).ToString();
+
+				case "A'":  return _machine.Registers.AltA.ToString();
+				case "HL'": return _machine.Registers.AltHL.ToString();
+				case "H'":  return ((_machine.Registers.AltHL & 0xFF00) >> 8 ).ToString();
+				case "L'":  return (_machine.Registers.AltHL & 0x00FF).ToString();
+				case "BC'": return _machine.Registers.AltBC.ToString();
+				case "B'":  return ((_machine.Registers.AltBC & 0xFF00) >> 8 ).ToString();
+				case "C'":  return (_machine.Registers.AltBC & 0x00FF).ToString();
+				case "DE'": return _machine.Registers.AltDE.ToString();
+				case "D'":  return ((_machine.Registers.AltDE & 0xFF00) >> 8 ).ToString();
+				case "E'":  return (_machine.Registers.AltDE & 0x00FF).ToString();
+
+				case "IX":  return _machine.Registers.IX.ToString();
+				case "IXH": return ((_machine.Registers.IX & 0xFF00) >> 8 ).ToString();
+				case "IXL": return (_machine.Registers.IX & 0x00FF).ToString();
+
+				case "IY":  return _machine.Registers.IY.ToString();
+				case "IYH": return ((_machine.Registers.IY & 0xFF00) >> 8 ).ToString();
+				case "IYL": return (_machine.Registers.IY & 0x00FF).ToString();
+
+				case "PC":  return _machine.Registers.PC.ToString();
+				case "SP":  return _machine.Registers.SP.ToString();
+
+				case "I":   return _machine.Registers.I.ToString();
+				case "R":   return _machine.Registers.R.ToString();
+			}
+
+			return "";
+		}
+
 
 
         // events from Log

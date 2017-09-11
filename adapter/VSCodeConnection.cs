@@ -187,6 +187,10 @@ namespace VSCodeDebugger
                         OnEvaluate?.Invoke( pRequest );
                         break;
 
+//                    case "runInTerminal":
+//                        OnRunInTerminal?.Invoke( pRequest );
+//                        break;
+
 //                    case "setBreakpoints":
 //                        SetBreakpoints( pResponse, pArgs );
 //                        break;

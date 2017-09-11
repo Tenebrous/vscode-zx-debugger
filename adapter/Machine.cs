@@ -69,25 +69,15 @@ namespace Z80Machine
 
         public void SetRegister( string pRegister, string pValue )
         {
-            ushort value;
-
             try
             {
-                if( pValue.StartsWith( "$" ) )
-                    value = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
-                else if( pValue.StartsWith( "0x" ) )
-                    value = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
-                else
-                    value = Convert.ToUInt16( pValue );
-
-                Connection.SetRegister( _registers, pRegister, value );
+                Connection.SetRegister( _registers, pRegister, Format.Parse( pValue ) );
             }
             catch( Exception e )
             {
                 Log.Write( Log.Severity.Error, e.ToString() );
                 throw;
             }
-
         }
 
 

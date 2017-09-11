@@ -20,9 +20,12 @@ get-breakpoints          Get breakpoints list
 get-breakpointsactions   Get breakpoints actions list
 get-cpu-core-name        Get emulation cpu core name
 get-current-machine      Returns current machine name
+get-current-memory-zone  Returns current memory zone
 get-debug-settings       Get debug settings on remote command protocol
 get-io-ports             Returns currently i/o ports used
 get-machines             Returns list of emulated machines
+get-memory-pages         Returns current state of memory pages
+get-memory-zones         Returns list of memory zones of this machine
 get-ocr                  Get OCR output text
 get-os                   Shows emulator operating system
 get-registers            Get CPU registers
@@ -30,13 +33,13 @@ get-stack-backtrace      Get last 5 16-bit values from the stack
 get-version              Shows emulator version
 hard-reset-cpu           Hard resets the machine
 help                     Shows help screen or command help
-hexdump                  Dumps mapped memory at address, showing hex and ascii
+hexdump                  Dumps memory at address, showing hex and ascii
 hexdump-internal         Dumps internal memory (hexadecimal and ascii) for a given memory pointer
 load-source-code         Load source file to be used on disassemble opcode functions
 ls                       Minimal command list
 noop                     This command does nothing
 quit                     Closes connection
-read-mapped-memory       Dumps mapped memory at address
+read-memory              Dumps memory at address
 reset-cpu                Resets CPU
 run                      Run cpu when on cpu step mode
 save-binary-internal     Dumps internal memory to file for a given memory pointer
@@ -47,6 +50,7 @@ set-breakpointaction     Sets a breakpoint action at desired index entry with co
 set-cr                   Sends carriage return to every command output received, useful on Windows environments
 set-debug-settings       Set debug settings on remote command protocol
 set-machine              Set machine
+set-memory-zone          Set memory zone number
 set-register             Changes register value
 set-verbose-level        Sets verbose level for console output
 set-window-zoom          Sets window zoom
@@ -55,11 +59,10 @@ tbblue-get-palette       Get palette colour at index
 tbblue-get-pattern       Get patterns at index, if not specified items parameters, returns only one
 tbblue-get-sprite        Get sprites at index, if not specified items parameters, returns only one
 tsconf-get-af-port       Get TSConf XXAF port value
-tsconf-get-vram          Get TSConf NVRAM value at index
+tsconf-get-nvram         Get TSConf NVRAM value at index
 view-basic               Gets Basic program listing
-write-mapped-memory      Writes a sequence of bytes starting at desired address on mapped memory
-write-mapped-memory-raw  Writes a sequence of bytes starting at desired address on mapped memory
+write-memory             Writes a sequence of bytes starting at desired address on memory
+write-memory-raw         Writes a sequence of bytes starting at desired address on memory
 
 You can get descriptive help for every command with: help command
 Note: When help shows an argument in brackets [], it means the argument is optional, and when written, you must not write these brackets
-

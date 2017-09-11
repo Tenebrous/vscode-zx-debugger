@@ -55,12 +55,13 @@
     <Compile Include="IDebuggerConnection.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Machine.cs" />
-    <Compile Include="Values.cs" />
+    <Compile Include="Value.cs" />
     <Compile Include="ZEsarUXConnection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VSCodeConnection.cs" />
     <Compile Include="VSCodeProtocol.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="Format.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
