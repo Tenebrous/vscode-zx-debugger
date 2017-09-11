@@ -3,5 +3,4 @@ syntax: glob
 *.DotSettings.user
 packages/
 adapter/obj/
-Adapter/obj/
 .vs/
