@@ -6,7 +6,7 @@ using Z80Machine;
 
 namespace VSCodeDebugger
 {
-    public class ZMain
+    public class Adapter
 	{
 	    static ZEsarUXConnection _zesarux;
 	    static VSCodeConnection _vscode;
@@ -54,53 +54,63 @@ namespace VSCodeDebugger
 
             // zesarux events
 
-            _zesarux = new ZEsarUXConnection();	        
+            _zesarux = new ZEsarUXConnection();	       
+			_zesarux.OnData += Z_OnData; 
 
-            // _zesarux.OnPaused += Z_OnPaused;
-	        // _zesarux.OnContinued += Z_OnContinued;
-	        // _zesarux.OnStepped += Z_OnStepped;
-            // _zesarux.OnRegisterChange += Z_OnRegisterChange;
+
+			// machine events
 
             _machine = new Machine( _zesarux );
 
 
 			// tie all the values together
+
 			SetupValues( _rootValues, _machine );
 
 
+			// event loop
+
 	        _running = true;
+
 	        var wasActive = false;
+			var wasRunning = false;
 
 	        // event loop
 	        while( _running )
 	        {
-	            var active = _vscode.Read() || _zesarux.Read();
+	            var vsactive = _vscode.Read();
+				var zactive = _zesarux.Read();
 
-	            switch( _zesarux.StateChange )
-	            {
-	                case ZEsarUXConnection.RunningStateChangeEnum.Started:
+				if( _zesarux.IsRunning != wasRunning )
+				{
+					if( _zesarux.IsRunning )
                         _vscode.Continued( true );
-	                    break;
-
-                    case ZEsarUXConnection.RunningStateChangeEnum.Stopped:
+					else
                         _vscode.Stopped( 1, "step", "step" );
-                        break;
-	            }
 
-	            if( !active )
+					wasRunning = _zesarux.IsRunning;
+				}
+
+	            if( !vsactive )
 	            {
 	                if( wasActive )
 	                    Log.Write( Log.Severity.Debug, "" );
 
-	                System.Threading.Thread.Sleep( 10 );
+					if( !zactive )
+	                	System.Threading.Thread.Sleep( 10 );
 	            }
 
-	            wasActive = active;
+	            wasActive = vsactive;
 	        }
 	    }
 
+        private static void Z_OnData( List<string> pList )
+        {
+            
+        }
 
-	    // events coming in from VSCode
+
+        // events coming in from VSCode
 
         static void VSCode_OnInitialize( Request pRequest )
 	    {
@@ -302,7 +312,7 @@ namespace VSCodeDebugger
 		{
 			string command = DynString( pRequest.arguments, "expression", "" );
 
-			List<string> result = _zesarux.Command( command );
+			List<string> result = _zesarux.SendAndReceive( command );
 			
 			_vscode.Send(
 				 pRequest, 

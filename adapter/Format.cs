@@ -38,6 +38,11 @@ namespace VSCodeDebugger
             return result;
         }
 
+        public static ushort FromHex( string pHex )
+        {
+            return Convert.ToUInt16( pHex, 16 );
+        }
+
 	    static StringBuilder _tempHexToBin = new StringBuilder();
         public static string HexToBin( string pHex, int pSplit )
         {

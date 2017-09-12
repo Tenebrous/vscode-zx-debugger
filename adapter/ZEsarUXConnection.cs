@@ -11,10 +11,7 @@ namespace VSCodeDebugger
 {
     public class ZEsarUXConnection : IDebuggerConnection
     {
-        public Action OnPaused;
-        public Action OnContinued;
-        public Action OnStepped;
-        public Action<string, string> OnRegisterChange;
+        public Action<List<string>> OnData;
 
         TcpClient _client;
         NetworkStream _stream;
@@ -36,7 +33,7 @@ namespace VSCodeDebugger
 
                 ReadAll();
 
-                var version = SimpleCommand("get-version");
+                var version = SendAndReceiveSingle("get-version");
                 Log.Write( Log.Severity.Message, "zesarux: connected (" + version + ")." );
 
                 ReadAll();
@@ -54,14 +51,14 @@ namespace VSCodeDebugger
 
         public bool Pause()
         {
-            SimpleCommand( "enter-cpu-step" );
+            SendAndReceiveSingle( "enter-cpu-step" );
             return true;
         }
 
 
         public bool Continue()
         {
-            SimpleCommand( "exit-cpu-step" );
+            SendAndReceiveSingle( "exit-cpu-step" );
             return true;
         }
 
@@ -69,7 +66,7 @@ namespace VSCodeDebugger
         public bool StepOver()
         {
             _wasRunning = true;
-            SimpleCommand( "cpu-step-over" );
+            SendAndReceiveSingle( "cpu-step-over" );
             return true;
         }
 
@@ -77,7 +74,7 @@ namespace VSCodeDebugger
         public bool Step()
         {
             _wasRunning = true;
-            SimpleCommand( "cpu-step" );
+            SendAndReceiveSingle( "cpu-step" );
             return true;
         }
 
@@ -87,7 +84,7 @@ namespace VSCodeDebugger
             Log.Write( Log.Severity.Message, "zesarux: disconnecting..." );
 
             if( _stream != null )
-                SimpleCommand( "exit" );
+                SendAndReceiveSingle( "exit" );
 
             if( _stream != null )
             {
@@ -118,19 +115,19 @@ namespace VSCodeDebugger
             //   Bit 2: Do not add a L preffix when searching source code labels.
             //   Bit 3: Show bytes when debugging opcodes"
 
-            SimpleCommand( "set-debug-settings 8" );
+            SendAndReceiveSingle( "set-debug-settings 8" );
 
-            SimpleCommand( "set-memory-zone -1" );
+            SendAndReceiveSingle( "set-memory-zone -1" );
         }
 
         public string GetMachine()
         {
-            return _machine = SimpleCommand( "get-current-machine" );
+            return _machine = SendAndReceiveSingle( "get-current-machine" );
         }
 
         public void GetMemoryPages( Memory pMemory )
         {
-            var pages = SimpleCommand( "get-memory-pages" );
+            var pages = SendAndReceiveSingle( "get-memory-pages" );
             // RO1 RA5 RA2 RA7 SCR5 PEN
 
             var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
@@ -162,14 +159,14 @@ namespace VSCodeDebugger
 
         public string GetMemory( ushort pAddress, int pLength )
         {
-            var memory = SimpleCommand( "read-memory " + pAddress + " " + pLength );
+            var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
             return memory;
         }
 
         public void GetStack( Stack pStack )
         {
             pStack.Clear();
-            var stack = SimpleCommand( "get-stack-backtrace" );
+            var stack = SendAndReceiveSingle( "get-stack-backtrace" );
 
             // [15E6H 15E1H 0F3BH 107FH FF54H]
             var split = stack.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
@@ -178,7 +175,7 @@ namespace VSCodeDebugger
 
             foreach( var frame in split )
                 if( frame.EndsWith("H") )
-                    pStack.Add( (ushort)( UnHex( frame.Substring( 0, frame.Length - 1 ) ) - 3 ) );
+                    pStack.Add( (ushort)( Format.FromHex( frame.Substring( 0, frame.Length - 1 ) ) - 3 ) );
                 else
                     pStack.Add( (ushort)(int.Parse( frame ) - 3) );
         }
@@ -187,12 +184,12 @@ namespace VSCodeDebugger
         public void GetRegisters( Registers pRegisters )
         {
             _registers = pRegisters;
-            ParseRegisters( pRegisters, SimpleCommand( "get-registers" ) );
+            ParseRegisters( pRegisters, SendAndReceiveSingle( "get-registers" ) );
         }
 
         public void SetRegister( Registers pRegisters, string pRegister, ushort pValue )
         {
-            var result = SimpleCommand( "set-register " + pRegister + "=" + pValue );
+            var result = SendAndReceiveSingle( "set-register " + pRegister + "=" + pValue );
             ParseRegisters( pRegisters, result );
         }
 
@@ -206,7 +203,7 @@ namespace VSCodeDebugger
             foreach( Match match in matches )
             {
                 var register = match.Groups[1].ToString();
-                var value = UnHex(match.Groups[2].ToString());
+                var value = Format.FromHex(match.Groups[2].ToString());
 
                 try
                 {
@@ -230,7 +227,7 @@ namespace VSCodeDebugger
 
         public void UpdateDisassembly( int pAddress )
         {
-            var lines = Command( "disassemble " + pAddress + " " + 30 );
+            var lines = SendAndReceive( "disassemble " + pAddress + " " + 30 );
 
             if( lines == null )
                 return;
@@ -392,30 +389,6 @@ namespace VSCodeDebugger
             get { return _isRunning; }
         }
 
-        public enum RunningStateChangeEnum
-        {
-            NoChange,
-            Stopped,
-            Started
-        }
-
-        public RunningStateChangeEnum StateChange
-        {
-            get
-            {
-                var result = RunningStateChangeEnum.NoChange;
-
-                if( _wasRunning && !_isRunning )
-                    result = RunningStateChangeEnum.Stopped;
-                else if( !_wasRunning && _isRunning )
-                    result = RunningStateChangeEnum.Started;
-
-                _wasRunning = _isRunning;
-
-                return result;
-            }
-        }
-
         public string DisassemblyFile
         {
             get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
@@ -443,11 +416,14 @@ namespace VSCodeDebugger
 
             var result = ReadAll();
 
+            if( result.Count > 0 )
+                OnData?.Invoke( result );
+
             return result.Count > 0;
         }
 
 
-        public List<string> Command( string pCommand )
+        public List<string> SendAndReceive( string pCommand )
         {
             if( !Start() )
                 return null;
@@ -490,6 +466,23 @@ namespace VSCodeDebugger
             );
 
             return _tempReceiveLines;
+        }
+
+        string SendAndReceiveSingle( string pCommand )
+        {
+            var result = SendAndReceive( pCommand );
+
+            if( result == null || result.Count == 0 )
+                return "";
+
+            return result[0];
+        }
+
+        void Send( string pCommand )
+        {
+            // clear buffer
+            ReadAll();
+
         }
 
         byte[] _tempReadBytes = new byte[4096];
@@ -538,21 +531,6 @@ namespace VSCodeDebugger
             }
 
             return _tempReceiveLines;
-        }
-
-        string SimpleCommand( string pCommand )
-        {
-            var result = Command( pCommand );
-
-            if( result == null || result.Count == 0 )
-                return "";
-
-            return result[0];
-        }
-
-        ushort UnHex( string pHex )
-        {
-            return Convert.ToUInt16( pHex, 16 );
         }
     }
 }
