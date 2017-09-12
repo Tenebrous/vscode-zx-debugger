@@ -1,10 +1,10 @@
 {
-    "name": "vscode-zesarux-debug",
-    "displayName": "Debugger for ZEsarUX",
-    "version": "0.0.3",
+    "name": "vscode-zx-debugger",
+    "displayName": "ZX Debugger",
+    "version": "0.0.7",
     "preview": true,
     "publisher": "Tenebrous",
-    "description": "ZEsarUX debugger extension",
+    "description": "ZX debugger extension",
     "author": {
         "name": "Tenebrous",
         "email": "m@tenebrous.co.uk"
@@ -13,7 +13,7 @@
         "Debuggers"
     ],
     "keywords": [
-        "zesarux",
+        "zx",
         "debugger",
         "debug",
         "z80",
@@ -32,14 +32,14 @@
     "contributes": {
         "debuggers": [
             {
-                "type": "zesarux",
-                "label": "ZEsarUX Debugger",
+                "type": "zxdebug",
+                "label": "ZX Debugger",
                 "enableBreakpointsFor": {
                     "languageIds": [
-                        "zesarux-disasm"
+                        "zx-debug-disasm"
                     ]
                 },
-                "program": "./bin/vscode-zesarux-debug.exe",
+                "program": "./bin/vscode-zx-debugger.exe",
                 "osx": {
                     "runtime": "mono"
                 },
@@ -58,8 +58,8 @@
                 },
                 "initialConfigurations": [
                     {
-                        "name": "ZEsarUX",
-                        "type": "zesarux",
+                        "type": "zxdebug",
+                        "name": "ZX Debugger",
                         "request": "attach",
                         "folder": "${workspaceRoot}"
                     }
@@ -68,21 +68,21 @@
         ],
         "languages": [
             {
-                "id": "zesarux-disasm",
+                "id": "zx-debug-disasm",
                 "aliases": [
-                    "ZEsarUX Disassembly"
+                    "ZX Debugger Disassembly"
                 ],
                 "extensions": [
                     ".zdis"
                 ],
-                "configuration": "./syntax/zesarux-disasm.json"
+                "configuration": "./syntax/zx-debug-disasm.json"
             }
         ],
         "grammars": [
             {
-                "language": "zesarux-disasm",
+                "language": "zx-debug-disasm",
                 "scopeName": "source.asm.z80",
-                "path": "./syntax/zesarux-disasm.tmLanguage.json"
+                "path": "./syntax/zx-debug-disasm.tmLanguage.json"
             }
         ]
     }

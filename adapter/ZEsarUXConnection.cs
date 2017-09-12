@@ -447,7 +447,7 @@ namespace VSCodeDebugger
         }
 
 
-        List<string> Command( string pCommand )
+        public List<string> Command( string pCommand )
         {
             if( !Start() )
                 return null;

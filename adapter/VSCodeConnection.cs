@@ -21,6 +21,7 @@ namespace VSCodeDebugger
         public Action<Request> OnGetVariables;
         public Action<Request> OnSetVariable;
         public Action<Request> OnGetThreads;
+        public Action<Request> OnGetCompletions;
         public Action<Request> OnGetScopes;
         public Action<Request> OnGetSource;
         public Action<Request> OnGetLoadedSources;
@@ -83,7 +84,7 @@ namespace VSCodeDebugger
 
         void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
         {
-            Log.Write( Log.Severity.Debug, "vscode: (in) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Verbose, "vscode: (in) [" + pCommand + "]" );
 
             pArgs = pArgs ?? new { };
 
@@ -185,6 +186,10 @@ namespace VSCodeDebugger
 
                     case "evaluate":
                         OnEvaluate?.Invoke( pRequest );
+                        break;
+
+                    case "completions":
+                        OnGetCompletions?.Invoke( pRequest );
                         break;
 
 //                    case "runInTerminal":

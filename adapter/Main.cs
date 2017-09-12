@@ -46,6 +46,7 @@ namespace VSCodeDebugger
 	        _vscode.OnGetVariables += VSCode_OnGetVariables;
 	        _vscode.OnSetVariable += VSCode_OnSetVariable;
 	        _vscode.OnGetSource += VSCode_OnGetSource;
+			_vscode.OnGetCompletions += VSCode_OnGetCompletions;
 	        _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 	        _vscode.OnEvaluate += VSCode_OnEvaluate;
@@ -107,7 +108,8 @@ namespace VSCodeDebugger
 	            pRequest,
 	            new Capabilities()
 	            {
-	                supportsConfigurationDoneRequest = true
+	                supportsConfigurationDoneRequest = true,
+					supportsCompletionsRequest = true
                 }
 	        );
 
@@ -254,6 +256,11 @@ namespace VSCodeDebugger
             _vscode.Send( pRequest, new ScopesResponseBody( scopes ) );
         }
 
+        static void VSCode_OnGetCompletions( Request pRequest )
+        {
+			//Log.Write( Log.Severity.Error, pRequest.arguments.ToString() );
+        }		
+
 	    static void VSCode_OnGetLoadedSources( Request pRequest )
 	    {
 	    //    _vscode.Send(
@@ -285,6 +292,28 @@ namespace VSCodeDebugger
 
         static void VSCode_OnEvaluate( Request pRequest )
 	    {
+			if( DynString( pRequest.arguments, "context", "" ) == "repl" )
+				VSCode_OnEvaluate_REPL( pRequest );
+			else
+				VSCode_OnEvaluate_Variable( pRequest );
+		}
+
+		static void VSCode_OnEvaluate_REPL( Request pRequest )
+		{
+			string command = DynString( pRequest.arguments, "expression", "" );
+
+			List<string> result = _zesarux.Command( command );
+			
+			_vscode.Send(
+				 pRequest, 
+				 new EvaluateResponseBody(
+					 string.Join( "\n", result )
+				 )
+			);
+		}
+
+		static void VSCode_OnEvaluate_Variable( Request pRequest )
+		{
 	        var value = "";
             string formatted = "";
 
@@ -483,14 +512,7 @@ namespace VSCodeDebugger
 
 		static void SetupValues_Settings( Value pVal )
 		{
-			pVal.Create( "Command", pSet: RunCommand );
 		}
-
-        private static void RunCommand( Value pValue, string pNew )
-        {
-            _vscode.Send( _vscode.CurrentRequest, pErrorMessage: "whoops" );
-        }
-		
 
         static void SetReg( Value pReg, string pValue )
 		{
@@ -512,59 +534,6 @@ namespace VSCodeDebugger
 	        _vscode?.Send( new OutputEvent( type, pMessage + "\n" ) );
 	    }
 
-
-        //static void Z_OnRegisterChange( string pRegister, string pValue )
-        //{
-        //    _vscode.Send(
-        //        new var
-        //    );
-        //}
-
-
-        //public override void SetBreakpoints( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: setbreakpoints");
-        //}
-
-        //public override void Next( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: next");
-        //}
-
-        //public override void StepIn( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: stepin");
-        //}
-
-        //public override void StepOut( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: stepout");
-        //}
-
-        //public override void StackTrace( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: stacktrace");
-        //}
-
-        //public override void Variables( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: variables");
-        //}
-
-        //public override void SetExceptionBreakpoints( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: set exception breakpoints");
-        //}
-
-        //public override void SetFunctionBreakpoints( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: set function breakpoints");
-        //}
-
-        //public override void Source( Response response, dynamic arguments )
-        //{
-        //    Log.Write("vscode: source");
-        //}
 
         static string DynString( dynamic pArgs, string pName, string pDefault = null )
 	    {
