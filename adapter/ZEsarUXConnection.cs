@@ -12,7 +12,7 @@ namespace VSCodeDebugger
     public class ZEsarUXConnection : IDebuggerConnection
     {
         public Action<List<string>> OnData;
-
+   
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
@@ -65,7 +65,7 @@ namespace VSCodeDebugger
 
         public bool StepOver()
         {
-            _wasRunning = true;
+            _isRunning = true;
             SendAndReceiveSingle( "cpu-step-over" );
             return true;
         }
@@ -73,7 +73,7 @@ namespace VSCodeDebugger
 
         public bool Step()
         {
-            _wasRunning = true;
+            _isRunning = true;
             SendAndReceiveSingle( "cpu-step" );
             return true;
         }
@@ -382,8 +382,7 @@ namespace VSCodeDebugger
         }
 
 
-        bool _wasRunning;
-        bool _isRunning;
+        bool _isRunning = true;
         public bool IsRunning
         {
             get { return _isRunning; }
@@ -432,7 +431,7 @@ namespace VSCodeDebugger
 
 
             // send command to zesarux
-            Log.Write( Log.Severity.Debug, "zesarux: (out) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Message, "zesarux: (out) [" + pCommand + "]" );
 
             var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
             _stream.Write(bytes, 0, bytes.Length);
@@ -461,7 +460,6 @@ namespace VSCodeDebugger
                 pLine =>
                 {
                     if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
-                    Log.Write( Log.Severity.Verbose, "zesarux: <- [" + pLine + "]" );
                 }
             );
 
@@ -482,8 +480,16 @@ namespace VSCodeDebugger
         {
             // clear buffer
             ReadAll();
-
         }
+
+        public enum Transition
+        {
+            None,
+            Stopped,
+            Started
+        }
+
+        public Transition LastTransition;
 
         byte[] _tempReadBytes = new byte[4096];
         StringBuilder _tempReadString = new StringBuilder();
@@ -491,43 +497,48 @@ namespace VSCodeDebugger
         List<string> _tempReceiveLines = new List<string>();
         List<string> ReadAll()
         {
+            var wasRunning = _isRunning;
+
             _tempReadString.Clear();
             _tempReadProcessLines.Clear();
             _tempReceiveLines.Clear();
 
-            if( _stream.DataAvailable )
+            if( !_stream.DataAvailable ) return _tempReceiveLines;
+
+            var wait = new Stopwatch();
+
+            do
             {
-
-                var wait = new Stopwatch();
-
-                do
+                // read all the data until none left
+                if( _stream.DataAvailable )
                 {
-                    // read all the data until none left
-                    if( _stream.DataAvailable )
-                    {
-                        var read = _stream.Read( _tempReadBytes, 0, _tempReadBytes.Length );
-                        _tempReadString.Append( Encoding.ASCII.GetString( _tempReadBytes, 0, read ) );
-                        wait.Restart();
-                    }
+                    var read = _stream.Read( _tempReadBytes, 0, _tempReadBytes.Length );
+                    _tempReadString.Append( Encoding.ASCII.GetString( _tempReadBytes, 0, read ) );
+                    wait.Restart();
                 }
-                while( wait.ElapsedMilliseconds < 10 );
+            }
+            while( wait.ElapsedMilliseconds < 10 );
 
-                _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
+            _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
 
 
-                // look for magic words
-                foreach( var line in _tempReadProcessLines )
-                {
-                    Log.Write( Log.Severity.Debug, "zesarux: (in) [" + line + "]" );
+            // look for magic words
+            foreach( var line in _tempReadProcessLines )
+            {
+                Log.Write( Log.Severity.Message, "zesarux: (in)  [" + line + "]" );
 
-                    if( line.StartsWith( "command> " ) )
-                        _isRunning = true;
-                    else if( line.StartsWith( "command@cpu-step> " ) )
-                        _isRunning = false;
-                    else
-                        _tempReceiveLines.Add( line );
-                }
+                if( line.StartsWith( "command> " ) )
+                    _isRunning = true;
+                else if( line.StartsWith( "command@cpu-step> " ) )
+                    _isRunning = false;
+                else
+                    _tempReceiveLines.Add( line );
+            }
 
+
+            if( wasRunning != _isRunning )
+            {
+                LastTransition = _isRunning ? Transition.Started : Transition.Stopped;
             }
 
             return _tempReceiveLines;

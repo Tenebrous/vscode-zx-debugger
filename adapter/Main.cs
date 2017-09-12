@@ -73,7 +73,6 @@ namespace VSCodeDebugger
 	        _running = true;
 
 	        var wasActive = false;
-			var wasRunning = false;
 
 	        // event loop
 	        while( _running )
@@ -81,15 +80,21 @@ namespace VSCodeDebugger
 	            var vsactive = _vscode.Read();
 				var zactive = _zesarux.Read();
 
-				if( _zesarux.IsRunning != wasRunning )
-				{
-					if( _zesarux.IsRunning )
-                        _vscode.Continued( true );
-					else
-                        _vscode.Stopped( 1, "step", "step" );
+	            switch( _zesarux.LastTransition )
+	            {
+	                    case ZEsarUXConnection.Transition.None:
+	                        break;
 
-					wasRunning = _zesarux.IsRunning;
-				}
+                        case ZEsarUXConnection.Transition.Started:
+                            _vscode.Continued( true );
+                            _zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+                            break;
+
+                        case ZEsarUXConnection.Transition.Stopped:
+                            _vscode.Stopped( 1, "step", "step" );
+                            _zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+                            break;
+	            }
 
 	            if( !vsactive )
 	            {
