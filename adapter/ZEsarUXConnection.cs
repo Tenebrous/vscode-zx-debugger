@@ -431,11 +431,9 @@ namespace VSCodeDebugger
 
 
             // send command to zesarux
-            Log.Write( Log.Severity.Message, "zesarux: (out) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Verbose, "zesarux: (out) [" + pCommand + "]" );
 
-            var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
-            _stream.Write(bytes, 0, bytes.Length);
-            _stream.Flush();
+            Send( pCommand );
 
 
             // limit how long we wait for the reply to start
@@ -476,10 +474,14 @@ namespace VSCodeDebugger
             return result[0];
         }
 
-        void Send( string pCommand )
+        public void Send( string pCommand )
         {
             // clear buffer
             ReadAll();
+
+            var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
+            _stream.Write( bytes, 0, bytes.Length );
+            _stream.Flush();
         }
 
         public enum Transition
@@ -525,7 +527,7 @@ namespace VSCodeDebugger
             // look for magic words
             foreach( var line in _tempReadProcessLines )
             {
-                Log.Write( Log.Severity.Message, "zesarux: (in)  [" + line + "]" );
+                Log.Write( Log.Severity.Verbose, "zesarux: (in)  [" + line + "]" );
 
                 if( line.StartsWith( "command> " ) )
                     _isRunning = true;
@@ -534,7 +536,6 @@ namespace VSCodeDebugger
                 else
                     _tempReceiveLines.Add( line );
             }
-
 
             if( wasRunning != _isRunning )
             {

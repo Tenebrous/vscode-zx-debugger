@@ -20,10 +20,12 @@ namespace VSCodeDebugger
 
 	    static Machine _machine;
 
+	    static bool _analysing;
+
     	static void Main(string[] argv)
 	    {
 	        // set up 
-
+             
             Log.OnLog += Log_SendToVSCode;
 	        Log.MaxSeverity = Log.Severity.Message;
 
@@ -109,9 +111,22 @@ namespace VSCodeDebugger
 	        }
 	    }
 
-        private static void Z_OnData( List<string> pList )
+        static void Z_OnData( List<string> pList )
         {
-            
+            if( _analysing )
+            {
+                _vscode.Send( new OutputEvent( OutputEvent.OutputEventType.console, "." ) );
+                _zesarux.Send( "run verbose 1000" );
+
+                return;
+            }
+
+            _vscode.Send( 
+                new OutputEvent( 
+                    OutputEvent.OutputEventType.console, 
+                    string.Join( "\n", pList )
+                )
+            );
         }
 
 
@@ -317,7 +332,24 @@ namespace VSCodeDebugger
 		{
 			string command = DynString( pRequest.arguments, "expression", "" );
 
-			List<string> result = _zesarux.SendAndReceive( command );
+		    if( !_analysing && command == "heat" )
+		    {
+		        _vscode.Send( pRequest, new EvaluateResponseBody("Analysing - type 'stop' to end ..." ) );
+
+                _analysing = true;
+		        _zesarux.Send( "run verbose 1000" );
+		        return;
+		    }
+
+            if( _analysing && command == "stop" )
+		    {
+		        _vscode.Send( pRequest, new EvaluateResponseBody( "Stopped." ) );
+
+                _analysing = false;
+		        return;
+		    }
+
+			var result = _zesarux.SendAndReceive( command );
 			
 			_vscode.Send(
 				 pRequest, 

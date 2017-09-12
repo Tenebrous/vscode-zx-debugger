@@ -2,3 +2,4 @@ adapter/obj/
 bin/
 .vs/
 packages/
+*.DotSettings.user
