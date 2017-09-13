@@ -81,21 +81,22 @@ namespace VSCodeDebugger
         }
 
 
-        char[] space = new char[] { ' ' };
-        public IEnumerable<AssemblyLine> Disassemble( ushort pAddress, int pCount )
+        char[] _space = new char[] { ' ' };
+        public void Disassemble( ushort pAddress, int pCount, List<AssemblyLine> pResults )
         {
             var lines = SendAndReceive( "disassemble " + pAddress + " " + pCount );
 
             foreach( var line in lines )
             {
-                var split = line.Split( space, StringSplitOptions.RemoveEmptyEntries );
+                var split = line.Split( _space, 3, StringSplitOptions.RemoveEmptyEntries );
 
-                yield return new AssemblyLine()
-                {
-                    Address = Format.FromHex(split[0]),
-                    Opcodes = split[1],
-                    Text = split[2]
-                };
+                pResults.Add( new AssemblyLine()
+                    {
+                        Address = Format.FromHex( split[0] ),
+                        Opcodes = split[1],
+                        Text = split[2]
+                    } 
+                );
             }
         }
 
@@ -148,7 +149,7 @@ namespace VSCodeDebugger
 
             var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
 
-            pMemory.ClearMemoryMap();
+            // pMemory.ClearMemoryMap();
 
             ushort slotSize = pMemory.SlotSize;
             ushort slotPos = 0;
@@ -255,11 +256,6 @@ namespace VSCodeDebugger
             get { return _isRunning; }
         }
 
-        public string DisassemblyFile
-        {
-            get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
-        }
-
 
         string _hardware;
         public string Hardware
@@ -270,14 +266,6 @@ namespace VSCodeDebugger
         public string GetHardware()
         {
             return _hardware = SendAndReceiveSingle( "get-current-machine" );
-        }
-
-
-        string _tempFolder;
-        public string TempFolder
-        {
-            set { _tempFolder = value; }
-            get { return _tempFolder; }
         }
 
         public bool Read()

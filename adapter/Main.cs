@@ -115,6 +115,8 @@ namespace VSCodeDebugger
         {
             if( _analysing )
             {
+                // _machine.UpdateDisassembly( pList, DisassemblyFile );
+
                 _vscode.Send( new OutputEvent( OutputEvent.OutputEventType.console, "." ) );
                 _zesarux.Send( "run verbose 10000" );
 
@@ -201,8 +203,8 @@ namespace VSCodeDebugger
                 return;
 	        }
 
-	        _zesarux.TempFolder = Path.Combine( _folder, ".debug" );
-	        Directory.CreateDirectory( _zesarux.TempFolder );
+	        _tempFolder = Path.Combine( _folder, ".debug" );
+	        Directory.CreateDirectory( _tempFolder );
 
             if( !_zesarux.Start() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
@@ -227,7 +229,7 @@ namespace VSCodeDebugger
 
 	    static Source DisassemblySource()
 	    {
-	        return new Source( "-", _zesarux.DisassemblyFile, 0, Source.SourcePresentationHintEnum.deemphasize );
+	        return new Source( "-", DisassemblyFile, 0, Source.SourcePresentationHintEnum.deemphasize );
 	    }
 
         static List<StackFrame> _stackFrames = new List<StackFrame>();
@@ -237,7 +239,7 @@ namespace VSCodeDebugger
 	        _machine.Memory.GetMapping();
 	        _machine.Stack.Get();
 
-            _machine.UpdateDisassembly( _machine.Registers.PC );
+            _machine.UpdateDisassembly( _machine.Registers.PC, DisassemblyFile );
 
             _stackFrames.Clear();
 
@@ -268,7 +270,7 @@ namespace VSCodeDebugger
         {
             int frameId = pRequest.arguments.frameId;
 
-            _machine.UpdateDisassembly( _machine.Stack[frameId-1] );
+            _machine.UpdateDisassembly( _machine.Stack[frameId-1], DisassemblyFile );
 
             var scopes = new List<Scope>();
 
@@ -596,6 +598,13 @@ namespace VSCodeDebugger
 
 	        return result;
 	    }
+
+	    static string _tempFolder;
+        static string DisassemblyFile
+	    {
+	        get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
+	    }
+
     }
 }
 

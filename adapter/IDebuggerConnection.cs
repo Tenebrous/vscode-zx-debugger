@@ -21,7 +21,7 @@ namespace VSCodeDebugger
                
         bool   StepOver();
         bool   Step();
-        IEnumerable<AssemblyLine> Disassemble( ushort pAddress, int pCount );
+        void   Disassemble( ushort pAddress, int pCount, List<AssemblyLine> pOutput );
     }
 
     public class AssemblyLine
