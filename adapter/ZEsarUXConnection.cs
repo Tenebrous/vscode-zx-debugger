@@ -5,10 +5,12 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-using Z80Machine;
+using Spectrum;
 
 namespace VSCodeDebugger
 {
+    // test
+    
     public class ZEsarUXConnection : IDebuggerConnection
     {
         public Action<List<string>> OnData;
@@ -79,6 +81,25 @@ namespace VSCodeDebugger
         }
 
 
+        char[] space = new char[] { ' ' };
+        public IEnumerable<AssemblyLine> Disassemble( ushort pAddress, int pCount )
+        {
+            var lines = SendAndReceive( "disassemble " + pAddress + " " + pCount );
+
+            foreach( var line in lines )
+            {
+                var split = line.Split( space, StringSplitOptions.RemoveEmptyEntries );
+
+                yield return new AssemblyLine()
+                {
+                    Address = Format.FromHex(split[0]),
+                    Opcodes = split[1],
+                    Text = split[2]
+                };
+            }
+        }
+
+
         public bool Stop()
         {
             Log.Write( Log.Severity.Message, "zesarux: disconnecting..." );
@@ -120,11 +141,6 @@ namespace VSCodeDebugger
             SendAndReceiveSingle( "set-memory-zone -1" );
         }
 
-        public string GetMachine()
-        {
-            return _machine = SendAndReceiveSingle( "get-current-machine" );
-        }
-
         public void GetMemoryPages( Memory pMemory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
@@ -134,7 +150,8 @@ namespace VSCodeDebugger
 
             pMemory.ClearMemoryMap();
 
-            int sixteenkpage = 0;
+            ushort slotSize = pMemory.SlotSize;
+            ushort slotPos = 0;
 
             foreach( var part in split )
             {
@@ -145,14 +162,14 @@ namespace VSCodeDebugger
                 else if( part.StartsWith( "RO" ) )
                 {
                     var bank = pMemory.ROM( int.Parse( part.Substring( 2 ) ) );
-                    pMemory.SetAddressBank( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), bank );
-                    sixteenkpage++;
+                    pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
+                    slotPos++;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
                     var bank = pMemory.RAM( int.Parse( part.Substring( 2 ) ) );
-                    pMemory.SetAddressBank( (ushort)( sixteenkpage * 0x4000 ), (ushort)( sixteenkpage * 0x4000 + 0x3FFF ), bank );
-                    sixteenkpage++;
+                    pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
+                    slotPos++;
                 }
             }
         }
@@ -225,156 +242,6 @@ namespace VSCodeDebugger
             }
         }
 
-        public void UpdateDisassembly( int pAddress )
-        {
-            var lines = SendAndReceive( "disassemble " + pAddress + " " + 30 );
-
-            if( lines == null )
-                return;
-
-            //var defaultBank = _memory.GetBankAtAddress( 0x0000 );
-
-            //foreach( var line in lines )
-            //{
-            //    var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-            //    var address = UnHex(parts[0]);
-            //    var bank = defaultBank;
-
-            //    if( _memory.PagingEnabled )
-            //        bank = _memory.GetBankAtAddress( address );
-
-            //}
-        }
-
-        //public void UpdateDisassembly2( int pAddress )
-        //{
-        //    foreach( var section in _disassembledSections )
-        //        if( pAddress >= section.Start && pAddress <= section.End - 10 )
-        //            return;
-
-        //    var lines = Command( "disassemble " + pAddress + " " + 30 );
-
-        //    if( lines != null )
-        //    {
-        //        var section = new DisassemblySection() { Start = 0xFFFFF };
-
-        //        foreach( var line in lines )
-        //        {
-        //            var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-        //            var address = UnHex(parts[0]);
-
-        //            section.Start = Math.Min( section.Start, address );
-        //            section.End   = Math.Max( section.End, address );
-
-        //            section.Lines.Add(
-        //                new DisassemblyLine()
-        //                {
-        //                    Address = address,
-        //                    Code = parts[1]
-        //                }
-        //            );
-
-        //            // stop disassembling at hard RET (just testing to see if that makes things clearer)
-        //            if( parts[1].Substring( 0, 2 ) == "C9" )
-        //                break;
-        //        }
-
-        //        // look to see if we cover two existing sections, whereby we'll merge them
-        //        for( int i = 0; i < _disassembledSections.Count - 1; i++ )
-        //            if( section.Start <= _disassembledSections[i].End 
-        //             && section.End   >= _disassembledSections[i+1].Start )
-        //            {
-        //                _disassembledSections[i].End = _disassembledSections[i + 1].End;
-        //                _disassembledSections[i].Lines.AddRange( _disassembledSections[i+1].Lines );
-        //                _disassembledSections.RemoveAt( i + 1 );
-        //                break;
-        //            }
-
-                
-        //        // find relevant section to add lines to
-        //        DisassemblySection addTo = null;
-        //        foreach( var otherSection in _disassembledSections )
-        //            if( section.End >= otherSection.Start && section.Start <= otherSection.End )
-        //            {
-        //                addTo = otherSection;
-        //                break;
-        //            }
-
-        //        if( addTo == null )
-        //        {
-        //            // created new section
-        //            _disassembledSections.Add( section );
-        //        }
-        //        else
-        //        {
-        //            // merge with existing section
-                    
-        //            foreach( var line in section.Lines )
-        //            {
-        //                bool exists = false;
-
-        //                foreach ( var otherLine in addTo.Lines )
-        //                    if( line.Address == otherLine.Address )
-        //                    {
-        //                        exists = true;
-        //                        break;
-        //                    }
-
-        //                if( !exists )
-        //                    addTo.Lines.Add( line );
-        //            }
-
-        //            addTo.Lines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
-        //        }
-
-
-        //        // re-sort sections
-        //        _disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
-        //    }
-
-        //    int lastBank = -1;
-        //    var tmp = new List<string>();
-        //    foreach( var section in _disassembledSections )
-        //    {
-        //        foreach( var line in section.Lines )
-        //        {
-        //            if( _memory.PagingEnabled )
-        //            {
-        //                var bank = _memory.GetMapForAddress( (ushort) line.Address );
-        //                if( bank != lastBank )
-        //                {
-        //                    if( bank < -1 )
-        //                        tmp.Add( string.Format( "ROM_{0:D2}", -1 - bank ) );
-        //                    else if( bank >= 0 )
-        //                        tmp.Add( string.Format( "BANK_{0:D2}", bank ) );
-
-        //                    lastBank = bank;
-        //                }
-        //            }
-
-        //            tmp.Add( string.Format( "  {0:X4} {1}", line.Address, line.Code ) );
-
-        //            line.FileLine = tmp.Count;
-        //        }
-
-        //        tmp.Add( "" );
-        //        lastBank = -1;
-        //    }
-
-        //    File.WriteAllLines( DisassemblyFile, tmp );
-        //}
-
-
-        public int FindLine( int pAddress )
-        {
-//            foreach( var section in _disassembledSections )
-//                foreach( var line in section.Lines )
-//                    if( line.Address == pAddress )
-//                        return line.FileLine;
-
-            return 0;
-        }
-
 
         public bool IsConnected
         {
@@ -393,11 +260,18 @@ namespace VSCodeDebugger
             get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
         }
 
-        string _machine;
-        public string Machine
+
+        string _hardware;
+        public string Hardware
         {
-            get { return _machine; }
+            get { return _hardware; }
         }
+
+        public string GetHardware()
+        {
+            return _hardware = SendAndReceiveSingle( "get-current-machine" );
+        }
+
 
         string _tempFolder;
         public string TempFolder

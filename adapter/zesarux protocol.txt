@@ -31,6 +31,7 @@ get-os                   Shows emulator operating system
 get-registers            Get CPU registers
 get-stack-backtrace      Get last 5 16-bit values from the stack
 get-version              Shows emulator version
+get-visualmem-dump       Dumps all the visual memory written positions
 hard-reset-cpu           Hard resets the machine
 help                     Shows help screen or command help
 hexdump                  Dumps memory at address, showing hex and ascii

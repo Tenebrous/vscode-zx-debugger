@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Z80Machine;
+using Spectrum;
 
 namespace VSCodeDebugger
 {
@@ -84,18 +84,18 @@ namespace VSCodeDebugger
 
 	            switch( _zesarux.LastTransition )
 	            {
-	                    case ZEsarUXConnection.Transition.None:
-	                        break;
+					case ZEsarUXConnection.Transition.None:
+						break;
 
-                        case ZEsarUXConnection.Transition.Started:
-                            _vscode.Continued( true );
-                            _zesarux.LastTransition = ZEsarUXConnection.Transition.None;
-                            break;
+					case ZEsarUXConnection.Transition.Started:
+						_vscode.Continued( true );
+						_zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+						break;
 
-                        case ZEsarUXConnection.Transition.Stopped:
-                            _vscode.Stopped( 1, "step", "step" );
-                            _zesarux.LastTransition = ZEsarUXConnection.Transition.None;
-                            break;
+					case ZEsarUXConnection.Transition.Stopped:
+						_vscode.Stopped( 1, "step", "step" );
+						_zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+						break;
 	            }
 
 	            if( !vsactive )
@@ -116,7 +116,7 @@ namespace VSCodeDebugger
             if( _analysing )
             {
                 _vscode.Send( new OutputEvent( OutputEvent.OutputEventType.console, "." ) );
-                _zesarux.Send( "run verbose 1000" );
+                _zesarux.Send( "run verbose 10000" );
 
                 return;
             }
@@ -234,10 +234,10 @@ namespace VSCodeDebugger
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
 	        _machine.Registers.Get();
-	        _machine.RefreshMemoryPages();
-	        _machine.RefreshStack();
+	        _machine.Memory.GetMapping();
+	        _machine.Stack.Get();
 
-            _zesarux.UpdateDisassembly( _machine.Registers.PC );
+            _machine.UpdateDisassembly( _machine.Registers.PC );
 
             _stackFrames.Clear();
 
@@ -249,7 +249,7 @@ namespace VSCodeDebugger
 	                    i + 1,
 	                    string.Format( "${0:X4} / {0}", stack[i] ),
 	                    DisassemblySource(),
-	                    _zesarux.FindLine( stack[i] ),
+	                    _machine.FindLine( stack[i] ),
 	                    0,
 	                    "normal"
                     )
@@ -268,7 +268,7 @@ namespace VSCodeDebugger
         {
             int frameId = pRequest.arguments.frameId;
 
-            _zesarux.UpdateDisassembly( _machine.Stack[frameId-1] );
+            _machine.UpdateDisassembly( _machine.Stack[frameId-1] );
 
             var scopes = new List<Scope>();
 
@@ -337,7 +337,7 @@ namespace VSCodeDebugger
 		        _vscode.Send( pRequest, new EvaluateResponseBody("Analysing - type 'stop' to end ..." ) );
 
                 _analysing = true;
-		        _zesarux.Send( "run verbose 1000" );
+		        _zesarux.Send( "run verbose 10000" );
 		        return;
 		    }
 
@@ -500,13 +500,13 @@ namespace VSCodeDebugger
         static void SetupValues( Value pValues, Machine pMachine )
         {
             _registersValues = pValues.Create("Registers");
-			SetupValues_Registers( _registersValues, pMachine );
+			SetupValues_Registers( _registersValues );
 
 			_settingsValues = pValues.Create("Settings");
 			SetupValues_Settings( _settingsValues );
 		}
 
-		static void SetupValues_Registers( Value pVal, Machine pMachine )
+		static void SetupValues_Registers( Value pVal )
 		{
             Value reg16;
 

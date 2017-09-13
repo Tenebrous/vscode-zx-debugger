@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using VSCodeDebugger;
 
-namespace Z80Machine
+namespace Spectrum
 {
     public class Machine
     {
@@ -73,16 +73,6 @@ namespace Z80Machine
             get { return _memory; }
         }
 
-        public void RefreshMemoryPages()
-        {
-            Connection.GetMemoryPages( _memory );
-        }
-
-        public string GetMemory( ushort pAddress, int pLength )
-        {
-            return Connection.GetMemory( pAddress, pLength );
-        }
-
 
         /////////////////
         // stack
@@ -93,12 +83,153 @@ namespace Z80Machine
             get { return _stack; }
         }
 
-        public void RefreshStack()
+
+        /////////////////
+        // 
+
+        public void UpdateDisassembly( ushort pAddress )
         {
-            Connection.GetStack( _stack );
+            foreach( var line in Connection.Disassemble( pAddress, 30 ) )
+            {
+                
+            }
+
+            // var defaultBank = _machine..GetBankAtAddress( 0x0000 );
+
+            //foreach( var line in lines )
+            //{
+            //    var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+            //    var address = Format.FromHex(parts[0]);
+            //    var bank = defaultBank;
+
+            //    if( _memory.PagingEnabled )
+            //        bank = _memory.GetBankAtAddress( address );
+            //}
+
+            //public void UpdateDisassembly2( int pAddress )
+            //{
+            //    foreach( var section in _disassembledSections )
+            //        if( pAddress >= section.Start && pAddress <= section.End - 10 )
+            //            return;
+
+            //    var lines = Command( "disassemble " + pAddress + " " + 30 );
+
+            //    if( lines != null )
+            //    {
+            //        var section = new DisassemblySection() { Start = 0xFFFFF };
+
+            //        foreach( var line in lines )
+            //        {
+            //            var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
+            //            var address = UnHex(parts[0]);
+
+            //            section.Start = Math.Min( section.Start, address );
+            //            section.End   = Math.Max( section.End, address );
+
+            //            section.Lines.Add(
+            //                new DisassemblyLine()
+            //                {
+            //                    Address = address,
+            //                    Code = parts[1]
+            //                }
+            //            );
+
+            //            // stop disassembling at hard RET (just testing to see if that makes things clearer)
+            //            if( parts[1].Substring( 0, 2 ) == "C9" )
+            //                break;
+            //        }
+
+            //        // look to see if we cover two existing sections, whereby we'll merge them
+            //        for( int i = 0; i < _disassembledSections.Count - 1; i++ )
+            //            if( section.Start <= _disassembledSections[i].End 
+            //             && section.End   >= _disassembledSections[i+1].Start )
+            //            {
+            //                _disassembledSections[i].End = _disassembledSections[i + 1].End;
+            //                _disassembledSections[i].Lines.AddRange( _disassembledSections[i+1].Lines );
+            //                _disassembledSections.RemoveAt( i + 1 );
+            //                break;
+            //            }
+
+
+            //        // find relevant section to add lines to
+            //        DisassemblySection addTo = null;
+            //        foreach( var otherSection in _disassembledSections )
+            //            if( section.End >= otherSection.Start && section.Start <= otherSection.End )
+            //            {
+            //                addTo = otherSection;
+            //                break;
+            //            }
+
+            //        if( addTo == null )
+            //        {
+            //            // created new section
+            //            _disassembledSections.Add( section );
+            //        }
+            //        else
+            //        {
+            //            // merge with existing section
+
+            //            foreach( var line in section.Lines )
+            //            {
+            //                bool exists = false;
+
+            //                foreach ( var otherLine in addTo.Lines )
+            //                    if( line.Address == otherLine.Address )
+            //                    {
+            //                        exists = true;
+            //                        break;
+            //                    }
+
+            //                if( !exists )
+            //                    addTo.Lines.Add( line );
+            //            }
+
+            //            addTo.Lines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
+            //        }
+
+
+            //        // re-sort sections
+            //        _disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
+            //    }
+
+            //    int lastBank = -1;
+            //    var tmp = new List<string>();
+            //    foreach( var section in _disassembledSections )
+            //    {
+            //        foreach( var line in section.Lines )
+            //        {
+            //            if( _memory.PagingEnabled )
+            //            {
+            //                var bank = _memory.GetMapForAddress( (ushort) line.Address );
+            //                if( bank != lastBank )
+            //                {
+            //                    if( bank < -1 )
+            //                        tmp.Add( string.Format( "ROM_{0:D2}", -1 - bank ) );
+            //                    else if( bank >= 0 )
+            //                        tmp.Add( string.Format( "BANK_{0:D2}", bank ) );
+
+            //                    lastBank = bank;
+            //                }
+            //            }
+
+            //            tmp.Add( string.Format( "  {0:X4} {1}", line.Address, line.Code ) );
+
+            //            line.FileLine = tmp.Count;
+            //        }
+
+            //        tmp.Add( "" );
+            //        lastBank = -1;
+            //    }
+
+            //    File.WriteAllLines( DisassemblyFile, tmp );
+            //}
+        }
+
+        public int FindLine( ushort pUshort )
+        {
+            return 0;
         }
     }
-
 
     public class Registers
     {
@@ -106,17 +237,27 @@ namespace Z80Machine
         public ushort SP;
 
         public byte   A;
-        public ushort BC;
-        public ushort DE;
-        public ushort HL;
+        public byte   F;
+        public byte   B;
+        public byte   C;
+        public byte   D;
+        public byte   E;
+        public byte   H;
+        public byte   L;
 
         public byte   AltA;
-        public ushort AltBC;
-        public ushort AltDE;
-        public ushort AltHL;
+        public byte   AltF;
+        public byte   AltB;
+        public byte   AltC;
+        public byte   AltD;
+        public byte   AltE;
+        public byte   AltH;
+        public byte   AltL;
 
-        public ushort IX;
-        public ushort IY;
+        public byte   IXH;
+        public byte   IXL;
+        public byte   IYH;
+        public byte   IYL;
 
         public byte   I;
         public byte   R;
@@ -157,42 +298,55 @@ namespace Z80Machine
             {
 			    switch( pRegister )
 			    {
-				    case "A":   return (ushort) _machine.Registers.A;
+                    ///
+				    case "A":   return (ushort) A;
+                    case "F":   return (ushort) F;
+                    case "AF":  return (ushort) ((A << 8) | F);
+
+				    case "B":   return (ushort) B;
+				    case "C":   return (ushort) C;
+				    case "BC":  return (ushort) ((B << 8) | C);
+
+				    case "D":   return (ushort) D;
+				    case "E":   return (ushort) E;
+				    case "DE":  return (ushort) ((D << 8) | E);
+
+				    case "H":   return (ushort) H;
+				    case "L":   return (ushort) L;
+				    case "HL":  return (ushort) ((H << 8) | L);
+
+                    ///
+				    case "A'":  return (ushort) AltA;
+				    case "F'":  return (ushort) AltF;
+                    case "AF'": return (ushort) ((AltA << 8) | AltF);
+
+				    case "B'":  return (ushort) AltB;
+				    case "C'":  return (ushort) AltC;
+				    case "BC'": return (ushort) ((AltB << 8) | AltC);
+
+				    case "D'":  return (ushort) AltD;
+				    case "E'":  return (ushort) AltE;
+				    case "DE'": return (ushort) ((AltD << 8) | AltE);
+
+				    case "H'":  return (ushort) AltH;
+				    case "L'":  return (ushort) AltL;
+				    case "HL'": return (ushort) ((AltH << 8) | AltL);
+
+                    ///
+				    case "IXH": return (ushort) IXH;
+				    case "IXL": return (ushort) IXL;
+				    case "IX":  return (ushort) ((IXH << 8) | IXL);
+
+				    case "IYH": return (ushort) IYH;
+				    case "IYL": return (ushort) IYL;
+				    case "IY":  return (ushort) ((IYH << 8) | IYL);
+
+                    ///                     
+				    case "PC":  return (ushort) PC;
+				    case "SP":  return (ushort) SP;
                                             
-				    case "HL":  return (ushort) _machine.Registers.HL;
-				    case "H":   return (ushort) ((_machine.Registers.HL & 0xFF00) >> 8 );
-				    case "L":   return (ushort) ( _machine.Registers.HL & 0x00FF);
-				    case "BC":  return (ushort) _machine.Registers.BC;
-				    case "B":   return (ushort) ( (_machine.Registers.BC & 0xFF00) >> 8 );
-				    case "BL":  return (ushort) ( _machine.Registers.BC & 0x00FF);
-				    case "DE":  return (ushort) _machine.Registers.DE;
-				    case "D":   return (ushort) ( (_machine.Registers.DE & 0xFF00) >> 8 );
-				    case "E":   return (ushort) ( _machine.Registers.DE & 0x00FF);
-                                            
-				    case "A'":  return (ushort) _machine.Registers.AltA;
-				    case "HL'": return (ushort) _machine.Registers.AltHL;
-				    case "H'":  return (ushort) ((_machine.Registers.AltHL & 0xFF00) >> 8 );
-				    case "L'":  return (ushort) (_machine.Registers.AltHL & 0x00FF);
-				    case "BC'": return (ushort) _machine.Registers.AltBC;
-				    case "B'":  return (ushort) ((_machine.Registers.AltBC & 0xFF00) >> 8 );
-				    case "C'":  return (ushort) (_machine.Registers.AltBC & 0x00FF);
-				    case "DE'": return (ushort) _machine.Registers.AltDE;
-				    case "D'":  return (ushort) ((_machine.Registers.AltDE & 0xFF00) >> 8 );
-				    case "E'":  return (ushort) (_machine.Registers.AltDE & 0x00FF);
-                                            
-				    case "IX":  return (ushort) _machine.Registers.IX;
-				    case "IXH": return (ushort) ((_machine.Registers.IX & 0xFF00) >> 8 );
-				    case "IXL": return (ushort) (_machine.Registers.IX & 0x00FF);
-                                            
-				    case "IY":  return (ushort) _machine.Registers.IY;
-				    case "IYH": return (ushort) ((_machine.Registers.IY & 0xFF00) >> 8 );
-				    case "IYL": return (ushort) (_machine.Registers.IY & 0x00FF);
-                                            
-				    case "PC":  return (ushort) _machine.Registers.PC;
-				    case "SP":  return (ushort) _machine.Registers.SP;
-                                            
-				    case "I":   return (ushort) _machine.Registers.I;
-				    case "R":   return (ushort) _machine.Registers.R;
+				    case "I":   return (ushort) I;
+				    case "R":   return (ushort) R;
 			    }
 
                 throw new Exception( "Unknown register '" + pRegister + "'" );
@@ -202,20 +356,59 @@ namespace Z80Machine
             {
                 switch( pRegister )
                 {
-                    case "A":   A     = (byte)value; return;
-                    case "HL":  HL    = value;       return;
-                    case "BC":  BC    = value;       return;
-                    case "DE":  DE    = value;       return;
-                    case "A'":  AltA  = (byte)value; return;
-                    case "HL'": AltHL = value;       return;
-                    case "BC'": AltBC = value;       return;
-                    case "DE'": AltDE = value;       return;
-                    case "IX":  IX    = value;       return;
-                    case "IY":  IY    = value;       return;
-                    case "PC":  PC    = value;       return;
-                    case "SP":  SP    = value;       return;
-                    case "I":   I     = (byte)value; return;
-                    case "R":   R     = (byte)value; return;
+                    ///
+                    case "A":   A     = (byte)value;          return;
+
+                    case "B":   B     = (byte)value;          return;
+                    case "C":   C     = (byte)value;          return;
+                    case "BC":  B     = (byte)(value >> 8);     
+                                C     = (byte)(value & 0xFF); return;
+
+                    case "D":   D     = (byte)value;          return;
+                    case "E":   E     = (byte)value;          return;
+                    case "DE":  D     = (byte)(value >> 8);     
+                                E     = (byte)(value & 0xFF); return;
+
+                    case "H":   H     = (byte)value;          return;
+                    case "L":   L     = (byte)value;          return;
+                    case "HL":  H     = (byte)(value >> 8);     
+                                L     = (byte)(value & 0xFF); return;
+
+                    ///
+                    case "A'":  AltA  = (byte)value;          return;
+
+                    case "B'":  AltB  = (byte)value;          return;
+                    case "C'":  AltC  = (byte)value;          return;
+                    case "BC'": AltB  = (byte)(value >> 8);     
+                                AltC  = (byte)(value & 0xFF); return;
+
+                    case "D'":  AltD  = (byte)value;          return;
+                    case "E'":  AltE  = (byte)value;          return;
+                    case "DE'": AltD  = (byte)(value >> 8);     
+                                AltE  = (byte)(value & 0xFF); return;
+
+                    case "H'":  AltH  = (byte)value;          return;
+                    case "L'":  AltL  = (byte)value;          return;
+                    case "HL'": AltH  = (byte)(value >> 8);     
+                                AltL  = (byte)(value & 0xFF); return;
+
+                    ///
+                    case "IXH": IXH   = (byte)value;          return;
+                    case "IXL": IXL   = (byte)value;          return;
+                    case "IX":  IXH   = (byte)(value >> 8);     
+                                IXL   = (byte)(value & 0xFF); return;
+
+                    case "IYH": IYH   = (byte)value;          return;
+                    case "IYL": IYL   = (byte)value;          return;
+                    case "IY":  IYH   = (byte)(value >> 8);     
+                                IYL   = (byte)(value & 0xFF); return;
+
+                    ///
+                    case "PC":  PC    = value;                return;
+                    case "SP":  SP    = value;                return;
+                             
+                    case "I":   I     = (byte)value;          return;
+                    case "R":   R     = (byte)value;          return;
                 }
 
                 throw new Exception( "Unknown register '" + pRegister + "'" );
@@ -227,10 +420,11 @@ namespace Z80Machine
 
     public class Memory
     {
-        public bool PagingEnabled;
+        public bool   PagingEnabled;
+        public ushort SlotSize = 0x4000;
 
+        Dictionary<ushort, Slot> _slots = new Dictionary<ushort, Slot>();
         Dictionary<int, Bank> _banks = new Dictionary<int, Bank>();
-        List<Map> _pages = new List<Map>();
 
         Machine _machine;
         public Memory( Machine pMachine )
@@ -238,28 +432,38 @@ namespace Z80Machine
             _machine = pMachine;
         }
 
-        public Bank GetBankAtAddress( ushort pAddress )
+        public Slot GetSlot( ushort pAddress )
         {
-            foreach( var page in _pages )
-                if( pAddress >= page.Min && pAddress <= page.Max )
-                    return page.Bank;
+            ushort slotIndex = (ushort)(pAddress / SlotSize);
+            Slot slot;
 
-            return null;
+            if( !_slots.TryGetValue( slotIndex, out slot ) )
+            {
+                slot = new Slot() { Min = slotIndex, Max = (ushort)(slotIndex + SlotSize - 1) };
+                _slots[slotIndex] = slot;
+            }
+
+            return slot;
         }
 
         public void ClearMemoryMap()
         {
-            _pages.Clear();
+            _slots.Clear();
+            _banks.Clear();
         }
 
         public void SetAddressBank( ushort pMin, ushort pMax, Bank pBank )
         {
-            _pages.Add( new Map() { Min = pMin, Max = pMax, Bank = pBank } );
+            GetSlot( pMin ).Bank = pBank;
+            _banks[pBank.ID] = pBank;
         }
 
-        public Bank Bank( int pID )
+        Bank Bank( int pID, bool bROM )
         {
             Bank result;
+
+            if( bROM )
+                pID = -2 - pID;
 
             if( !_banks.TryGetValue( pID, out result ) )
                 result = new Bank() { ID = pID };
@@ -269,17 +473,23 @@ namespace Z80Machine
 
         public Bank ROM( int pID )
         {
-            return Bank( -2 - pID );
+            return Bank( pID, true );
         }
 
         public Bank RAM( int pID )
         {
-            return Bank( pID );
+            return Bank( pID, false );
         }
 
         public string Get( ushort pAddress, int pLength )
         {
-            return _machine.GetMemory( pAddress, pLength );
+            return _machine.Connection.GetMemory( pAddress, pLength );
+        }
+
+        
+        public void GetMapping()
+        {
+            _machine.Connection.GetMemoryPages( this );
         }
     }
 
@@ -287,13 +497,13 @@ namespace Z80Machine
     {
         // 0, 1, 2 etc = bank #
         // -1 = default
-        // -2 = rom 1
-        // -3 = rom 2
-        public int ID;
-        public ushort BaseAddress;
+        // -2 = rom 0
+        // -3 = rom 1
+        public int    ID;
     }
 
-    public class Map
+    public class Slot
+
     {
         public ushort Min;
         public ushort Max;
@@ -308,9 +518,9 @@ namespace Z80Machine
             _machine = pMachine;
         }
 
-        public void Refresh()
+        public void Get()
         {
-            _machine.RefreshStack();
+            _machine.Connection.GetStack( this );
         }
     }
 }
