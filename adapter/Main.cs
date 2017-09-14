@@ -203,7 +203,7 @@ namespace VSCodeDebugger
                 return;
 	        }
 
-	        _tempFolder = Path.Combine( _folder, ".debug" );
+	        _tempFolder = Path.Combine( _folder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
             if( !_zesarux.Start() )

@@ -2,7 +2,7 @@
 **
 **/.DS_Store
 **/.mdb
-!attach.js
+!extension/zxdebug.js
 !package.json
 !bin/**
 !syntax/**

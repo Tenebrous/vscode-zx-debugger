@@ -20,12 +20,13 @@
         "spectrum"
     ],
     "activationEvents": [
-        "onCommand:attach.attachToDebugger"
+        "onCommand:zxdebug.attachToDebugger",
+        "onCommand:zxdebug.testCommand"
     ],
     "engines": {
         "vscode": "^1.16.0"
     },
-    "main": "./attach",
+    "main": "./extension/zxdebug",
     "scripts": {
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
@@ -83,6 +84,13 @@
                 "language": "zx-debug-disasm",
                 "scopeName": "source.asm.z80",
                 "path": "./syntax/zx-debug-disasm.tmLanguage.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "zxdebug.testCommand",
+                "title": "Test command",
+                "category": "ZX Debugger"
             }
         ]
     }
