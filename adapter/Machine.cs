@@ -91,13 +91,9 @@ namespace Spectrum
         class DisasmLine
         {
             public ushort Offset;
-            public string Opcodes;
+            public byte[] Opcodes;
             public string Text;
-
-            public override string ToString()
-            {
-                return string.Format( "{0:X4} {1,-8} {2}", Offset, Opcodes, Text );
-            }
+            public int LineNumber;
         }
 
         class DisasmBank : Bank
@@ -112,7 +108,7 @@ namespace Spectrum
 
         HashSet<int> _tempBankDone = new HashSet<int>();
 
-        public void UpdateDisassembly( ushort pAddress, string pFilename )
+        public bool UpdateDisassembly( ushort pAddress, string pFilename )
         {
             // note: assumes disassembly can only cover a maximum of two slots
 
@@ -122,27 +118,28 @@ namespace Spectrum
             var minBank = GetDisasmBank( minSlot.Bank.ID );
 
 
-            // find limit slot & bank
-            var nextSlot = _memory.GetSlot( (ushort)(pAddress + 10) );
-            var nextBank = GetDisasmBank( minSlot.Bank.ID );
-
-
-            //// don't ask for disassembly if we have at least another 10 instructions worth
+            //// don't update disassembly if we have at least 10 lines worth already
             //
-            ushort limit = (ushort) ( (pAddress + 10) - nextSlot.Min );
+            bool request = false;
+            for( int i = 0; i < 10; i++ )
+                if( !minBank.Lines.ContainsKey( (ushort) ( pAddress - minSlot.Min + i ) ) )
+                {
+                    request = true;
+                    break;
+                }
 
-            if( minBank.Lines.ContainsKey( limit )
-             || minBank.Lines.ContainsKey( (ushort) ( limit + 1 ) )
-             || minBank.Lines.ContainsKey( (ushort) ( limit + 2 ) )
-             || minBank.Lines.ContainsKey( (ushort) ( limit + 3 ) )
-            )
-                return;
+            if( !request )
+                return false;
+            //
+            ////
+
 
             _tempDisasm.Clear();
             Connection.Disassemble( pAddress, 30, _tempDisasm );
 
+
             if( _tempDisasm.Count == 0 )
-                return;
+                return false;
 
 
             var maxLine = _tempDisasm[_tempDisasm.Count - 1];
@@ -170,10 +167,14 @@ namespace Spectrum
                 }
 
                 // temporarily end disasm on a RET to see if it simplifies things
-                if( line.Opcodes.StartsWith( "C9" ) )
+                if( line.Opcodes[0] == 0xC9 )
                     break;
             }
 
+            if( File.Exists(pFilename) )
+                File.SetAttributes( pFilename, 0 );
+
+            int lineNumber = 0;
             using( var stream = new StreamWriter( pFilename ) )
             {
                 _tempBankDone.Clear();
@@ -187,12 +188,15 @@ namespace Spectrum
                     if( bank.Lines.Count == 0 )
                         continue;
 
+                    lineNumber++;
                     stream.WriteLine( "Slot{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
+
                     _tempBankDone.Add( slot.Bank.ID );
                     
                     bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Offset.CompareTo( pRight.Offset ) );
-                    WriteDisasmLines( stream, bank );
+                    WriteDisasmLines( stream, bank, slot.Min, ref lineNumber );
 
+                    lineNumber++;
                     stream.WriteLine();
                 }
 
@@ -209,35 +213,47 @@ namespace Spectrum
 
                     if( !doneHeader )
                     {
+                        lineNumber++;
                         stream.WriteLine( "Not currently paged in:" );
                         doneHeader = true;
                     }
 
                     bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Offset.CompareTo( pRight.Offset ) );
-                    WriteDisasmLines( stream, bank );
+                    WriteDisasmLines( stream, bank, 0, ref lineNumber );
                 }
             }
 
+            File.SetAttributes( pFilename, FileAttributes.ReadOnly );
+
             _tempDisasm.Clear();
+
+            return true;
         }
 
-        static void WriteDisasmLines( StreamWriter pStream, DisasmBank pBank )
+        static void WriteDisasmLines( TextWriter pStream, DisasmBank pBank, ushort pOffset, ref int pLineNumber )
         {
+            pLineNumber++;
             pStream.WriteLine( "  {0}", pBank.Name );
 
-            ushort pref = pBank.SortedLines[0].Offset;
+            ushort prev = pBank.SortedLines[0].Offset;
             foreach( var line in pBank.SortedLines )
             {
-                if( line.Offset - pref > 1 )
+                if( line.Offset - prev > 1 )
+                {
+                    pLineNumber++;
                     pStream.WriteLine();
+                }
 
-                pref = (ushort) ( line.Offset + line.Opcodes.Length / 2 );
+                prev = (ushort) ( line.Offset + line.Opcodes.Length );
 
+                pLineNumber++;
                 pStream.WriteLine( "    {0:X4} {1,-8} {2}",
-                                  line.Offset,
-                                  line.Opcodes,
-                                  line.Text
+                    line.Offset + pOffset,
+                    Format.ToHex( line.Opcodes ),
+                    line.Text
                 );
+
+                line.LineNumber = pLineNumber;
             }
         }
 
@@ -263,141 +279,78 @@ namespace Spectrum
             return d;
         }
 
-        /*
-            var defaultBank = _machine..GetBankAtAddress( 0x0000 );
-
-            foreach( var line in lines )
-            {
-                var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-                var address = Format.FromHex(parts[0]);
-                var bank = defaultBank;
-
-                if( _memory.PagingEnabled )
-                    bank = _memory.GetBankAtAddress( address );
-            }
-
-            public void UpdateDisassembly2( int pAddress )
-            {
-                foreach( var section in _disassembledSections )
-                    if( pAddress >= section.Start && pAddress <= section.End - 10 )
-                        return;
-
-                var lines = Command( "disassemble " + pAddress + " " + 30 );
-
-                if( lines != null )
-                {
-                    var section = new DisassemblySection() { Start = 0xFFFFF };
-
-                    foreach( var line in lines )
-                    {
-                        var parts = line.Trim().Split( new [] {' '}, 2, StringSplitOptions.RemoveEmptyEntries );
-                        var address = UnHex(parts[0]);
-
-                        section.Start = Math.Min( section.Start, address );
-                        section.End   = Math.Max( section.End, address );
-
-                        section.Lines.Add(
-                            new DisassemblyLine()
-                            {
-                                Address = address,
-                                Code = parts[1]
-                            }
-                        );
-
-                        // stop disassembling at hard RET (just testing to see if that makes things clearer)
-                        if( parts[1].Substring( 0, 2 ) == "C9" )
-                            break;
-                    }
-
-                    // look to see if we cover two existing sections, whereby we'll merge them
-                    for( int i = 0; i < _disassembledSections.Count - 1; i++ )
-                        if( section.Start <= _disassembledSections[i].End 
-                            && section.End   >= _disassembledSections[i+1].Start )
-                        {
-                            _disassembledSections[i].End = _disassembledSections[i + 1].End;
-                            _disassembledSections[i].Lines.AddRange( _disassembledSections[i+1].Lines );
-                            _disassembledSections.RemoveAt( i + 1 );
-                            break;
-                        }
-
-
-                    // find relevant section to add lines to
-                    DisassemblySection addTo = null;
-                    foreach( var otherSection in _disassembledSections )
-                        if( section.End >= otherSection.Start && section.Start <= otherSection.End )
-                        {
-                            addTo = otherSection;
-                            break;
-                        }
-
-                    if( addTo == null )
-                    {
-                        // created new section
-                        _disassembledSections.Add( section );
-                    }
-                    else
-                    {
-                        // merge with existing section
-
-                        foreach( var line in section.Lines )
-                        {
-                            bool exists = false;
-
-                            foreach ( var otherLine in addTo.Lines )
-                                if( line.Address == otherLine.Address )
-                                {
-                                    exists = true;
-                                    break;
-                                }
-
-                            if( !exists )
-                                addTo.Lines.Add( line );
-                        }
-
-                        addTo.Lines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
-                    }
-
-
-                    // re-sort sections
-                    _disassembledSections.Sort( ( pLeft, pRight ) => pLeft.Start.CompareTo( pRight.Start ) );
-                }
-
-                int lastBank = -1;
-                var tmp = new List<string>();
-                foreach( var section in _disassembledSections )
-                {
-                    foreach( var line in section.Lines )
-                    {
-                        if( _memory.PagingEnabled )
-                        {
-                            var bank = _memory.GetMapForAddress( (ushort) line.Address );
-                            if( bank != lastBank )
-                            {
-                                if( bank < -1 )
-                                    tmp.Add( string.Format( "ROM_{0:D2}", -1 - bank ) );
-                                else if( bank >= 0 )
-                                    tmp.Add( string.Format( "BANK_{0:D2}", bank ) );
-
-                                lastBank = bank;
-                            }
-                        }
-
-                        tmp.Add( string.Format( "  {0:X4} {1}", line.Address, line.Code ) );
-
-                        line.FileLine = tmp.Count;
-                    }
-
-                    tmp.Add( "" );
-                    lastBank = -1;
-                }
-
-                File.WriteAllLines( DisassemblyFile, tmp );
-            }
-        }
-        */
-        public int FindLine( ushort pUshort )
+        public int FindLine( ushort pAddress )
         {
+            var slot = _memory.GetSlot( pAddress );
+            var bank = GetDisasmBank( slot.Bank.ID );
+            var offset = pAddress - slot.Min;
+            DisasmLine line;
+
+            if( bank.Lines.TryGetValue( (ushort) offset, out line ) )
+                return line.LineNumber;
+
             return 0;
+        }
+
+        public bool PreloadDisassembly( ushort pAddress, string pFilename )
+        {
+            var slot = _memory.GetSlot( pAddress );
+            var bank = GetDisasmBank( slot.Bank.ID );
+            var offset = pAddress - slot.Min;
+            DisasmLine line;
+
+            if( !bank.Lines.TryGetValue( (ushort) offset, out line ) )
+                return false;
+
+            var opcodes = line.Opcodes;
+            var preload = pAddress;
+
+            switch( opcodes[0] )
+            {
+                case 0x18: // jr     ± byte
+                case 0x20: // jr nz  ± byte
+                case 0x28: // jr z   ± byte
+                case 0x30: // jr nc  ± byte
+                case 0x38: // jr c   ± byte
+                    break;
+
+                case 0xCA: // jp z     word
+                case 0xC3: // jp       word
+                case 0xC4: // call     word
+                case 0xCC: // call z   word
+                case 0xCD: // call     word
+                case 0xD2: // jp nc    word
+                case 0xD4: // call nc  word
+                case 0xDA: // jp c     word
+                case 0xDC: // call c   word
+                case 0xE2: // jp po    word
+                case 0xE4: // call po  word
+                case 0xEA: // jp pe    word
+                case 0xEC: // call pe  word
+                case 0xF2: // jp p     word
+                case 0xF4: // call p   word
+                case 0xFA: // jp m     word
+                case 0xFE: // call m   word
+                    preload = (ushort)(opcodes[1] | opcodes[2] << 8);
+                    break;
+
+                case 0xE9: // jp (hl)
+                    break;
+
+                case 0xCF: // rst $08
+                case 0xD7: // rst $10
+                case 0xDF: // rst $18
+                case 0xE7: // rst $20
+                case 0xEF: // rst $28
+                case 0xF7: // rst $30
+                case 0xFF: // rst $38
+                    break;
+            }
+
+            if( preload != pAddress )
+                return UpdateDisassembly( preload, pFilename );
+
+            return false;
         }
     }
 

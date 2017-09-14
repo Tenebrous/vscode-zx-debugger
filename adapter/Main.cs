@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Spectrum;
 
 namespace VSCodeDebugger
@@ -125,8 +124,8 @@ namespace VSCodeDebugger
 
             _vscode.Send( 
                 new OutputEvent( 
-                    OutputEvent.OutputEventType.console, 
-                    string.Join( "\n", pList )
+                    OutputEvent.OutputEventType.stdout, 
+                    string.Join( "\n", pList ) + "\n"
                 )
             );
         }
@@ -161,20 +160,15 @@ namespace VSCodeDebugger
 
         static void VSCode_OnNext( Request pRequest )
 	    {
-	        // must ack before sending anything else
-	        _vscode.Send(pRequest);
-
             _machine.StepOver();
 	    }
 
-	    static void VSCode_OnStepIn( Request pRequest )
+        static void VSCode_OnStepIn( Request pRequest )
 	    {
-	        // must ack before sending anything else
-	        _vscode.Send( pRequest );
 	        _machine.Step();
 	    }
 
-	    static void VSCode_OnStepOut( Request pRequest )
+        static void VSCode_OnStepOut( Request pRequest )
 	    {
 	        _vscode.Send( pRequest, pErrorMessage: "Step Out is not supported" );
 	    }
@@ -187,23 +181,34 @@ namespace VSCodeDebugger
 
 	    static void VSCode_OnAttach( Request pRequest )
 	    {
-	        _folder = DynString( pRequest.arguments, "folder" );
+            // get cwd
+
+	        _folder = DynString( pRequest.arguments, "cwd" );
 
 	        if( string.IsNullOrWhiteSpace( _folder ) )
 	        {
-	            Log.Write( Log.Severity.Error, "Property 'folder' is missing or empty." );
-	            _vscode.Send( pRequest, pErrorMessage: "Property 'folder' is missing or empty." );
+	            Log.Write( Log.Severity.Error, "Property 'cwd' is missing or empty." );
+	            _vscode.Send( pRequest, pErrorMessage: "Property 'cwd' is missing or empty." );
                 return;
 	        }
 
 	        if( !Directory.Exists( _folder ) )
 	        {
-	            Log.Write( Log.Severity.Error, "Property 'folder' refers to a folder that could not be found." );
-	            _vscode.Send( pRequest, pErrorMessage: "Property 'folder' refers to a folder that could not be found." );
+	            Log.Write( Log.Severity.Error, "Property 'cwd' refers to a folder that could not be found." );
+	            _vscode.Send( pRequest, pErrorMessage: "Property 'cwd' refers to a folder that could not be found." );
                 return;
 	        }
 
-	        _tempFolder = Path.Combine( _folder, ".zxdbg" );
+
+            // get map[]
+
+            foreach( string map in pRequest.arguments.maps )
+	            Log.Write( Log.Severity.Message, map );
+
+
+            // set up
+
+            _tempFolder = Path.Combine( _folder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
             if( !_zesarux.Start() )
@@ -239,7 +244,14 @@ namespace VSCodeDebugger
 	        _machine.Memory.GetMapping();
 	        _machine.Stack.Get();
 
-            _machine.UpdateDisassembly( _machine.Registers.PC, DisassemblyFile );
+            // disassemble from current PC
+	        var updated = _machine.UpdateDisassembly( _machine.Registers.PC, DisassemblyFile );
+
+            // if current PC instruction is a jp/call etc, pre-disassemble the destination
+	        updated |= _machine.PreloadDisassembly( _machine.Stack[0], DisassemblyFile );
+
+            // if( updated )
+            //   _vscode.Send( new Event( "refreshDisasm", new { file = DisassemblyFile } ) );
 
             _stackFrames.Clear();
 

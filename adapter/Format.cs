@@ -100,5 +100,27 @@ namespace VSCodeDebugger
 
             return result;
         }
+
+        public static byte[] HexToBytes( string pHex )
+        {
+            var count = pHex.Length / 2;
+            var result = new byte[count];
+
+            for( int i = 0; i < count; i++ )
+                result[i] = Convert.ToByte( pHex.Substring( i*2, 2 ), 16 );
+
+            return result;
+        }
+
+       
+        public static string ToHex( byte[] pBytes )
+        {
+            return BitConverter.ToString( pBytes ).Replace( "-", "" );
+        }
+
+        public static char ToHex( byte pByte )
+        {
+            return pByte < 10 ? (char)( pByte + 48 ) : (char)( pByte - 10 + 65 );
+        }
     }
 }

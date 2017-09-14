@@ -4,17 +4,28 @@
   "fileTypes": ["zdis"],
   "patterns": [
     {
-        "match": "(?i)^BANK.*?$",
-        "name": "punctuation.definition.tag.asm",
-        "comment": "Memory bank"
+        "match": "(?i)^(Slot)(.*?) [(](.*?)[)]",
+        "captures": {
+            "1": { "comment": "Slot text",     "name": "punctuation.definition.tag.asm" },
+            "2": { "comment": "Slot number",   "name": "punctuation.definition.tag.asm" },
+            "3": { "comment": "Address range", "name": "punctuation.definition.tag.asm" }
+        },
+        "comment": "Slot"    
     },
     {
-        "match": "(?i)^  ([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
+        "match": "(?i)^  ((ROM|RAM).*)$",
+        "captures": {
+            "1": { "comment": "Bank", "name": "punctuation.definition.tag.asm" }
+        },
+        "comment": "Label"    
+    },
+    {
+        "match": "(?i)^    ([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
         "captures": {
             "1": { "comment": "Memory address", "name": "punctuation.definition.tag.asm" },
             "2": { "comment": "Opcodes",        "name": "constant.numeric.asm" }
         },
-        "comment": "Label"    
+        "comment": "Label"
     },
     {
         "match": "(?i)\\b(call|jp|jr)\\s+(?:(z|nz|c|nc|po|pe|p|m)\\s*,\\s*)",

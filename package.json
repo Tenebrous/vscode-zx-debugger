@@ -20,8 +20,7 @@
         "spectrum"
     ],
     "activationEvents": [
-        "onCommand:zxdebug.attachToDebugger",
-        "onCommand:zxdebug.testCommand"
+        "*"
     ],
     "engines": {
         "vscode": "^1.16.0"
@@ -50,9 +49,17 @@
                 "configurationAttributes": {
                     "attach": {
                         "properties": {
-                            "folder": {
+                            "cwd": {
                                 "type": "string",
-                                "description": "Project folder"
+                                "description": "Project folder",
+                                "default": "${workspaceRoot}"
+                            },
+                            "maps": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "string"
+                                }
                             }
                         }
                     }
@@ -62,7 +69,8 @@
                         "type": "zxdebug",
                         "name": "ZX Debugger",
                         "request": "attach",
-                        "folder": "${workspaceRoot}"
+                        "cwd": "${workspaceRoot}",
+                        "maps": []
                     }
                 ]
             }

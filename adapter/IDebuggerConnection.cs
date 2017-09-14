@@ -27,7 +27,7 @@ namespace VSCodeDebugger
     public class AssemblyLine
     {
         public ushort Address;
-        public string Opcodes;
+        public byte[] Opcodes;
         public string Text;
     }
 }

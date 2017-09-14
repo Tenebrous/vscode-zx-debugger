@@ -68,7 +68,7 @@ namespace VSCodeDebugger
         public bool StepOver()
         {
             _isRunning = true;
-            SendAndReceiveSingle( "cpu-step-over" );
+            Send( "cpu-step-over" );
             return true;
         }
 
@@ -76,7 +76,7 @@ namespace VSCodeDebugger
         public bool Step()
         {
             _isRunning = true;
-            SendAndReceiveSingle( "cpu-step" );
+            Send( "cpu-step" );
             return true;
         }
 
@@ -93,7 +93,7 @@ namespace VSCodeDebugger
                 pResults.Add( new AssemblyLine()
                     {
                         Address = Format.FromHex( split[0] ),
-                        Opcodes = split[1],
+                        Opcodes = Format.HexToBytes( split[1] ),
                         Text = split[2]
                     } 
                 );
