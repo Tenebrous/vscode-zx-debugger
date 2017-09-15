@@ -47,21 +47,21 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\external\Newtonsoft.Json.dll</HintPath>
+      <HintPath>external\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IDebuggerConnection.cs" />
+    <Compile Include="Main.cs" />
+    <Compile Include="Format.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Machine.cs" />
     <Compile Include="Value.cs" />
-    <Compile Include="ZEsarUXConnection.cs" />
+    <Compile Include="Debugger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="VSCodeConnection.cs" />
-    <Compile Include="VSCodeProtocol.cs" />
-    <Compile Include="Main.cs" />
-    <Compile Include="Format.cs" />
+    <Compile Include="vscode\Connection.cs" />
+    <Compile Include="vscode\Protocol.cs" />
+    <Compile Include="debuggers\ZEsarUX.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

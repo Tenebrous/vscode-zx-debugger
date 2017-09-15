@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using Spectrum;
+using VSCode;
+using ZEsarUX;
 
 namespace VSCodeDebugger
 {
     public class Adapter
 	{
-	    static ZEsarUXConnection _zesarux;
-	    static VSCodeConnection _vscode;
+	    static ZEsarUX.Connection _zesarux;
+	    static VSCode.Connection _vscode;
 	    static bool _running;
 
 	    static string _folder;
@@ -31,7 +33,7 @@ namespace VSCodeDebugger
 
             // vscode events
 
-            _vscode = new VSCodeConnection();
+            _vscode = new VSCode.Connection();
 	        _vscode.OnPause += VSCode_OnPause;
 	        _vscode.OnContinue += VSCode_OnContinue;
 	        _vscode.OnNext += VSCode_OnNext;
@@ -55,7 +57,7 @@ namespace VSCodeDebugger
 
             // zesarux events
 
-            _zesarux = new ZEsarUXConnection();	       
+            _zesarux = new ZEsarUX.Connection();	       
 			_zesarux.OnData += Z_OnData; 
 
 
@@ -81,19 +83,19 @@ namespace VSCodeDebugger
 	            var vsactive = _vscode.Read();
 				var zactive = _zesarux.Read();
 
-	            switch( _zesarux.LastTransition )
+	            switch( _zesarux.GetLastStateChange() )
 	            {
-					case ZEsarUXConnection.Transition.None:
+					case StateChange.None:
 						break;
 
-					case ZEsarUXConnection.Transition.Started:
+					case StateChange.Started:
 						_vscode.Continued( true );
-						_zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+						_zesarux.ClearLastStateChange();
 						break;
 
-					case ZEsarUXConnection.Transition.Stopped:
+					case StateChange.Stopped:
 						_vscode.Stopped( 1, "step", "step" );
-						_zesarux.LastTransition = ZEsarUXConnection.Transition.None;
+						_zesarux.ClearLastStateChange();
 						break;
 	            }
 
@@ -137,7 +139,7 @@ namespace VSCodeDebugger
 	    {
 	        _vscode.Send(
 	            pRequest,
-	            new Capabilities()
+	            new VSCode.Capabilities()
 	            {
 	                supportsConfigurationDoneRequest = true,
 					supportsCompletionsRequest = true
@@ -211,7 +213,7 @@ namespace VSCodeDebugger
             _tempFolder = Path.Combine( _folder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
-            if( !_zesarux.Start() )
+            if( !_zesarux.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
@@ -224,9 +226,9 @@ namespace VSCodeDebugger
             _vscode.Send( 
                 pRequest,
                 new ThreadsResponseBody( 
-                    new List<VSCodeDebugger.Thread>()
+                    new List<VSCode.Thread>()
                     {
-                        new VSCodeDebugger.Thread( 1, "Main" )
+                        new VSCode.Thread( 1, "Main" )
                     }
                 )
             );

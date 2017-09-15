@@ -9,9 +9,9 @@ namespace Spectrum
     {
         // the class used to actually retrieve the data can be abstracted out at some point
         // but for now we'll tie directly to the ZEsarUX connection class
-        public IDebuggerConnection Connection;
+        public Debugger Connection;
 
-        public Machine( IDebuggerConnection pConnection )
+        public Machine( Debugger pConnection )
         {
             Connection = pConnection;
             _registers = new Registers(this);
@@ -25,7 +25,7 @@ namespace Spectrum
 
         public bool Start()
         {
-            return Connection.Start();
+            return Connection.Connect();
         }
 
         public bool Pause()
@@ -50,7 +50,7 @@ namespace Spectrum
 
         public bool Stop()
         {
-            return Connection.Stop();
+            return Connection.Disconnect();
         }
 
 
