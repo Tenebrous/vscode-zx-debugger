@@ -60,6 +60,10 @@
                                 "items": {
                                     "type": "string"
                                 }
+                            },
+                            "stopOnEntry": {
+                                "type": "boolean",
+                                "default": false
                             }
                         }
                     }
@@ -70,7 +74,8 @@
                         "name": "ZX Debugger",
                         "request": "attach",
                         "cwd": "${workspaceRoot}",
-                        "maps": []
+                        "maps": [],
+                        "stopOnEntry": true
                     }
                 ]
             }

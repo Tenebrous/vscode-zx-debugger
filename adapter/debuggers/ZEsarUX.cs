@@ -6,11 +6,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Spectrum;
-using VSCodeDebugger;
+using ZXDebug;
 
 namespace ZEsarUX
 {
-    public class Connection : VSCodeDebugger.Debugger
+    public class Connection : ZXDebug.Debugger
     {
         TcpClient _client;
         NetworkStream _stream;

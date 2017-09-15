@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using Spectrum;
 using VSCode;
-using ZEsarUX;
 
-namespace VSCodeDebugger
+namespace ZXDebug
 {
     public class Adapter
 	{
@@ -13,13 +12,14 @@ namespace VSCodeDebugger
 	    static Debugger _debugger;
 	    static bool _running;
 
-	    static string _folder;
-
 	    static Value _rootValues = new Value();
 	    static Value _registersValues;
 	    static Value _settingsValues;
 
 	    static Machine _machine;
+
+	    static Settings _settings = new Settings();
+
 
     	static void Main(string[] argv)
 	    {
@@ -32,7 +32,7 @@ namespace VSCodeDebugger
 
             // vscode events
 
-            _vscode = new VSCode.Connection();
+            _vscode = new VSCode.Connection( _settings );
             _vscode.OnInitialize += VSCode_OnInitialize;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 	        _vscode.OnLaunch += VSCode_OnLaunch;
@@ -84,6 +84,9 @@ namespace VSCodeDebugger
 	        {
 	            var vsactive = _vscode.Process();
 				var zactive = _debugger.Process();
+
+                if( !vsactive )
+                    System.Threading.Thread.Sleep( 10 );
 	        }
 	    }
 
@@ -156,39 +159,18 @@ namespace VSCodeDebugger
 
 	    static void VSCode_OnAttach( Request pRequest )
 	    {
-            // get cwd
+            // vscode interface will have filled in our Settings object here
 
-	        _folder = DynString( pRequest.arguments, "cwd" );
-
-	        if( string.IsNullOrWhiteSpace( _folder ) )
-	        {
-	            Log.Write( Log.Severity.Error, "Property 'cwd' is missing or empty." );
-	            _vscode.Send( pRequest, pErrorMessage: "Property 'cwd' is missing or empty." );
-                return;
-	        }
-
-	        if( !Directory.Exists( _folder ) )
-	        {
-	            Log.Write( Log.Severity.Error, "Property 'cwd' refers to a folder that could not be found." );
-	            _vscode.Send( pRequest, pErrorMessage: "Property 'cwd' refers to a folder that could not be found." );
-                return;
-	        }
-
-
-            // get map[]
-			// list of .dbg files that list bank/address/filename/line number associations
-
-            foreach( string map in pRequest.arguments.maps )
-	            Log.Write( Log.Severity.Message, map );
-
-
-            // set up
-
-            _tempFolder = Path.Combine( _folder, ".zxdbg" );
+	        _tempFolder = Path.Combine( _settings.cwd, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
             if( !_debugger.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
+
+	        if( _settings.stopOnEntry )
+	        {
+	            _machine.Pause();
+	        }
 	    }
 
 	    static void VSCode_OnConfigurationDone( Request pRequest )

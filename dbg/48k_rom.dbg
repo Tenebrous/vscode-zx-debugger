@@ -1,0 +1,1203 @@
+ROM_00 0000h rom_start
+ROM_00 0000h restart
+ROM_00 0000h start                 ; cold start restart
+ROM_00 0008h error_1               ; the 'error' restart
+ROM_00 0010h print_a_1             ; the 'print a character' restart (char in A)
+ROM_00 0018h get_char              ; the 'collect character' restart
+ROM_00 001ch test_char             ; Skip-over tests if character is relevant
+ROM_00 0020h next_char             ; the 'collect next character' restart
+ROM_00 0028h fp_calc               ; the 'calculator' restart
+ROM_00 0030h bc_spaces             ; the 'make BC spaces' restart
+ROM_00 0038h mask_int              ; the 'maskable interrupt' routine
+ROM_00 0048h key_int               ; read and decode keyboard
+ROM_00 0053h error_2               ; the 'error-2' routine (continuation of rst 8 routine)
+ROM_00 0055h error_3
+ROM_00 0066h nmi                   ; the 'non-maskable interrupt' (NMI) routine
+ROM_00 0066h reset
+ROM_00 0070h no_reset
+ROM_00 0074h ch_add_plus_1         ; the 'ch-add+1' subroutine (called from rst 20)
+ROM_00 0077h temp_ptr1
+ROM_00 0078h temp_ptr2
+ROM_00 007dh skip_over             ; the 'skip-over' subroutine (skipping white-spaces)
+ROM_00 0090h skips
+ROM_00 0095h token_table           ; tokenized characters 134d (RND) ..255d (COPY)
+ROM_00 0205h main_keys             ; maps for the 39 keys L-mode and Caps Shift
+ROM_00 022ch ext_unshift           ; 26 extended mode keys, letter keys and unshifted
+ROM_00 0246h ext_shift             ; 26 extended mode keys, letter keys and shifted
+ROM_00 0260h ctl_codes             ; 10 control codes, digit keys and Caps Shift
+ROM_00 026ah sym_codes             ; 26 symbol codes, letter keys and Symbol Shift
+ROM_00 0284h ext_digits            ; 10 extended mode keys, digit keys and Symbol Shift
+ROM_00 028eh key_scan              ; the 'keyboard scanning' subroutine (result in DE)
+ROM_00 0296h key_line              ; eight passes loop
+ROM_00 029fh key_3keys
+ROM_00 02a1h key_bits
+ROM_00 02abh key_done
+ROM_00 02bfh keyboard              ; the 'keyboard' subroutine (called from interrupt 50 times per second)
+ROM_00 02c6h k_st_loop
+ROM_00 02d1h k_ch_set
+ROM_00 02f1h k_new                 ; new key is to be accepted
+ROM_00 0308h k_end
+ROM_00 0310h k_repeat              ; the 'repeating key' subroutine (occurs after REPDEL period)
+ROM_00 031eh k_test                ; the 'k-test' subroutine
+ROM_00 032ch k_main
+ROM_00 0333h k_decode              ; the 'keyboard decoding' subroutine (main code in E, shift byte in B)
+ROM_00 0341h k_e_let               ; letter keys in extended mode
+ROM_00 034ah k_lookup              ; look-ups key tables b-f
+ROM_00 034fh k_klc_let             ; letter keys in K, L or C modes
+ROM_00 0364h k_tokens              ; adds A5 to produce token code
+ROM_00 0367h k_digit               ; digit keys, space & enter, both shifts
+ROM_00 0382h k_8_and_9             ; 8 and 9 key getting BRIGHT/FLASH codes
+ROM_00 0389h k_gra_dgt             ; graphics mode with digits
+ROM_00 039dh k_klc_dgt             ; digit keys in K, L and C modes
+ROM_00 03b2h k_@_char              ; handling the @ char
+ROM_00 03b5h beeper                ; the 'beeper' subroutine
+ROM_00 03d1h be_ix_3
+ROM_00 03d2h be_ix_2
+ROM_00 03d3h be_ix_1
+ROM_00 03d4h be_ix_0
+ROM_00 03d6h be_h_and_l_lp
+ROM_00 03f2h be_again
+ROM_00 03f6h be_end
+ROM_00 03f8h beep                  ; the 'BEEP' command routine
+ROM_00 0425h be_i_ok               ; correct frequ for the 'pitch' i
+ROM_00 0427h be_octave
+ROM_00 046ch report_b              ; report B - integer out of range
+ROM_00 046eh semi_tones            ; the 'semi-tone' table
+ROM_00 04aah prog_name_zx81        ; program name subroutine of ZX81
+ROM_00 04c2h sa_bytes              ; the 'sa-bytes' subroutine (SAVE header and code)
+ROM_00 04d0h sa_flag
+ROM_00 04d8h sa_leader             ; produce an edge (red to cyan)
+ROM_00 04eah sa_sync_1             ; produce a sync pulse
+ROM_00 04f2h sa_sync_2
+ROM_00 04feh sa_loop               ; the SAVEing loop
+ROM_00 0505h sa_loop_p
+ROM_00 0507h sa_start
+ROM_00 050eh sa_parity             ; sends the parity byte (in L)
+ROM_00 0511h sa_bit_2              ; produces pulses
+ROM_00 0514h sa_bit_1
+ROM_00 051ah sa_set
+ROM_00 051ch sa_out
+ROM_00 0525h sa_8_bits             ; 8-bit-loop
+ROM_00 053ch sa_delay              ; time delay
+ROM_00 053fh sa_ld_ret             ; the 'sa/ld-ret' subroutine
+ROM_00 0552h report_d              ; report D - BREAK-CONT repeats
+ROM_00 0554h sa_ld_end
+ROM_00 0556h ld_bytes              ; the 'ld-bytes' subroutine (loads from cassette)
+ROM_00 056bh ld_break
+ROM_00 056ch ld_start
+ROM_00 0574h ld_wait               ; waits a while
+ROM_00 0580h ld_leader             ; accepts a leader signal only
+ROM_00 058fh ld_sync               ; off and on parts of the sync pulse
+ROM_00 05a9h ld_loop               ; loads the data
+ROM_00 05b3h ld_flag
+ROM_00 05bdh ld_verify             ; verifies the loaded byte
+ROM_00 05c2h ld_next               ; next byte
+ROM_00 05c4h ld_dec
+ROM_00 05c8h ld_marker
+ROM_00 05cah ld_8_bits             ; build up a byte in L
+ROM_00 05e3h ld_edge2              ; the 'ld-edge-2' and 'ld-edge-1' subroutines
+ROM_00 05e7h ld_edge1
+ROM_00 05e9h ld_delay
+ROM_00 05edh ld_sample
+ROM_00 0605h save_etc              ; the 'SAVE, LOAD, VERIFY & MERGE' command routines
+ROM_00 0621h sa_space
+ROM_00 0629h sa_blank
+ROM_00 0642h report_f              ; report F - invalid file name
+ROM_00 0644h sa_null               ; handle the name of program
+ROM_00 064bh sa_name               ; transfers name to workspace
+ROM_00 0652h sa_data               ; different parameters after command
+ROM_00 0620h report_2              ; report 2 - variable not found
+ROM_00 0672h sa_v_old              ; handling an existing array
+ROM_00 0685h sa_v_new              ; handling old and new arrays
+ROM_00 068fh sa_v_type
+ROM_00 0692h sa_data_1
+ROM_00 06a0h sa_scr                ; handling SCREEN$
+ROM_00 06c3h sa_code               ; handling CODE
+ROM_00 06e1h sa_code_1             ; look for starting address
+ROM_00 06f0h sa_code_2
+ROM_00 06f5h sa_code_3             ; fetching the length, if specified
+ROM_00 06f9h sa_code_4             ; store parameters in the workspace
+ROM_00 0710h sa_type_3             ; SCREEN$ and CODE type
+ROM_00 0716h sa_line               ; LINE parameter
+ROM_00 0723h sa_line_1             ; line number that follows LINE
+ROM_00 073ah sa_type_0             ; LINE and no params = type 0
+ROM_00 075ah sa_all                ; separates SAVE fom LOAD, VERIFY and MERGE
+ROM_00 0767h ld_look_h             ; loop that is left when a header has been loaded
+ROM_00 078ah ld_type               ; type checking and output message 'program', 'number array', etc.
+ROM_00 07a6h ld_name               ; print new name loop
+ROM_00 07adh ld_ch_pr
+ROM_00 07cbh vr_contrl             ; the 'VERIFY' control routine
+ROM_00 07e9h vr_cont_1             ; destination pointer
+ROM_00 07f4h vr_cont_2
+ROM_00 0800h vr_cont_3
+ROM_00 0802h ld_block              ; the 'load a data block' subroutine
+ROM_00 0806h report_r              ; report R - Tape loading error
+ROM_00 0808h ld_contrl             ; the 'LOAD' control routine
+ROM_00 0819h ld_cont_1             ; checking enough room
+ROM_00 0825h ld_cont_2             ; test for room
+ROM_00 082eh ld_data               ; loading of arrays
+ROM_00 084ch ld_data_1             ; make space for the new array
+ROM_00 0873h ld_prog               ; loading a Basic program+variables
+ROM_00 08adh ld_prog_1             ; data block can be loaded
+ROM_00 08b6h me_contrl             ; the 'MERGE' control routine
+ROM_00 08d2h me_new_lp             ; loop with the lines of new program
+ROM_00 08d7h me_old_lp             ; inner loop with lines of old program
+ROM_00 08dfh me_old_l1
+ROM_00 08ebh me_new_l2
+ROM_00 08f0h me_var_lp             ; merging variables
+ROM_00 08f9h me_old_vp             ; inner loop to search existing variables area
+ROM_00 0901h me_old_v1
+ROM_00 0909h me_old_v2             ; old and new variables match
+ROM_00 0912h me_old_v3             ; loop for comparing letters of long names
+ROM_00 091eh me_old_v4
+ROM_00 0921h me_var_l1             ; match was found
+ROM_00 0923h me_var_l2             ; match was not found
+ROM_00 092ch me_enter              ; the 'MERGE a line or a variable' subroutine
+ROM_00 093eh me_ent_1              ; the new entry can be made
+ROM_00 0955h me_ent_2
+ROM_00 0958h me_ent_3
+ROM_00 0970h sa_contrl             ; the 'SAVE' control routine
+ROM_00 0991h sa_1_sec              ; delay and save program/data
+ROM_00 09a1h cass_messages         ; the cassette messages
+ROM_00 09f4h print_out             ; the 'PRINT-out' routines
+ROM_00 0a11h ctrl_ch_table         ; the 'control character' table
+ROM_00 0a23h po_back_1             ; the 'cursor left' subroutine
+ROM_00 0a38h po_back_2
+ROM_00 0a3ah po_back_3
+ROM_00 0a3dh po_right              ; the 'cursor right' subroutine
+ROM_00 0a4fh po_enter              ; the 'carriage return' subroutine
+ROM_00 0a5fh po_comma              ; the 'PRINT comma' subroutine
+ROM_00 0a69h po_quest              ; the 'PRINT a question mark' subroutine
+ROM_00 0a6dh po_tv_2               ; the 'control characters with operands' routine
+ROM_00 0a75h po_2_oper             ; handling AT & TAB
+ROM_00 0a7ah po_1_oper             ; handling colour items INK to OVER
+ROM_00 0a7dh po_tv_1
+ROM_00 0a80h po_change             ; current output routine address changed temporarily
+ROM_00 0a87h po_cont               ; operands have been collected
+ROM_00 0aach po_at_err             ; error in AT parameter(s)
+ROM_00 0abfh po_at_set
+ROM_00 0ac2h po_tab                ; TAB control character
+ROM_00 0ac3h po_fill
+ROM_00 0ad0h po_space
+ROM_00 0ad9h po_able
+ROM_00 0adch po_store              ; the 'position store' subroutine
+ROM_00 0af0h po_st_e
+ROM_00 0afch po_st_pr
+ROM_00 0b03h po_fetch              ; the 'position fetch' subroutine
+ROM_00 0b1dh po_f_pr
+ROM_00 0b24h po_any                ; the 'PRINT any character(s)' subroutine
+ROM_00 0b38h po_gr_1               ; graphic characters
+ROM_00 0b3eh po_gr_2
+ROM_00 0b4ch po_gr_3
+ROM_00 0b52h po_t_and_udg          ; print-out token codes and user-def-graphics
+ROM_00 0b5fh po_t
+ROM_00 0b65h po_char               ; required character form is identified
+ROM_00 0b6ah po_char_2
+ROM_00 0b76h po_char_3
+ROM_00 0b7fh pr_all                ; the 'PRINT all characters' subroutine
+ROM_00 0b93h pr_all_1
+ROM_00 0ba4h pr_all_2
+ROM_00 0bb6h pr_all_3
+ROM_00 0bb7h pr_all_4              ; prints the character (8 pixel lines)
+ROM_00 0bc1h pr_all_5
+ROM_00 0bd3h pr_all_6
+ROM_00 0bdbh po_attr               ; the 'set attribute byte' subroutine
+ROM_00 0bfah po_attr_1
+ROM_00 0c08h po_attr_2
+ROM_00 0c0ah po_msg                ; the 'message printing' subroutine
+ROM_00 0c10h po_tokens             ; expanding token codes
+ROM_00 0c14h po_table              ; table is searched and entry printed
+ROM_00 0c22h po_each
+ROM_00 0c35h po_tr_sp              ; traling space
+ROM_00 0c3bh po_save               ; the 'po-save' subroutine
+ROM_00 0c41h po_search             ; the 'table search' subroutine
+ROM_00 0c44h po_step
+ROM_00 0c55h po_scr                ; the 'test for scroll' subroutine
+ROM_00 0c86h report_5              ; report 5 - Out of screen
+ROM_00 0c88h po_scr_2              ; is prompt "scroll?" necessary?
+ROM_00 0cd2h po_scr_3              ; scrolling the display
+ROM_00 0cf0h po_scr_3a
+ROM_00 0cf8h scroll_msg            ; the "scroll?" message
+ROM_00 0d00h report_d2             ; report D - BREAK-CONT repeats
+ROM_00 0d02h po_scr_4              ; lower part of display
+ROM_00 0d1ch po_scr_4a             ; lower part is scrolled 'A' times
+ROM_00 0d2dh po_scr_4b
+ROM_00 0d4dh temps                 ; the 'temporary colour items' subroutine
+ROM_00 0d5bh temps_1
+ROM_00 0d65h temps_2
+ROM_00 0d6bh cls                   ; the 'CLS' command routine
+ROM_00 0d6eh cls_lower
+ROM_00 0d87h cls_1
+ROM_00 0d89h cls_2
+ROM_00 0d8eh cls_3
+ROM_00 0d94h cl_chan
+ROM_00 0da0h cl_chan_a
+ROM_00 0dafh cl_all                ; the 'cleaning the whole display area' subroutine
+ROM_00 0dd9h cl_set                ; the 'cl-set' subroutine
+ROM_00 0deeh cl_set_1
+ROM_00 0df4h cl_set_2
+ROM_00 0dfeh cl_sc_all             ; the 'scrolling' subroutine
+ROM_00 0e00h cl_scroll
+ROM_00 0e05h cl_scr_1              ; main scrolling loop
+ROM_00 0e0dh cl_scr_2
+ROM_00 0e19h cl_scr_3              ; scrolls the pixel lines within the thirds
+ROM_00 0e44h cl_line               ; the 'clear lines' subroutine (bottom B lines of display)
+ROM_00 0e4ah cl_line_1             ; loop to clear all pixel lines
+ROM_00 0e4dh cl_line_2
+ROM_00 0e80h cl_line_3
+ROM_00 0e88h cl_attr               ; the 'cl-attr' subroutine
+ROM_00 0e9bh cl_addr               ; the 'cl-addr' subroutine (calculates display address of line B)
+ROM_00 0each copy_stmt             ; the 'COPY' command routine
+ROM_00 0eb2h copy_1                ; loop
+ROM_00 0ec9h copy_2
+ROM_00 0ecdh copy_buff             ; the 'COPY-buff' subroutine
+ROM_00 0ed3h copy_3
+ROM_00 0edah copy_end
+ROM_00 0edfh clear_prb             ; the 'clear printer buffer' subroutine
+ROM_00 0ee7h prb_bytes
+ROM_00 0ef4h copy_line             ; the 'COPY-line' subroutine
+ROM_00 0efdh copy_l_1
+ROM_00 0f0ch copy_l_2
+ROM_00 0f14h copy_l_3
+ROM_00 0f18h copy_l_4
+ROM_00 0f1eh copy_l_5
+ROM_00 0f2ch editor                ; the 'editor' routines
+ROM_00 0f30h ed_again
+ROM_00 0f38h ed_loop               ; loop that handles each keystroke
+ROM_00 0f6ch ed_contr              ; fetch other bytes of control characters
+ROM_00 0f81h add_char              ; the 'addchar' subroutine (adds a code to EDIT or INPUT line)
+ROM_00 0f8bh add_ch_1
+ROM_00 0f92h ed_keys               ; handling editing keys
+ROM_00 0fa0h ed_keys_table         ; the 'editing keys' table
+ROM_00 0fa9h ed_edit               ; the 'edit key' subroutine
+ROM_00 0ff3h ed_down               ; the 'cursor down editing' subroutine
+ROM_00 1001h ed_stop
+ROM_00 1007h ed_left               ; the 'cursor left editing' subroutine
+ROM_00 100ch ed_right              ; the 'cursor right editing' subroutine
+ROM_00 1011h ed_cur
+ROM_00 1015h ed_deletee            ; the 'delete editing' subroutine
+ROM_00 101eh ed_ignore             ; the 'ed-ignore' subroutine
+ROM_00 1024h ed_enter              ; the 'ENTER editing' subroutine
+ROM_00 1026h ed_end
+ROM_00 1031h ed_edge               ; the 'ed-edge' subroutine
+ROM_00 103eh ed_edge_1             ; check that control codes are not split from parameters
+ROM_00 1051h ed_edge_2
+ROM_00 1059h ed_up                 ; the 'cursor up editing' subroutine
+ROM_00 106eh ed_list
+ROM_00 1076h ed_symbol             ; the 'ed-symbol' subroutine
+ROM_00 107ch ed_graph
+ROM_00 107fh ed_error              ; the 'ed-error' subroutine
+ROM_00 1097h clear_sp              ; the 'clear-sp' subroutine (clears editing area or workspace)
+ROM_00 10a8h key_input             ; the 'keyboard input' subroutine
+ROM_00 10dbh key_m_and_cl          ; handles CAPS LOCK and mode codes
+ROM_00 10e6h key_mode
+ROM_00 10f4h key_flag
+ROM_00 10fah key_contr             ; control key codes are changed
+ROM_00 1105h key_data              ; parameter is saved in K-DATA
+ROM_00 110dh key_next
+ROM_00 1113h key_chan              ; set input address in first channel area
+ROM_00 111bh key_done
+ROM_00 111dh ed_copy               ; the 'lower screen copying' subroutine
+ROM_00 1150h ed_blank              ; fill with blanks
+ROM_00 115eh ed_spaces
+ROM_00 1167h ed_full               ; editor line is full
+ROM_00 117ch ed_c_done             ; normal exit
+ROM_00 117eh ed_c_end
+ROM_00 1190h set_hl                ; the 'set-hl' and 'set-de' subroutines
+ROM_00 1195h set_de
+ROM_00 11a7h remove_fp             ; the 'remove-fp' subroutine
+ROM_00 11b7h new_cmd               ; the 'new' command routine
+ROM_00 11cbh start_new             ; main entry point
+ROM_00 11dah ram_check             ; checks memory
+ROM_00 11dch ram_fill
+ROM_00 11e2h ram_read
+ROM_00 11efh ram_done
+ROM_00 1219h ram_set               ; setups
+ROM_00 12a2h main_exec             ; the 'main execution' loop
+ROM_00 12a9h main_1
+ROM_00 12ach main_2
+ROM_00 12cfh main_3                ; edit line passed syntax check
+ROM_00 1303h main_4                ; line has been interpreted
+ROM_00 1313h main_g
+ROM_00 133ch main_5
+ROM_00 1373h main_6
+ROM_00 1376h main_7
+ROM_00 1384h main_8
+ROM_00 1386h main_9
+ROM_00 1391h report_msg            ; the report messages
+ROM_00 1392h report_msg_0          ; report 0 - OK
+ROM_00 1394h report_msg_1          ; report 1 - NEXT without FOR
+ROM_00 13a4h report_msg_2          ; report 2 - variable not found
+ROM_00 13b6h report_msg_3          ; report 3 - subscript wrong
+ROM_00 13c6h report_msg_4          ; report 4 - out of memory
+ROM_00 13d2h report_msg_5          ; report 5 - out of screen
+ROM_00 13dfh report_msg_6          ; report 6 - number too big
+ROM_00 13edh report_msg_7          ; report 7 - RETURN without GOSUB
+ROM_00 1401h report_msg_8          ; report 8 - end of file
+ROM_00 140ch report_msg_9          ; report 9 - STOP statement
+ROM_00 141ah report_msg_A          ; report A - invalid argument
+ROM_00 142ah report_msg_B          ; report B - integer out of range
+ROM_00 143eh report_msg_C          ; report C - nonsense in Basic
+ROM_00 144fh report_msg_D          ; report D - BREAK - CONT repeats
+ROM_00 1463h report_msg_E          ; report E - out of data
+ROM_00 146eh report_msg_F          ; report F - invalid file name
+ROM_00 147fh report_msg_G          ; report G - no room for line
+ROM_00 148fh report_msg_H          ; report H - STOP in INPUT
+ROM_00 149ch report_msg_I          ; report I - FOR without NEXT
+ROM_00 14ach report_msg_J          ; report J - invalid I/O device
+ROM_00 14beh report_msg_K          ; report K - invalid colour
+ROM_00 14cch report_msg_L          ; report L - BREAK into program
+ROM_00 14deh report_msg_M          ; report M - RAMTOP no good
+ROM_00 14ech report_msg_N          ; report N - statement lost
+ROM_00 14fah report_msg_O          ; report O - invalid stream
+ROM_00 1508h report_msg_P          ; report P - FN without DEF
+ROM_00 1516h report_msg_Q          ; report Q - parameter error
+ROM_00 1525h report_msg_R          ; report R - tape loading error
+ROM_00 1537h report_msg_comma      ; report ', '
+ROM_00 1539h report_msg_cpyrgt     ; report (C) 1982 Sinclair Research Ltd
+ROM_00 1555h report_g              ; report G - no room for line
+ROM_00 155dh main_add              ; the 'main-add' subroutine
+ROM_00 157dh main_add_1
+ROM_00 15abh main_add_2
+ROM_00 15afh init_chan_info        ; the 'initial channel information'
+ROM_00 15c4h report_j              ; report J - invalid I/O device
+ROM_00 15c6h init_strm_data        ; the 'initial stream data'
+ROM_00 15d4h wait_key              ; the 'wait-key' subroutine
+ROM_00 15deh wait_key_1
+ROM_00 15e4h report_8              ; report 8 - end of file
+ROM_00 15e6h input_ad              ; the 'input-ad' subroutine
+ROM_00 15efh out_code              ; the 'main printing' subroutine
+ROM_00 15f2h print_a_2
+ROM_00 15f7h call_sub              ; call subroutine; hl points to i/o address
+ROM_00 1601h chan_open             ; the 'chan-open' subroutine
+ROM_00 160eh report_o              ; report O - invalid stream
+ROM_00 1610h chan_op_1             ; find the base address
+ROM_00 1615h chan_flag             ; the 'chan-flag' subroutine
+ROM_00 162ch call_jump
+ROM_00 162dh chan_code_lookup      ; the 'channel code look-up' table
+ROM_00 1634h chan_k                ; the 'channel "K" flag' subroutine
+ROM_00 1642h chan_s                ; the 'channel "S" flag' subroutine
+ROM_00 1646h chan_s_1
+ROM_00 164dh chan_p                ; the 'channel "P" flag' subroutine
+ROM_00 1652h one_space             ; the 'make-room' subroutine
+ROM_00 1655h make_room
+ROM_00 1664h pointers              ; the 'pointers' subroutine
+ROM_00 166bh ptr_next              ; loop for each pointer
+ROM_00 167fh ptr_done
+ROM_00 168fh line_zero             ; the 'collect a line number' subroutine
+ROM_00 1691h line_no_a
+ROM_00 1695h line_no
+ROM_00 169eh reserve               ; the 'reserve' subroutine
+ROM_00 16b0h set_min               ; the 'set-min' subroutine (sets editing area to minimum)
+ROM_00 16bfh set_work              ; clear workspace and calculator stack
+ROM_00 16c5h set_stk               ; clears calculator stack
+ROM_00 16d4h rec_edit              ; the 'reclaim the edit-line' subroutine
+ROM_00 16dbh indexer_1             ; the 'indexer' subroutine
+ROM_00 16dch indexer
+ROM_00 16e4h close                 ; the 'CLOSE#' command routine
+ROM_00 16fch close_1
+ROM_00 1701h close_2               ; the 'close-2' subroutine
+ROM_00 1716h cls_strm_lookup       ; the 'close stream look-up' table
+ROM_00 171ch close_str             ; the 'close stream' subroutine
+ROM_00 171eh str_data              ; the 'stream data' subrotine
+ROM_00 1725h report_o2             ; report O - invalid stream
+ROM_00 1727h str_data_1            ; continue with valid stream numbers
+ROM_00 1736h open                  ; the 'OPEN#' command routine
+ROM_00 1756h open_1
+ROM_00 175dh open_2                ; the 'open-2' subroutine
+ROM_00 1765h report_f2             ; report F - invalid file name
+ROM_00 1767h open_3                ; continue if ok
+ROM_00 177ah open_strm_lookup      ; the 'open stream look-up' table
+ROM_00 1781h open_k                ; the 'open-K' subroutine
+ROM_00 1785h open_s                ; the 'open-S' subroutine
+ROM_00 1789h open_p                ; the 'open-P' subroutine
+ROM_00 178bh open_end
+ROM_00 1793h cat_etc               ; the 'CAT, ERASE, FORMAT & MOVE' command routine
+ROM_00 1795h auto_list             ; the 'LIST & LLIST' command routines
+ROM_00 17ceh auto_l_1              ; loop; auto-line number is increased on each pass
+ROM_00 17e1h auto_l_2              ; auto-listing can be made
+ROM_00 17e4h auto_l_3
+ROM_00 17edh auto_l_4
+ROM_00 17f5h llist                 ; the 'LLIST' entry point
+ROM_00 17f9h list                  ; the 'LIST' entry point
+ROM_00 17fbh list_1
+ROM_00 1814h list_2
+ROM_00 181ah list_3
+ROM_00 181fh list_4                ; stream was not changed
+ROM_00 1822h list_5
+ROM_00 1833h list_all
+ROM_00 1835h list_all_1            ; loop for printing the lines
+ROM_00 1855h out_line              ; the 'PRINT a whole Basic line' subroutine
+ROM_00 1865h out_line_1
+ROM_00 187dh out_line_2
+ROM_00 1881h out_line_3
+ROM_00 1894h out_line_4            ; print all codes of the remaining line
+ROM_00 18a1h out_line_5
+ROM_00 18b4h out_line_6            ; line has been printed
+ROM_00 18b6h number                ; the 'number' subroutine
+ROM_00 18c1h out_flash             ; the 'PRINT a flashing character' subroutine
+ROM_00 18e1h out_curs              ; the 'PRINT the cursor' subroutine
+ROM_00 18f3h out_c_1
+ROM_00 1909h out_c_2
+ROM_00 190fh ln_fetch              ; the 'LN-fetch' subroutine
+ROM_00 191ch ln_store              ; is used by the editor
+ROM_00 1925h out_sp_2              ; the 'printing characters in a Basic line' subroutine
+ROM_00 192ah out_sp_no
+ROM_00 192bh out_sp_1              ; hl=line number; bc=value for division
+ROM_00 1937h out_char              ; used for all characters, tokens and control codes
+ROM_00 195ah out_ch_1
+ROM_00 1968h out_ch_2
+ROM_00 196ch out_ch_3
+ROM_00 196eh line_addr             ; the 'line-addr' subroutine
+ROM_00 1974h line_ad_1
+ROM_00 1980h cp_lines              ; the 'compare line numbers' subroutine
+ROM_00 1988h find_each             ; the 'find each statement' subroutine
+ROM_00 198bh each_stmt
+ROM_00 1990h each_s_1              ; loop to handle statements of Basic line
+ROM_00 1998h each_s_2              ; check individual characters in the line
+ROM_00 199ah each_s_3
+ROM_00 19a5h each_s_4
+ROM_00 19adh each_s_5
+ROM_00 19b1h each_s_6
+ROM_00 19b8h next_one              ; the 'next-one' subroutine
+ROM_00 19c7h next_o_1
+ROM_00 19ceh next_o_2
+ROM_00 19d5h next_o_3
+ROM_00 19d6h next_o_4
+ROM_00 19dbh next_o_5              ; next line or variable is found
+ROM_00 19ddh differ                ; the 'difference' subroutine
+ROM_00 19e5h reclaim_1             ; the 'reclaiming' subroutine
+ROM_00 19e8h reclaim_2
+ROM_00 19fbh e_line_no             ; the 'e-line-no' subroutine
+ROM_00 1a15h e_l_1
+ROM_00 1a1bh out_num_1             ; the 'report and line number printing' subroutine
+ROM_00 1a28h out_num_2
+ROM_00 1a30h out_num_3             ; print line number in HL
+ROM_00 1a42h out_num_4
+ROM_00 1a48h syntax_table_1        ; the offset table
+ROM_00 1a7ah syntax_table_2        ; the parameter table
+ROM_00 1b17h line_scan             ; the 'main parser' of the Basic interpreter
+ROM_00 1b28h stmt_loop             ; the statement loop
+ROM_00 1b29h stmt_l_1
+ROM_00 1b52h scan_loop             ; executes the commands
+ROM_00 1b55h get_param
+ROM_00 1b6fh separator             ; the 'separator' subroutine
+ROM_00 1b76h stmt_ret              ; the 'statement-ret' subroutine
+ROM_00 1b7bh report_l              ; report L - BREAK into program
+ROM_00 1b7dh stmt_r_1              ; continue if BREAK is not pressed
+ROM_00 1b8ah line_run              ; the 'line-run' entry point
+ROM_00 1b9eh line_new              ; the 'line-new' subroutine
+ROM_00 1bb0h report_0              ; report 0 - OK
+ROM_00 1bb2h rem                   ; the 'REM' command routine
+ROM_00 1bb3h line_end              ; the 'line-end' routine
+ROM_00 1bbfh line_use              ; the 'line-use' routine
+ROM_00 1bd1h next_line             ; the 'next-line' routine
+ROM_00 1bech report_n              ; report N - statement lost
+ROM_00 1beeh check_end             ; the 'check-end' subroutine
+ROM_00 1bf4h stmt_next             ; the 'statement-next' routine
+ROM_00 1c01h cmd_class_table       ; the 'command class' table
+ROM_00 1c0dh class_03              ; the 'command classes 00, 03 & 05' routine (class 03 commands could have a numeric operand)
+ROM_00 1c10h class_00              ; class 00 commands must not have operands
+ROM_00 1c11h class_05              ; class 05 commands can have a set of items (e.g. PRINT)
+ROM_00 1c16h jump_c_r              ; the 'jump-c-r' routine
+ROM_00 1c1fh class_01              ; the 'command classes 01, 02 & 04' routine (class 01 has a variable that is to be assigned)
+ROM_00 1c22h var_a_1               ; the 'variable in assignment' subroutine
+ROM_00 1c2eh report_2b             ; report 2 - variable not found
+ROM_00 1c30h var_a_2               ; handles existing variables
+ROM_00 1c46h var_a_3
+ROM_00 1c4eh class_02              ; class 02 contains calculation
+ROM_00 1c56h val_fet_1             ; the 'fetch a value' subroutine (LET, READ, INPUT)
+ROM_00 1c59h val_fet_2
+ROM_00 1c6ch class_04              ; the 'command class 04' routine (FOR, NEXT)
+ROM_00 1c79h next_2num             ; class 08 - evaluate next two numeric expressions (comma separated)
+ROM_00 1c7ah expt_2num
+ROM_00 1c82h expt_1num             ; class 06 - command line number parser
+ROM_00 1c8ah report_c              ; report C - nonsense in Basic
+ROM_00 1c8ch expt_exp              ; class 0A - evaluate next expression
+ROM_00 1c96h perms                 ; the 'set permanent colours' subroutine (class 07)
+ROM_00 1cbeh class_09              ; the 'command class 09' routine (PLOT, DRAW, CIRCLE)
+ROM_00 1cd6h cl_09_1
+ROM_00 1cdbh class_0b              ; the 'command class 0B' routine (SAVE, LOAD, VERIFY & MERGE)
+ROM_00 1cdeh fetch_num             ; the 'fetch a number' subroutine
+ROM_00 1ce6h use_zero              ; add 0 to the calculator stack
+ROM_00 1ceeh report_9              ; the 'STOP' command routine
+ROM_00 1cf0h if                    ; the 'IF' command routine
+ROM_00 1d00h if_1
+ROM_00 1d03h for                   ; the 'FOR' command routine
+ROM_00 1d10h f_use_1               ; STEP 1 has been used
+ROM_00 1d16h f_reorder
+ROM_00 1d34h f_l_and_s             ; initial values for limit and STEP
+ROM_00 1d64h f_loop                ; search next from current position
+ROM_00 1d7ch f_found               ; correct NEXT has been found
+ROM_00 1d84h report_i              ; report I - FOR without NEXT
+ROM_00 1d86h look_prog             ; the 'look-prog' subroutine (search DATA, DEF FN or NEXT)
+ROM_00 1d8bh look_p_1              ; loop for each line
+ROM_00 1da3h look_p_2
+ROM_00 1dabh next                  ; the 'NEXT' command routine
+ROM_00 1dd8h report_1              ; report 1 - NEXT without FOR
+ROM_00 1ddah next_loop             ; the 'NEXT-loop' subroutine
+ROM_00 1de2h next_1
+ROM_00 1de9h next_2                ; loop is impossible
+ROM_00 1dech read_3                ; the 'READ' command routine
+ROM_00 1dedh read
+ROM_00 1e08h report_e2             ; report E - out of data
+ROM_00 1e0ah read_1                ; picking a value from DATA list
+ROM_00 1e1eh read_2
+ROM_00 1e27h data                  ; the 'DATA' command routine
+ROM_00 1e2ch data_1                ; loop for each expression in DATA list
+ROM_00 1e37h data_2                ; DATA statement ignored at runtime
+ROM_00 1e39h pass_by               ; the 'pass-by' subroutine
+ROM_00 1e42h restore               ; the 'RESTORE' command routine
+ROM_00 1e45h rest_run
+ROM_00 1e4fh randomize             ; the 'RANDOMIZE' command routine
+ROM_00 1e5ah rand_1
+ROM_00 1e5fh continue              ; the 'CONTINUE' command routine
+ROM_00 1e67h go_to                 ; the 'GO TO' command routine
+ROM_00 1e73h go_to_2               ; determine line number of next statement
+ROM_00 1e7ah out                   ; the 'OUT' command routine
+ROM_00 1e80h poke                  ; the 'POKE' command routine
+ROM_00 1e85h two_param             ; the 'two-param' subroutine
+ROM_00 1e8eh two_p_1
+ROM_00 1e94h find_int1             ; the 'find integers' subroutine (integer into A)
+ROM_00 1e99h find_int2             ; command line integer parser into BC
+ROM_00 1e9ch find_i_1
+ROM_00 1e9fh report_b2             ; report B - integer out of range
+ROM_00 1ea1h run                   ; the 'RUN' command routine
+ROM_00 1each clear                 ; the 'CLEAR' command routine
+ROM_00 1eafh clear_run
+ROM_00 1eb7h clear_1
+ROM_00 1edah report_m              ; report M - RAMTOP no good
+ROM_00 1edch clear_3               ; continue with CLEAR
+ROM_00 1eedh go_sub                ; the 'GO SUB' command routine
+ROM_00 1f05h test_room             ; the 'test-room' subroutine
+ROM_00 1f15h report_4              ; report 4 - out of memory
+ROM_00 1f1ah free_mem              ; the 'free memory' subroutine
+ROM_00 1f23h return_stmt           ; the 'RETURN' command routine
+ROM_00 1f36h report_7              ; report 7 - RETURN without GOSUB
+ROM_00 1f3ah pause                 ; the 'PAUSE' command routine
+ROM_00 1f3dh pause_1
+ROM_00 1f49h pause_2
+ROM_00 1f4fh pause_end             ; period of pause has finished
+ROM_00 1f54h break_key             ; the 'BREAK-key' subroutine
+ROM_00 1f60h def_fn                ; the 'DEF FN' command routine
+ROM_00 1f6ah def_fn_1              ; get the variable
+ROM_00 1f7dh def_fn_2
+ROM_00 1f86h def_fn_3              ; loop for each parameter
+ROM_00 1f89h def_fn_4
+ROM_00 1f94h def_fn_5
+ROM_00 1fa6h def_fn_6              ; get the definition of the function
+ROM_00 1fbdh def_fn_7
+ROM_00 1fc3h unstack_z             ; the 'unstack-z' subroutine
+ROM_00 1fc9h lprint                ; the 'LPRINT & PRINT' command routines
+ROM_00 1fcdh print
+ROM_00 1fcfh print_1
+ROM_00 1fdfh print_2               ; print controlling (PRINT, LPRINT, INPUT)
+ROM_00 1fe5h print_3               ; position controllers
+ROM_00 1ff2h print_4
+ROM_00 1ff5h print_cr              ; the 'PRINT a carriage return' subroutine
+ROM_00 1ffch pr_item_1             ; the 'PRINT items' subroutine (test for AT)
+ROM_00 200eh pr_item_2             ; test for TAB
+ROM_00 201eh pr_at_tab             ; print AT and TAB
+ROM_00 2024h pr_item_3             ; embedded colour items
+ROM_00 203ch pr_string             ; loop for characters in a string
+ROM_00 2045h pr_end_z              ; the 'end of printing' subroutine
+ROM_00 2048h pr_st_end
+ROM_00 204eh pr_posn_1             ; the 'PRINT position' subroutine
+ROM_00 2061h pr_posn_2
+ROM_00 2067h pr_posn_3
+ROM_00 206eh pr_posn_4
+ROM_00 2070h str_alter             ; the 'alter stream' subroutine
+ROM_00 2089h input                 ; the 'INPUT' command routine
+ROM_00 2096h input_1
+ROM_00 20adh input_2
+ROM_00 20c1h in_item_1             ; INPUT and PRINT items loop
+ROM_00 20d8h in_item_2             ; INPUT LINE
+ROM_00 20edh in_item_3             ; simple INPUT variables
+ROM_00 20fah in_prompt             ; build prompt message in workspace
+ROM_00 211ah in_pr_1
+ROM_00 211ch in_pr_2
+ROM_00 2129h in_pr_3
+ROM_00 213ah in_var_1              ; input variables
+ROM_00 2148h in_var_2
+ROM_00 215eh in_var_3
+ROM_00 2161h in_var_4              ; reset system variables before assignment
+ROM_00 2174h in_var_5
+ROM_00 219bh in_var_6
+ROM_00 21afh in_next_1             ; further INPUT items
+ROM_00 21b2h in_next_2
+ROM_00 21b9h in_assign             ; the 'INPUT-assign' subroutine
+ROM_00 21ceh report_c2             ; report C - Nonsense in Basic
+ROM_00 21d0h in_stop               ; INPUT line starts with STOP
+ROM_00 21d4h report_h              ; report H - STOP in INPUT
+ROM_00 21d6h in_chan_k             ; the 'INPUT-chan-K' subroutine
+ROM_00 21e1h co_temp_1             ; the 'colour item' routines
+ROM_00 21e2h co_temp_2
+ROM_00 21f2h co_temp_3
+ROM_00 21fch co_temp_4             ; colour items are printed calling PRINT
+ROM_00 2211h co_temp_5             ; temporary system variables
+ROM_00 2228h co_temp_6
+ROM_00 2234h co_temp_7             ; handle PAPER & INK
+ROM_00 223eh co_temp_8
+ROM_00 2244h report_k              ; report K - invalid colour
+ROM_00 2246h co_temp_9             ; continue handling PAPER & INK
+ROM_00 2257h co_temp_a
+ROM_00 2258h co_temp_b
+ROM_00 226ch co_change             ; the 'colour-change' subroutine
+ROM_00 2273h co_temp_c             ; handling FLASH & BRIGHT
+ROM_00 227dh co_temp_d
+ROM_00 2287h co_temp_e
+ROM_00 2294h border                ; the 'BORDER' command routine
+ROM_00 22a6h border_1
+ROM_00 22aah pixel_add             ; the 'pixel address' subroutine (returns pixel addr in HL for coord in BC)
+ROM_00 22cbh point_sub             ; the 'POINT' subroutine
+ROM_00 22d4h point_lp
+ROM_00 22dch plot                  ; the 'PLOT' command routine
+ROM_00 22e5h plot_sub
+ROM_00 22f0h plot_loop
+ROM_00 22fdh pl_tst_in
+ROM_00 2303h plot_end
+ROM_00 2307h stk_to_bc             ; the 'stack-to-bc' subroutine
+ROM_00 2314h stk_to_a              ; the 'stack-to-a' subroutine
+ROM_00 2320h circle                ; the 'CIRCLE' command routine
+ROM_00 233bh c_r_gre_1             ; on stack = X Y Z draws circle
+ROM_00 235ah c_arc_ge1
+ROM_00 2382h draw                  ; the 'DRAW' command routine
+ROM_00 238dh dr_3_prms             ; DRAW with 3 params
+ROM_00 23a3h dr_sin_nz
+ROM_00 23c1h dr_prms
+ROM_00 2420h drw_steps             ; the arc-drawing loop
+ROM_00 2425h arc_loop
+ROM_00 2439h arc_start
+ROM_00 245fh arc_end
+ROM_00 2477h line_draw
+ROM_00 247dh cd_prms1              ; the 'initial parameters' subroutine (CIRCLE, DRAW)
+ROM_00 2495h use_252
+ROM_00 2497h draw_save
+ROM_00 24b7h draw_line             ; the 'line-drawing' subroutine (draws a line from COORDS to BC)
+ROM_00 24c4h dl_x_ge_y
+ROM_00 24cbh dl_larger
+ROM_00 24ceh d_l_loop
+ROM_00 24d4h d_l_diag
+ROM_00 24dbh d_l_hr_vt
+ROM_00 24dfh d_l_step
+ROM_00 24ech d_l_plot
+ROM_00 24f7h d_l_range
+ROM_00 24f9h report_b3             ; report B - integer out of range
+ROM_00 24fbh scanning              ; the 'scanning' subroutine (expression evaluation)
+ROM_00 24ffh s_loop_1
+ROM_00 250fh s_quote_s             ; checking string quotes
+ROM_00 2522h s_2_coord             ; two-coordinates subroutine
+ROM_00 252dh s_rport_c
+ROM_00 2530h syntax_z              ; the 'syntax-z' subroutine
+ROM_00 2535h s_scrns_s
+ROM_00 254fh s_scrn_lp
+ROM_00 255ah s_sc_match
+ROM_00 255dh s_sc_rows
+ROM_00 2573h s_scr_nxt
+ROM_00 257dh s_scr_sto
+ROM_00 2580h s_attr_s
+ROM_00 2596h scn_func_table        ; the scanning function table
+ROM_00 25afh s_u_plus              ; the scanning function routines
+ROM_00 25b3h s_quote               ; the scanning quote routine
+ROM_00 25beh s_q_again
+ROM_00 25cbh s_q_copy
+ROM_00 25d9h s_q_prms
+ROM_00 25dbh s_string
+ROM_00 25e8h s_bracket             ; reduces string quotes pairs
+ROM_00 25f5h s_fn
+ROM_00 25f8h s_rnd                 ; the 'RND' routine
+ROM_00 2625h s_rnd_end
+ROM_00 2627h s_pi                  ; the 'PI' routine
+ROM_00 2630h s_pi_end
+ROM_00 2634h s_inkeys              ; the 'INKEY$' routine
+ROM_00 2660h s_ik_stk
+ROM_00 2665h s_ik_en
+ROM_00 2668h s_screens             ; the 'SCREEN$' routine
+ROM_00 2672h s_attr                ; the 'ATTR' routine
+ROM_00 267bh s_point               ; the 'POINT' routine
+ROM_00 2684h s_alphanum
+ROM_00 268dh s_decimal             ; scanning decimal routine
+ROM_00 26b5h s_stk_dec
+ROM_00 26b6h s_sd_skip
+ROM_00 26c3h s_numeric             ; numeric result has been identified
+ROM_00 26c9h s_letter              ; the 'scanning variable' routine
+ROM_00 26ddh s_cont_1
+ROM_00 26dfh s_negate              ; checking for negation
+ROM_00 2707h s_no_to_str           ; checking for STR$ and CHR$
+ROM_00 270dh s_push_po             ; remember priority code
+ROM_00 2712h s_cont_2              ; checking for end of expression
+ROM_00 2713h s_cont_3
+ROM_00 2723h s_opertr
+ROM_00 2734h s_loop                ; main loop
+ROM_00 274ch s_stk_lst
+ROM_00 275bh s_syntest             ; syntax check
+ROM_00 2761h s_report_c2           ; report C - Nonsense in Basic
+ROM_00 2764h s_runtest             ; remember nature of last value
+ROM_00 2770h s_loopend             ; continue loop
+ROM_00 2773h s_tighter
+ROM_00 2788h s_not_and
+ROM_00 2790h s_next
+ROM_00 2795h table_ops             ; the table of operators
+ROM_00 27b0h table_prior           ; the table of properties
+ROM_00 27bdh s_fn_sbrn             ; the 'scanning function' subroutine
+ROM_00 27d0h sf_brkt_1             ; check for '('
+ROM_00 27d9h sf_argmts
+ROM_00 27e4h sf_brkt_2             ; check for ')'
+ROM_00 27e6h sf_rprt_c             ; if not, report C - nonsense in Basic
+ROM_00 27e9h sf_flag_6
+ROM_00 27f4h sf_syn_en             ; continue scanning the line
+ROM_00 27f7h sf_run                ; search for DEF FN statement
+ROM_00 2802h sf_argmt1
+ROM_00 2808h sf_find_df
+ROM_00 2812h report_p              ; report P - FN without DEF
+ROM_00 2814h sf_cp_def             ; DEF FN found
+ROM_00 2825h sf_not_fd
+ROM_00 2831h sf_values             ; FN is being evaluated
+ROM_00 2843h sf_arg_lp
+ROM_00 2852h sf_arg_vl
+ROM_00 2885h sf_r_br_2             ; check for ')'
+ROM_00 288bh report_q              ; report Q - parameter error
+ROM_00 288dh sf_value              ; evaluate function
+ROM_00 28abh fn_skipover           ; the 'function skipover' subroutine
+ROM_00 28b2h look_vars             ; the 'look-vars' subroutine
+ROM_00 28d4h v_char                ; find end char of name with more than 1 character
+ROM_00 28deh v_str_var             ; simple strings and arrays of strings
+ROM_00 28e3h v_test_fn
+ROM_00 28efh v_run_syn
+ROM_00 28fdh v_run                 ; basic line is being executed
+ROM_00 2900h v_each                ; loop that scans all existing variables
+ROM_00 2912h v_matches
+ROM_00 2913h v_spaces
+ROM_00 2929h v_get_ptr             ; names do not match
+ROM_00 292ah v_next
+ROM_00 2932h v_80_byte             ; variable not found
+ROM_00 2934h v_syntax              ; checking snytax
+ROM_00 293eh v_found_1             ; entry with correct name was found
+ROM_00 293fh v_found_2
+ROM_00 2943h v_pass
+ROM_00 294bh v_end                 ; setting exit parameters
+ROM_00 2951h stk_f_arg             ; the 'stack function argument' subroutine
+ROM_00 295ah sfa_loop
+ROM_00 296bh sfa_cp_vr
+ROM_00 2981h sfa_match             ; match has been found.
+ROM_00 2991h sfa_end
+ROM_00 2996h stk_var               ; the 'stack-var' routine
+ROM_00 29a1h sv_simplestring       ; simple string params found
+ROM_00 29aeh sv_arrays             ; base address of an array element found
+ROM_00 29c0h sv_ptr                ; numeric arrays and string arrays pointer into DE
+ROM_00 29c3h sv_comma              ; find array element parameters
+ROM_00 29d8h sv_close              ; checking for string slicing
+ROM_00 29e0h sv_ch_add
+ROM_00 29e7h sv_count              ; parameter loop
+ROM_00 29eah sv_loop
+ROM_00 29fbh sv_mult
+ROM_00 2a12h sv_rpt_c              ; report error C if syntax checking
+ROM_00 2a20h report_3              ; report 3 - Subscript out of range
+ROM_00 2a22h sv_number             ; calculate address of the location
+ROM_00 2a2ch sv_elemstring         ; calculate length of last string array dimension
+ROM_00 2a45h sv_slice              ; call slicing routine
+ROM_00 2a48h sv_dim                ; check for '('
+ROM_00 2a49h sv_sliceq             ; search the last '(' in a loop
+ROM_00 2a52h slicing               ; the 'slicing' subroutine
+ROM_00 2a7ah sl_rpt_c              ; report C if not ' TO '
+ROM_00 2a81h sl_second             ; evaluate second parameter of slicing
+ROM_00 2a94h sl_define             ; the 'new' parameters are defined
+ROM_00 2aa8h sl_over
+ROM_00 2aadh sl_store
+ROM_00 2ab1h stk_st_0              ; the 'stack-store' subroutine
+ROM_00 2ab2h stk_sto_string
+ROM_00 2ab6h stk_store             ; put ABCDE to top of stack
+ROM_00 2acch int_exp1              ; the 'int-exp' subroutine
+ROM_00 2acdh int_exp2
+ROM_00 2ae8h i_carry               ; calc value for 'error register'
+ROM_00 2aebh i_restore             ; restore registers
+ROM_00 2aeeh ld_de_plus_1          ; the 'LD DE,(DE+1)" subroutine
+ROM_00 2af4h get_hl_times_de       ; the 'get-HL*DE' subroutine
+ROM_00 2affh let                   ; the 'LET' command routine
+ROM_00 2b0bh l_each_ch             ; enter loop for characters of a long name
+ROM_00 2b0ch l_no_sp
+ROM_00 2b1fh l_test_ch             ; separate numeric and string names
+ROM_00 2b29h l_spaces              ; make room for variable
+ROM_00 2b3eh l_char                ; extra codes of a long name
+ROM_00 2b4fh l_single
+ROM_00 2b59h l_numeric             ; last value can be transferred to var area
+ROM_00 2b66h l_exists              ; variable already exists
+ROM_00 2b72h l_deletestring        ; fetch params of string variable
+ROM_00 2b9bh l_length              ; put length of new area to stack
+ROM_00 2ba3h l_in_ws               ; restore saved values
+ROM_00 2ba6h l_enter               ; the 'L-enter' subroutine
+ROM_00 2bafh l_addstring           ; LET subroutine continues
+ROM_00 2bc0h l_newstring           ; new declared simple strings are handled
+ROM_00 2bc6h l_string              ; the 'L-string' subroutine
+ROM_00 2beah l_first               ; the 'L-first' subroutine
+ROM_00 2bf1h stk_fetch             ; the 'stk-fetch' subroutine - fetch top of stack to ABCDE
+ROM_00 2c02h dim_stmt              ; the 'DIM' command routine
+ROM_00 2c05h d_report_c            ; report C
+ROM_00 2c15h d_run                 ; reclaims an existing array
+ROM_00 2c1fh d_letter              ; initial parameters of new array are found
+ROM_00 2c2dh d_size
+ROM_00 2c2eh d_no_loop             ; loop for accessing each dimension
+ROM_00 2c7ch dim_clear             ; clears elements of new array
+ROM_00 2c7fh dim_sizes             ; enters the dimension sizes
+ROM_00 2c88h alphanum              ; the 'alphanum' subroutine
+ROM_00 2c8dh alpha                 ; the 'alpha' subroutine (checks whether a contains a letter)
+ROM_00 2c9bh dec_to_fp             ; the 'decimal to floating point' subroutine
+ROM_00 2ca2h bin_digit             ; it's a binary number (after BIN)
+ROM_00 2cb3h bin_end               ; end of binary number
+ROM_00 2cb8h not_bin               ; other numbers (integers or decimal)
+ROM_00 2ccbh decimal               ; number is a decimal
+ROM_00 2ccfh dec_rpt_c             ; if no digit after a '.', report C
+ROM_00 2cd5h dec_sto_1             ; store 1 in memory area M0
+ROM_00 2cdah nxt_dgt_1             ; evaluate next digit
+ROM_00 2cebh e_format              ; check 'E' or 'e' after decimal
+ROM_00 2cf2h sign_flag
+ROM_00 2cfeh sign_done
+ROM_00 2cffh st_e_part             ; check for digit after E/e
+ROM_00 2d18h e_fp_jump             ; jump to x*10^m
+ROM_00 2d1bh numeric               ; the 'numeric' subroutine (check for 0..9)
+ROM_00 2d22h stk_digit             ; the 'stk digit' subroutine
+ROM_00 2d28h stack_a               ; the 'stack-A' subroutine (stack contents of A)
+ROM_00 2d2bh stack_bc              ; the 'stack-BC' subroutine (stack contents of BC)
+ROM_00 2d3bh int_to_fp             ; the 'integer to floating-point' subroutine
+ROM_00 2d40h nxt_dgt_2
+ROM_00 2d4fh e_to_fp               ; the 'E-format to floating-point' subroutine
+ROM_00 2d55h e_save
+ROM_00 2d60h e_loop
+ROM_00 2d6dh e_division
+ROM_00 2d6eh e_fetch
+ROM_00 2d71h e_test_end
+ROM_00 2d7bh e_end
+ROM_00 2d7fh int_fetch             ; the 'int-fetch' subroutine
+ROM_00 2d8ch p_int_sto             ; the 'int-store' subroutine
+ROM_00 2d8eh int_store
+ROM_00 2da2h fp_to_bc              ; the 'floating-point to BC' subroutine
+ROM_00 2dadh fp_delete
+ROM_00 2dc1h log_2_pow_a           ; the 'LOG (2^A)' subroutine
+ROM_00 2dd5h fp_to_a               ; the 'floating-point to a' subroutine
+ROM_00 2de1h fp_a_end
+ROM_00 2de3h print_fp              ; the 'print a floating-point number' subroutine
+ROM_00 2df2h pf_negative
+ROM_00 2df8h pf_positive
+ROM_00 2e01h pf_loop               ; loop for large numbers
+ROM_00 2e1eh pf_save
+ROM_00 2e24h pf_small
+ROM_00 2e56h pf_large              ; numbers > 2^27
+ROM_00 2e6fh pf_medium             ; integer part of X is stored in mem 3 and 4
+ROM_00 2e7bh pf_bits               ; numbers < 65536
+ROM_00 2e8ah pf_bytes
+ROM_00 2ea1h pf_digits
+ROM_00 2ea9h pf_insert
+ROM_00 2eb3h pf_test_2
+ROM_00 2eb8h pf_all_9
+ROM_00 2ecbh pf_more
+ROM_00 2ecfh pf_fraction           ; fractionla part of X is stored in the print buffer
+ROM_00 2edfh pf_frn_lp
+ROM_00 2eech pf_fr_dgt
+ROM_00 2eefh pf_fr_exx
+ROM_00 2f0ch pf_round              ; round the digits in the print buffer to max. 8 digits
+ROM_00 2f18h pf_round_lp
+ROM_00 2f25h pf_round_back
+ROM_00 2f2dh pf_count
+ROM_00 2f46h pf_not_e
+ROM_00 2f4ah pf_e_sbrn
+ROM_00 2f52h pf_out_lp
+ROM_00 2f59h pf_out_dig
+ROM_00 2f5eh pf_dec_out
+ROM_00 2f64h pf_dec_0s
+ROM_00 2f6ch pf_e_format
+ROM_00 2f83h pf_e_pos
+ROM_00 2f85h pf_e_sign
+ROM_00 2f8bh ca_is_10a_plus_c      ; the 'CA=10*A+C' subroutine
+ROM_00 2f9bh prep_add              ; the 'prepare to add' subroutine
+ROM_00 2fafh neg_byte
+ROM_00 2fbah fetch_two             ; the 'fetch two numbers' subroutine
+ROM_00 2fddh shift_fp              ; the 'shift addend' subroutine
+ROM_00 2fe5h one_shift
+ROM_00 2ff9h addend_0
+ROM_00 2ffbh zeros_4_5
+ROM_00 3004h add_back              ; the 'add-back' subroutine
+ROM_00 300dh all_added
+ROM_00 300fh calc_subtract         ; the 'subtraction' operation (offset 03: 'subtract')
+ROM_00 3014h calc_addition         ; the 'addition' operation (offset 0F: 'addition')
+ROM_00 303ch addn_overflow
+ROM_00 303eh full_addn
+ROM_00 3055h shift_len
+ROM_00 307ch test_neg
+ROM_00 309fh add_rep_6             ; report 6
+ROM_00 30a3h end_compl
+ROM_00 30a5h go_nc_mlt
+ROM_00 30a9h hl_is_hl_times_de     ; the 'HL=HL*DE' subroutine
+ROM_00 30b1h hl_loop
+ROM_00 30bch hl_again
+ROM_00 30beh hl_end
+ROM_00 30c0h prep_mul_div          ; the 'prepare to multiply or divide' subroutine
+ROM_00 30cah calc_multiply         ; the 'multiplication' operation (offset 04: 'multiply')
+ROM_00 30eah mult_rslt
+ROM_00 30efh mult_overflow
+ROM_00 30f0h mult_long
+ROM_00 3114h mult_loop             ; multiplier loop
+ROM_00 311bh no_add
+ROM_00 3125h strt_mlt
+ROM_00 313bh make_exp
+ROM_00 313dh divn_expt             ; common for multiplication and division
+ROM_00 3146h overflow1_clr
+ROM_00 3151h overflow2_clr
+ROM_00 3155h test_norm             ; normalisation
+ROM_00 3159h near_zero
+ROM_00 315dh zero_rslt
+ROM_00 315eh skip_zero
+ROM_00 316ch normalise             ; the normalisation operation
+ROM_00 316eh shift_one
+ROM_00 3186h normal_now            ; finish the nomalisation
+ROM_00 3195h overflow_clr
+ROM_00 31adh report_6              ; report 6 - number too big
+ROM_00 31afh calc_division         ; the 'division' operation (offset 05: 'division')
+ROM_00 31d2h div_loop              ; division loop
+ROM_00 31dbh div_34th
+ROM_00 31e2h div_start
+ROM_00 31f2h subn_only
+ROM_00 31f9h no_restore
+ROM_00 31fah count_one
+ROM_00 3214h calc_truncate         ; the 'integer truncation towards zero' operation (offset 3A: 'truncate')
+ROM_00 3221h t_gr_zero
+ROM_00 3225h chk_65536             ; check for -65536
+ROM_00 3233h t_first
+ROM_00 323fh t_small               ; check for small integers
+ROM_00 3252h t_numeric
+ROM_00 325eh t_test
+ROM_00 3261h t_shift
+ROM_00 3267h t_store
+ROM_00 326ch t_exponent            ; large values are considered
+ROM_00 326dh x_large
+ROM_00 3272h nil_bytes             ; clear the mantissa bytes
+ROM_00 327eh byte_zero
+ROM_00 3283h bits_zero
+ROM_00 328ah less_mask
+ROM_00 3290h ix_end
+ROM_00 3293h re_st_two             ; the 're-stack two' subroutine
+ROM_00 3296h restk_sub
+ROM_00 3297h re_stack              ; the 're-stack' subroutine
+ROM_00 32b1h rs_normalise
+ROM_00 32b2h rs_loop
+ROM_00 32bdh rs_store
+ROM_00 32c5h stk_zero              ; condensed form of 0 (table of constants)
+ROM_00 32c8h stk_one               ; condensed form of 1
+ROM_00 32cch stk_half              ; condensed form of 0.1
+ROM_00 32ceh stk_pi_half           ; PI/2
+ROM_00 32d3h stk_ten               ; condensed form of 10
+ROM_00 32d7h stk_addr_table        ; the table of addresses
+ROM_00 335bh calculate             ; the 'calculate' subroutine
+ROM_00 335eh gen_ent_1
+ROM_00 3362h gen_ent_2
+ROM_00 3365h re_entry
+ROM_00 336ch scan_ent
+ROM_00 3380h first_3d
+ROM_00 338ch double_a
+ROM_00 338eh ent_table
+ROM_00 33a1h calc_delete           ; the 'delete' operation (offset 02: 'delete')
+ROM_00 33a2h calc_fp_calc_2        ; the 'single operation' subroutine (offset 3B: 'fp-calc-2')
+ROM_00 33a9h test_5_sp             ; the 'test 5-spaces' subroutine
+ROM_00 33b4h :0 stack_num             ; the 'stack number' subroutine
+ROM_00 33c0h :0 move_fp               ; the 'move a floating-point number' subroutine (offset 31: 'duplicate')
+ROM_00 33c6h :0 stk_data              ; the 'stack literals' subroutine (offset 34: 'stk-data')
+ROM_00 33c8h :0 stk_const
+ROM_00 33deh :0 form_exp
+ROM_00 33f1h :0 stk_zeros
+ROM_00 33f7h :0 skip_cons             ; the 'skip constants' subroutine
+ROM_00 33f8h :0 skip_next
+ROM_00 3406h :0 loc_mem               ; the 'memory location' subroutine
+ROM_00 340fh :0 calc_get_mem_0        ; the 'get from memory area' operation (offsets E0..E5: 'get-mem-0' .. 'get-mem-5')
+ROM_00 341bh :0 calc_stk_zero         ; the 'stack a constant' operation (offsets A0..A4: 'stk-zero'..''stk-ten')
+ROM_00 342dh :0 calc_st_mem_0         ; the 'store in memory area' operation (offsets C0..C5: 'st-mem-0'..'st-mem-5')
+ROM_00 343ch :0 exchange              ; the 'exchange' operation (offset 01: 'exchange')
+ROM_00 343eh :0 swap_byte
+ROM_00 3449h :0 calc_series_06        ; the 'series generator' operation (offsets 86, 88, 8C: 'series-06', 'series-08', 'series-0C')
+ROM_00 3453h :0 g_loop                ; polynom generation main loop
+ROM_00 346ah :0 calc_abs              ; the 'absolute magnitude' operation (offset 2A: 'abs')
+ROM_00 346eh :0 calc_negate           ; the 'unary minus' operation (offset 1B: 'negate')
+ROM_00 3474h :0 neg_test              ; 'ABS' enters here
+ROM_00 3483h :0 int_case              ; the 'integer case' subroutine
+ROM_00 3492h :0 calc_sgn              ; the 'signum' operation (offset 29: 'sgn')
+ROM_00 34a5h :0 calc_in               ; the 'IN' function (offset 2C: 'in')
+ROM_00 34ach :0 calc_peek             ; the 'PEEK' function (offset 2B: 'peek')
+ROM_00 34b0h :0 in_pk_stk
+ROM_00 34b3h :0 calc_usr_no           ; the 'USR' function (offset 2D: 'usr-no')
+ROM_00 34bch :0 calc_usr_string       ; the 'USR-string' function (offset 19: 'usr-$')
+ROM_00 34d3h :0 usr_range
+ROM_00 34e4h :0 usr_stack
+ROM_00 34e7h :0 report_a              ; report A - invalid argument
+ROM_00 34e9h :0 test_zero             ; the 'test-zero' subroutine
+ROM_00 34f9h :0 calc_greater_0        ; the 'greater than zero' operation (offset 37: 'greater-0')
+ROM_00 3501h :0 calc_not              ; the 'NOT' operation (offset 30: 'not')
+ROM_00 3506h :0 calc_less_0           ; the 'less than zero' operation (offset 36: 'less-0')
+ROM_00 3507h :0 sign_to_c
+ROM_00 350bh :0 fp_0_1                ; the 'zero or one' subroutine
+ROM_00 351bh :0 calc_or               ; the 'OR' operation (offset 07: 'or')
+ROM_00 3524h :0 calc_no_and_no        ; the 'number AND number' operation (offset 08: 'no-and-no')
+ROM_00 352dh :0 calc_str_and_no       ; the 'string AND number' operation (offset 10: 'str-and-no')
+ROM_00 353bh :0 calc_comparison       ; the 'comparison' operations (offsets 09..0E, 11..16: 'no-l-eql'..'strs-eql')
+ROM_00 3543h :0 ex_or_not
+ROM_00 354eh :0 nu_or_str
+ROM_00 3559h :0 strings
+ROM_00 3564h :0 byte_comp
+ROM_00 356bh :0 second_low
+ROM_00 3572h :0 both_null
+ROM_00 3575h :0 sec_plus
+ROM_00 3585h :0 first_less
+ROM_00 3588h :0 str_test
+ROM_00 358ch :0 end_tests
+ROM_00 359ch :0 calc_strs_add         ; the 'string concatenation' operation (offset 17: 'strs-add')
+ROM_00 35b7h :0 other_str
+ROM_00 35bfh :0 stk_pntrs             ; the 'stk-pntrs' subroutine
+ROM_00 35c9h :0 calc_chrs             ; the 'CHR$' function (offset 2F: 'chr$')
+ROM_00 35dch :0 report_b4             ; report B - integer out of range
+ROM_00 35deh :0 calc_val              ; the 'VAL' and 'VAL$' operation (offsets 1D: 'val', and 18: 'val$')
+ROM_00 360ch :0 v_report_c
+ROM_00 361fh :0 calc_strstring        ; the 'STR$' function (offset 2E: 'str$')
+ROM_00 3645h :0 calc_read_in          ; the 'read-in' operation (offset 1A: 'read-in')
+ROM_00 365fh :0 r_i_store
+ROM_00 3669h :0 calc_code             ; the 'CODE' function (offset 1C: 'code')
+ROM_00 3671h :0 stk_code
+ROM_00 3674h :0 calc_len              ; the 'LEN' function (offset 1E: 'len')
+ROM_00 367ah :0 calc_dec_jr_nz        ; the 'decrease the counter' subroutine (offset 35: 'dec-jr-nz')
+ROM_00 3686h :0 calc_jump             ; the 'jump' operation (offset 33: 'jump')
+ROM_00 3687h :0 jump_2
+ROM_00 368fh :0 calc_jump_true        ; the 'jump on true' subroutine (offset 00: 'jump-true')
+ROM_00 369bh :0 calc_end_calc         ; the 'end-calc' subroutine (offset 38: 'end-calc')
+ROM_00 36a0h :0 calc_n_mod_m          ; the 'modulo' subroutine (offset 32: 'n-mod-m')
+ROM_00 36afh :0 calc_int              ; the 'INT' operation (offset 27: 'int')
+ROM_00 36b7h :0 x_neg
+ROM_00 36c2h :0 int_exit
+ROM_00 36c4h :0 calc_exp              ; the 'exponential' operation (offset 26: 'exp')
+ROM_00 3703h :0 report_6b             ; report 6 - number too big
+ROM_00 3705h :0 n_negative
+ROM_00 370ch :0 result_ok
+ROM_00 370eh :0 result_zero
+ROM_00 3713h :0 calc_ln               ; the 'natural logarithm' operation (offset 25: 'ln')
+ROM_00 371ah :0 report_a2             ; report A - Invalid argument
+ROM_00 371ch :0 ln_valid
+ROM_00 373dh :0 gre_0_8
+ROM_00 3783h :0 calc_get_argt         ; the 'reduce argument' operation (offset 39: 'get-argt')
+ROM_00 37a1h :0 zplus
+ROM_00 37a8h :0 yneg
+ROM_00 37aah :0 calc_cos              ; the 'cosine' operation (offset 20: 'cos')
+ROM_00 37b5h :0 calc_sine             ; the 'sine' operation (offset 1f: 'sin')
+ROM_00 37b7h :0 c_ent
+ROM_00 37dah :0 calc_tan              ; the 'tangens' operation (offset 21: 'tan')
+ROM_00 37e2h :0 calc_atn              ; the 'arcus tangens' operation (offset 24: 'atn')
+ROM_00 37f8h :0 atn_small
+ROM_00 37fah :0 atn_cases
+ROM_00 3833h :0 calc_asn              ; the 'arcus sine' operation (offset 22: 'asn')
+ROM_00 3843h :0 calc_acs              ; the 'arcus cosine' operation (offset 23: 'acs')
+ROM_00 384ah :0 calc_sqr              ; the 'square root' operation (offset 28: 'sqr')
+ROM_00 3851h :0 calc_to_power         ; the 'exponentiation' operation (offset 06: 'to-power')
+ROM_00 385dh :0 tp_xis0
+ROM_00 386ah :0 tp_one
+ROM_00 386ch :0 tp_last
+ROM_00 3d00h :0 character_set         ; the character set
+ROM_00 4000h :0 display_file          ; screen display file
+ROM_00 5800h :0 attrs                 ; screen colour attributes
+ROM_00 5b00h :0 swap                  ; paging subroutine
+ROM_00 5b10h :0 stoo                  ; paging subroutine
+ROM_00 5b21h :0 younger               ; paging subroutine
+ROM_00 5b2ah :0 regnuoy               ; paging subroutine
+ROM_00 5b3ah :0 onerr                 ; paging subroutine
+ROM_00 5b52h :0 oldhl                 ; temp. register while switching ROMs
+ROM_00 5b54h :0 oldbc                 ; temp. register while switching ROMs
+ROM_00 5b56h :0 oldaf                 ; temp. register while switching ROMs
+ROM_00 5b58h :0 target                ; subroutine address in ROM 3
+ROM_00 5b5ah :0 retaddr               ; return address in ROM 1
+ROM_00 5b5ch :0 bankm                 ; copy of last byte output to bank
+ROM_00 5b5dh :0 ramrst                ; RST 8 instruction
+ROM_00 5b5eh :0 ramerr                ; error number, ROM 1
+ROM_00 5b5fh :0 baud                  ; RS232 bit period in T states/26
+ROM_00 5b61h :0 serfl                 ; 2nd-character-received-flag, and data
+ROM_00 5b63h :0 col                   ; current column from 1 to width
+ROM_00 5b64h :0 width                 ; paper column width
+ROM_00 5b65h :0 tvpars                ; no of inline params expected by RS232
+ROM_00 5b66h :0 flags3                ; various flags
+ROM_00 5b67h :0 bank678               ; copy of last byte output to I/O port 1FFDh (ram switching)
+ROM_00 5b68h :0 xloc                  ; x location when using unexpanded COPY command
+ROM_00 5b69h :0 yloc                  ; y location when using unexpanded COPY command
+ROM_00 5b6ah :0 oldsp                 ; old SP (stack pointer) when TSTACK is in use
+ROM_00 5b6ch :0 synret                ; return address for ONERR
+ROM_00 5b6eh :0 lastv                 ; last value printed by calculator
+ROM_00 5b73h :0 rcline                ; current line being renumbered
+ROM_00 5b75h :0 rcstart               ; starting line number for renumbering
+ROM_00 5b77h :0 rcstep                ; incremental value for renumbering
+ROM_00 5b79h :0 loddrv                ; holds 'T' if SAVE is to tape or other characters
+ROM_00 5b7ah :0 dumplf                ; holds the bumber of 1/216ths user for line feeds in COPY EXP
+ROM_00 5b7ch :0 strip1                ; stripe one bitmap
+ROM_00 5b84h :0 strip2                ; stripe two bitmap
+ROM_00 5b8ch :0 tstack                ; temp. stack grows down from here
+ROM_00 5c00h :0 kstate                ; keyboard bytes
+ROM_00 5c08h :0 last_k                ; last keypress
+ROM_00 5c09h :0 repdel                ; delay until repeat starts (default 35)
+ROM_00 5c0ah :0 repper                ; key repeat delay (default 5)
+ROM_00 5c0bh :0 defadd                ; pointer to DEF FN params during eval
+ROM_00 5c0dh :0 k_data                ; second byte of colour control from keyboard
+ROM_00 5c0eh :0 tvdata                ; both bytes of colour, AT, TAB controls
+ROM_00 5c10h :0 strms                 ; address of stream data
+ROM_00 5c36h :0 chars                 ; address - 0100h of character definitions in ROM (3d00h)
+ROM_00 5c38h :0 rasp                  ; duration of buzz (I.E. If No Mem For Input)
+ROM_00 5c39h :0 pip                   ; duration of keyboard Click (Default 0)
+ROM_00 5c3ah :0 errnr                 ; error report number -1 (iy points to here)
+ROM_00 5c3bh :0 flags                 ; flags (bit 5=lastk is valid, bit 1=printer output)
+ROM_00 5c3ch :0 tv_flag               ; flag bits
+ROM_00 5c3dh :0 err_sp                ; pointer to top of stack for ret on error
+ROM_00 5c3fh :0 list_sp               ; pointer to return from auto list
+ROM_00 5c41h :0 mode                  ; keyword, extended, graphics or letter/caps
+ROM_00 5c42h :0 newppc                ; next line number of program
+ROM_00 5c44h :0 nsppc                 ; next statement offset (in next line)
+ROM_00 5c45h :0 ppc                   ; current line number of program
+ROM_00 5c47h :0 subppc                ; current statement offset (in current line)
+ROM_00 5c48h :0 bordcr                ; bits 5, 4, 3 = border colour
+ROM_00 5c49h :0 e_ppc                 ; program edit cursor line number
+ROM_00 5c4bh :0 vars                  ; pointer to first variable
+ROM_00 5c4dh :0 dest                  ; pointer to variable during assignment
+ROM_00 5c4fh :0 chans                 ; pointer to first channel area
+ROM_00 5c51h :0 curchl                ; pointer to current channel area
+ROM_00 5c53h :0 prog                  ; pointer to first line in program
+ROM_00 5c55h :0 nxtlin                ; pointer to next program line
+ROM_00 5c57h :0 datadd                ; pointer to just past last data item read
+ROM_00 5c59h :0 e_line                ; pointer to edit line
+ROM_00 5c5bh :0 k_cur                 ; pointer to cursor
+ROM_00 5c5dh :0 ch_add                ; pointer to next char
+ROM_00 5c5fh :0 x_ptr                 ; pointer to syntax error
+ROM_00 5c61h :0 worksp                ; pointer to workspace
+ROM_00 5c63h :0 stkbot                ; pointer to calculator stack base
+ROM_00 5c65h :0 stkend                ; pointer to topmost memory address used by Basic
+ROM_00 5c67h :0 breg                  ; byte used for B register of calculator
+ROM_00 5c68h :0 mem                   ; pointer to calculator memory
+ROM_00 5c6ah :0 flags2                ; bit flags
+ROM_00 5c6bh :0 df_sz                 ; lines in lower screen (default 2)
+ROM_00 5c6ch :0 s_top                 ; line number of top line of auto list
+ROM_00 5c6eh :0 oldppc                ; continuation line number
+ROM_00 5c70h :0 ospcc                 ; continuation statement number
+ROM_00 5c71h :0 flagx                 ; bit flags
+ROM_00 5c72h :0 strlen                ; string length during assignment
+ROM_00 5c74h :0 t_addr                ; pointer to next syntax table item
+ROM_00 5c76h :0 seed                  ; word used by random number routines
+ROM_00 5c78h :0 frames                ; frame counter low, med, high bytes
+ROM_00 5c79h :0 frames1               ; med byte of frame counter
+ROM_00 5c7ah :0 frames2               ; high byte of frame counter
+ROM_00 5c7bh :0 udg                   ; pointer to bit patterns for user defined graphics
+ROM_00 5c7dh :0 coords                ; PLOT x, y values
+ROM_00 5c7fh :0 p_posn                ; printer position (range 33-02)
+ROM_00 5c80h :0 pr_cc                 ; low byte of next address in printer buffer
+ROM_00 5c81h :0 unused                ; unused
+ROM_00 5c82h :0 echo_e                ; column, line for input buffer
+ROM_00 5c84h :0 df_cc                 ; next screen location for PRINT
+ROM_00 5c86h :0 dfccl                 ; next screen location for PRINT (lower screen)
+ROM_00 5c88h :0 s_posn                ; screen column (32-02), screen row (24-01)
+ROM_00 5c8ah :0 sposnl                ; screen column (32-02), screen row (24-01) (lower screen)
+ROM_00 5c8ch :0 scr_ct                ; remaining scroll count + 1 (0 is maximum)
+ROM_00 5c8dh :0 attr_p                ; screen colours
+ROM_00 5c8eh :0 mask_p                ; defines the transparent screen colours
+ROM_00 5c8fh :0 attr_t                ; temporary colours
+ROM_00 5c90h :0 mask_t                ; defines the transparent temporary screen colours
+ROM_00 5c91h :0 p_flag                ; bit flags
+ROM_00 5c92h :0 membot                ; scratchpad area for calculator routines
+ROM_00 5cb0h :0 nmiadd                ; pointer used by nmi routine at 0066
+ROM_00 5cb2h :0 ramtop                ; pointer to highest stack byte (value 3e)
+ROM_00 5cb4h :0 p_ramt                ; highest byte that passed RAM test

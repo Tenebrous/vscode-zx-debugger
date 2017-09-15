@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace VSCodeDebugger
+namespace ZXDebug
 {
     public class Value
     {

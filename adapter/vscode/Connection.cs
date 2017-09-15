@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using VSCodeDebugger;
+using ZXDebug;
 
 namespace VSCode
 {
@@ -38,9 +38,12 @@ namespace VSCode
         StringBuilder _rawData = new StringBuilder();
 
         Request _currentRequest;
+        Settings _settings;
 
-        public Connection()
+        public Connection( Settings pSettings )
         {
+            _settings = pSettings;
+
             _input = Console.OpenStandardInput();
             _inputReader = new Reader( _input );
 
@@ -82,29 +85,6 @@ namespace VSCode
                         OnInitialize?.Invoke(pRequest);
                         break;
 
-                    //if( pArgs.linesStartAt1 != null )
-                    //{
-                    //    _clientLinesStartAt1 = (bool) pArgs.linesStartAt1;
-                    //}
-                    //var pathFormat = (string) pArgs.pathFormat;
-                    //if( pathFormat != null )
-                    //{
-                    //    switch( pathFormat )
-                    //    {
-                    //        case "uri":
-                    //            _clientPathsAreURI = true;
-                    //            break;
-                    //        case "path":
-                    //            _clientPathsAreURI = false;
-                    //            break;
-                    //        default:
-                    //            SendErrorResponse( pResponse, 1015, "initialize: bad value '{_format}' for pathFormat", new { _format = pathFormat } );
-                    //            return;
-                    //    }
-                    //}
-                    // 
-                    //Initialize( pResponse, pArgs );
-
                     case "configurationDone":
                         OnConfigurationDone?.Invoke(pRequest);
                         break;
@@ -114,10 +94,15 @@ namespace VSCode
                         break;
 
                     case "attach":
+
+                        PopulateSettings( pRequest.arguments );
                         OnAttach?.Invoke( pRequest );
+
                         break;
 
                     case "disconnect":
+
+                        PopulateSettings( pRequest.arguments );
                         OnDisconnect?.Invoke( pRequest );
                         break;
 
@@ -211,6 +196,13 @@ namespace VSCode
 
                 Send( new Response( pRequest, pErrorMessage: e.Message ) );
             }
+        }
+
+        void PopulateSettings( dynamic pSettings )
+        {
+            var json = JsonConvert.SerializeObject( pSettings );
+            JsonConvert.PopulateObject( json, _settings );
+            _settings.Validate();
         }
 
         //

@@ -4,7 +4,7 @@ using Spectrum;
 
 // todo: decide between throwing exceptions or returning success/failure, and make it consistent
 
-namespace VSCodeDebugger
+namespace ZXDebug
 {
     /// <summary>
     /// Abstraction of interface to a Spectrum debugger
