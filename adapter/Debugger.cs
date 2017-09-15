@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Spectrum;
+
+// todo: decide between throwing exceptions or returning success/failure, and make it consistent
 
 namespace VSCodeDebugger
 {
@@ -8,6 +11,9 @@ namespace VSCodeDebugger
     /// </summary>
     public class Debugger
     {
+        public Action OnPause;
+        public Action OnContinue;
+
         /// <summary>
         /// Returns details on what this debugger provides
         /// </summary>
@@ -21,7 +27,7 @@ namespace VSCodeDebugger
         /// Retrieve the current state of the registers and update the provided pRegisters class
         /// </summary>
         /// <param name="pRegisters">Class to be updated</param>
-        public virtual void GetRegisters( Registers pRegisters )
+        public virtual void RefreshRegisters( Registers pRegisters )
         {
         }
 
@@ -34,20 +40,24 @@ namespace VSCodeDebugger
         public virtual void SetRegister( Registers pRegisters, string pRegister, ushort pValue )
         {
         }
-
-        public virtual void GetMemoryPages( Memory pMemory )
+        
+        public virtual void RefreshMemoryPages( Memory pMemory )
         {
         }
 
-        public virtual string GetMemory( ushort pAddress, int pLength )
+        public virtual string ReadMemory( ushort pAddress, int pLength )
         {
             return null;
         }
 
-        public virtual void GetStack( Stack pStack )
+        public virtual void RefreshStack( Stack pStack )
         {
         }
 
+        /// <summary>
+        /// Connect to the debugger
+        /// </summary>
+        /// <returns>true if connection was successful</returns>
         public virtual bool Connect()
         {
             return false;
@@ -56,6 +66,15 @@ namespace VSCodeDebugger
         public virtual bool Disconnect()
         {
             return false;
+        }
+
+        /// <summary>
+        /// Process any incoming messages or other regular updates
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool Process()
+        {
+            return true;
         }
 
         public virtual bool IsConnected { get; }
@@ -92,6 +111,11 @@ namespace VSCodeDebugger
 
         public virtual void ClearLastStateChange()
         {
+        }
+
+        public virtual string CustomCommand( string pCommand )
+        {
+            return null;
         }
     }
 

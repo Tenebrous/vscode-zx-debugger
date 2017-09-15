@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using VSCodeDebugger;
 
 namespace VSCode
 {
@@ -28,9 +29,8 @@ namespace VSCode
         public Action<Request> OnConfigurationDone;
         public Action<Request> OnEvaluate;
 
-        const string TwoCRLF = "\r\n\r\n";
-        static readonly Regex ContentLengthMatcher = new Regex(@"Content-Length: (\d+)");
-        static readonly Encoding Encoding = System.Text.Encoding.UTF8;
+        static readonly Regex _contentLength = new Regex(@"Content-Length: (\d+)\r\n\r\n");
+        static readonly Encoding _encoding = System.Text.Encoding.UTF8;
 
         Stream _input;
         Reader _inputReader;
@@ -63,21 +63,7 @@ namespace VSCode
         {
             Send( new ContinuedEvent( pAllThreads ) );
         }
-        
-        public void SourceAdded( Source pSource )
-        {
-            Send( new LoadedSourceEvent( "new", pSource ) );
-        }
 
-        public void SourceRemoved( Source pSource )
-        {
-            Send( new LoadedSourceEvent( "removed", pSource ) );
-        }
-
-        public void SourceChanged( Source pSource )
-        {
-            Send( new LoadedSourceEvent( "changed", pSource )  );
-        }
 
         // commands/events from vscode
 
@@ -210,7 +196,7 @@ namespace VSCode
                     default:
                         Log.Write( 
                             Log.Severity.Error,
-                            string.Format( "VSCode request not handled: {0}", pCommand )
+                            string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
                         );
 
                         break;
@@ -220,7 +206,7 @@ namespace VSCode
             {
                 Log.Write(
                     Log.Severity.Error,
-                    string.Format( "Error during request '{0}' (exception: {1})\n{2}", pCommand, e.Message, e )
+                    string.Format( "vscode: error during request '{0}' [{1}] (exception: {2})\n{3}", Format.Encode( pRequest.arguments.ToString() ), pCommand, e.Message, e )
                 );
 
                 Send( new Response( pRequest, pErrorMessage: e.Message ) );
@@ -229,64 +215,71 @@ namespace VSCode
 
         //
 
-        public bool Read()
+        public bool Process()
         {
-            if (_inputReader.HasData)
-            {
-                var data = Encoding.ASCII.GetString(_inputReader.GetData());
-                _rawData.Append(data);
-                ProcessData();
+            if( !_inputReader.HasData )
+                return false;
 
-                return true;
-            }
+            var data = Encoding.ASCII.GetString( _inputReader.GetData() );
+            _rawData.Append(data);
+            ProcessData();
 
-            return false;
+            return true;
         }
 
         void ProcessData()
         {
-            var data = _rawData.ToString();
-            _rawData.Clear();
-
-            while (true)
+            while( true )
             {
-                // find end of message
-                var twocrlf = data.IndexOf(TwoCRLF, StringComparison.Ordinal);
-
-                if (twocrlf == -1)
-                    break;
+                var data = _rawData.ToString();
 
                 // find size text
-                var match = ContentLengthMatcher.Match(data);
+                var match = _contentLength.Match( data );
 
-                if (!match.Success || match.Groups.Count != 2)
+                if( !match.Success || match.Groups.Count != 2 )
                     break;
 
-                var size = Convert.ToInt32(match.Groups[1].ToString());
+                var size = Convert.ToInt32( match.Groups[1].ToString() );
+                var end = match.Index + match.Length;
 
-                if (data.Length < twocrlf + size + TwoCRLF.Length)
+                if( data.Length < end + size )
                     break;
 
-                var message = data.Substring(twocrlf + TwoCRLF.Length, size);
-                ProcessMessage(message);
+                var message = data.Substring( end, size );
 
-                data = data.Substring(twocrlf + TwoCRLF.Length + size);
+                _rawData.Remove( 0, end + size );
+
+                ProcessMessage( message );
             }
-
-            _rawData.Append( data );
         }
 
         void ProcessMessage(string pMessage)
         {
-            Log.Write( Log.Severity.Verbose, "vscode: (in) " + pMessage );
+            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + pMessage );
 
-            var request = JsonConvert.DeserializeObject<Request>(pMessage);
+            Request request = null;
 
-            if (request != null && request.type == "request")
+            try
+            {
+                request = JsonConvert.DeserializeObject<Request>(pMessage);
+            }
+            catch( Exception e )
+            {
+                Log.Write( Log.Severity.Error, "The following message caused an error: [" + pMessage.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
+                Log.Write( Log.Severity.Error, e.ToString() );
+                return;
+            }
+
+            if( request == null )
+                return;
+
+            Log.Write( Log.Severity.Debug, "vscode: (in)  " + request.type + " " + request.command );
+
+            if( request.type == "request" )
             {
                 _currentRequest = request;
 
-                HandleMessage(request.command, request.arguments, request);
+                HandleMessage( request.command, request.arguments, request );
 
                 if( !request.responded )
                     Send( request );
@@ -339,10 +332,10 @@ namespace VSCode
         static byte[] ConvertToBytes( ProtocolMessage pMessage )
         {
             var asJson = JsonConvert.SerializeObject( pMessage );
-            var jsonBytes = Encoding.GetBytes(asJson);
+            var jsonBytes = _encoding.GetBytes(asJson);
 
-            var header = string.Format( "Content-Length: {0}{1}", jsonBytes.Length, TwoCRLF );
-            var headerBytes = Encoding.GetBytes(header);
+            var header = string.Format( "Content-Length: {0}\r\n\r\n", jsonBytes.Length );
+            var headerBytes = _encoding.GetBytes(header);
 
             Log.Write( Log.Severity.Verbose, "vscode: (out) [" + asJson + "]" );
 
@@ -351,12 +344,6 @@ namespace VSCode
             System.Buffer.BlockCopy(jsonBytes, 0, data, headerBytes.Length, jsonBytes.Length);
 
             return data;
-        }
-
-
-        public Request CurrentRequest
-        {
-            get { return _currentRequest; }
         }
     }
 

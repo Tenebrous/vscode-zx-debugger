@@ -7,9 +7,10 @@ namespace Spectrum
 {
     public class Machine
     {
-        // the class used to actually retrieve the data can be abstracted out at some point
-        // but for now we'll tie directly to the ZEsarUX connection class
         public Debugger Connection;
+
+        public Action OnPause;
+        public Action OnContinue;
 
         public Machine( Debugger pConnection )
         {
@@ -17,6 +18,22 @@ namespace Spectrum
             _registers = new Registers(this);
             _memory    = new Memory(this);
             _stack     = new Stack(this);
+
+            Connection.OnPause += Connection_OnPause;
+            Connection.OnContinue += Connection_OnContinue;
+        }
+
+        /////////////////
+        // events from debugger connection
+
+        void Connection_OnPause()
+        {
+            OnPause?.Invoke();
+        }
+
+        void Connection_OnContinue()
+        {
+            OnContinue?.Invoke();
         }
 
 
@@ -40,11 +57,13 @@ namespace Spectrum
 
         public bool StepOver()
         {
+            OnContinue?.Invoke();
             return Connection.StepOver();
         }
 
         public bool Step()
         {
+            OnContinue?.Invoke();
             return Connection.Step();
         }
 
@@ -118,17 +137,29 @@ namespace Spectrum
             var minBank = GetDisasmBank( minSlot.Bank.ID );
 
 
-            //// don't update disassembly if we have at least 10 lines worth already
+            //// don't update disassembly if we have at least 10 instructions worth already
             //
-            bool request = false;
+            bool needDisasm = false;
+            ushort address = (ushort)(pAddress - minSlot.Min);
+
             for( int i = 0; i < 10; i++ )
-                if( !minBank.Lines.ContainsKey( (ushort) ( pAddress - minSlot.Min + i ) ) )
+            {
+                DisasmLine line;
+
+                if( !minBank.Lines.TryGetValue( address, out line ) )
                 {
-                    request = true;
+                    // we don't have data at this address so we need to disassemble to get it
+                    needDisasm = true;
                     break;
                 }
 
-            if( !request )
+                if( TerminateDisassembly( line.Opcodes ) )
+                    break;
+
+                address += (ushort)line.Opcodes.Length;
+            }
+
+            if( !needDisasm )
                 return false;
             //
             ////
@@ -166,8 +197,7 @@ namespace Spectrum
                     bank.SortedLines.Add( dline );
                 }
 
-                // temporarily end disasm on a RET to see if it simplifies things
-                if( line.Opcodes[0] == 0xC9 )
+                if( TerminateDisassembly( line.Opcodes ) )
                     break;
             }
 
@@ -352,6 +382,17 @@ namespace Spectrum
 
             return false;
         }
+
+        bool TerminateDisassembly( byte[] pOpcodes )
+        {
+            // temporarily end disasm on a RET to see if it simplifies things
+
+            if( pOpcodes.Length == 1 )
+                if( pOpcodes[0] == 0xC9 )
+                    return true;
+
+            return false;
+        }
     }
 
     public class Registers
@@ -396,7 +437,7 @@ namespace Spectrum
         /// </summary>
         public void Get()
         {
-            _machine.Connection.GetRegisters( this );
+            _machine.Connection.RefreshRegisters( this );
         }
 
 
@@ -616,13 +657,13 @@ namespace Spectrum
 
         public string Get( ushort pAddress, int pLength )
         {
-            return _machine.Connection.GetMemory( pAddress, pLength );
+            return _machine.Connection.ReadMemory( pAddress, pLength );
         }
 
         
         public void GetMapping()
         {
-            _machine.Connection.GetMemoryPages( this );
+            _machine.Connection.RefreshMemoryPages( this );
         }
     }
 
@@ -669,7 +710,7 @@ namespace Spectrum
 
         public void Get()
         {
-            _machine.Connection.GetStack( this );
+            _machine.Connection.RefreshStack( this );
         }
     }
 }

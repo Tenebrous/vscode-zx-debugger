@@ -122,5 +122,10 @@ namespace VSCodeDebugger
         {
             return pByte < 10 ? (char)( pByte + 48 ) : (char)( pByte - 10 + 65 );
         }
+
+        public static string Encode( string pString )
+        {
+            return pString.Replace( "\r", "\\r" ).Replace( "\n", "\\n" );
+        }
     }
 }

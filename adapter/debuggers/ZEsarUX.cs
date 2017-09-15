@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -13,8 +12,6 @@ namespace ZEsarUX
 {
     public class Connection : VSCodeDebugger.Debugger
     {
-        public Action<List<string>> OnData;
-   
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
@@ -84,14 +81,14 @@ namespace ZEsarUX
 
         public override bool Pause()
         {
-            SendAndReceiveSingle( "enter-cpu-step" );
+            Send( "enter-cpu-step" );
             return true;
         }
 
 
         public override bool Continue()
         {
-            SendAndReceiveSingle( "exit-cpu-step" );
+            Send( "exit-cpu-step" );
             return true;
         }
 
@@ -150,7 +147,7 @@ namespace ZEsarUX
             SendAndReceiveSingle( "set-memory-zone -1" );
         }
 
-        public override void GetMemoryPages( Memory pMemory )
+        public override void RefreshMemoryPages( Memory pMemory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
             // RO1 RA5 RA2 RA7 SCR5 PEN
@@ -183,13 +180,13 @@ namespace ZEsarUX
             }
         }
 
-        public override string GetMemory( ushort pAddress, int pLength )
+        public override string ReadMemory( ushort pAddress, int pLength )
         {
             var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
             return memory;
         }
 
-        public override void GetStack( Stack pStack )
+        public override void RefreshStack( Stack pStack )
         {
             pStack.Clear();
             var stack = SendAndReceiveSingle( "get-stack-backtrace" );
@@ -207,7 +204,7 @@ namespace ZEsarUX
         }
 
         Registers _registers;
-        public override void GetRegisters( Registers pRegisters )
+        public override void RefreshRegisters( Registers pRegisters )
         {
             _registers = pRegisters;
             ParseRegisters( pRegisters, SendAndReceiveSingle( "get-registers" ) );
@@ -264,7 +261,6 @@ namespace ZEsarUX
             get { return _isRunning; }
         }
 
-
         string _hardware;
         public string Hardware
         {
@@ -276,21 +272,35 @@ namespace ZEsarUX
             return _hardware = SendAndReceiveSingle( "get-current-machine" );
         }
 
-        public bool Read()
+        public override bool Process()
         {
             // read any unsolicited messages coming from zesarux
 
             if( !IsConnected )
                 return false;
 
+            var wasRunning = _isRunning;
+
             var result = ReadAll();
 
-            if( result.Count > 0 )
-                OnData?.Invoke( result );
+            if( _isRunning != wasRunning )
+            {
+                if( _isRunning )
+                    OnContinue?.Invoke();
+                else
+                    OnPause?.Invoke();
+            }
+
+            //if( result.Count > 0 )
+            //    OnData?.Invoke( result );
 
             return result.Count > 0;
         }
 
+        public override string CustomCommand( string pCommand )
+        {
+            return string.Join( "\n", SendAndReceive(pCommand) );
+        }
 
         public List<string> SendAndReceive( string pCommand )
         {
@@ -298,10 +308,6 @@ namespace ZEsarUX
                 return null;
 
             _tempReceiveLines.Clear();
-
-
-            // send command to zesarux
-            Log.Write( Log.Severity.Verbose, "zesarux: (out) [" + pCommand + "]" );
 
             Send( pCommand );
 
@@ -349,21 +355,11 @@ namespace ZEsarUX
             // clear buffer
             ReadAll();
 
+            Log.Write( Log.Severity.Debug, "zesarux: (out) [" + pCommand + "]" );
+
             var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
             _stream.Write( bytes, 0, bytes.Length );
             _stream.Flush();
-        }
-
-        public StateChange _lastStateChange;
-
-        public override StateChange GetLastStateChange()
-        {
-            return _lastStateChange;
-        }
-
-        public override void ClearLastStateChange()
-        {
-            _lastStateChange = StateChange.None;
         }
 
         byte[] _tempReadBytes = new byte[4096];
@@ -397,6 +393,8 @@ namespace ZEsarUX
 
             _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
 
+            if( _tempReadProcessLines.Count > 0 )
+                Log.Write( Log.Severity.Debug, "zesarux: (in)  " + _tempReadProcessLines.Count + " line(s) [" + _tempReadProcessLines[0] + "]" );
 
             // look for magic words
             foreach( var line in _tempReadProcessLines )
@@ -409,11 +407,6 @@ namespace ZEsarUX
                     _isRunning = false;
                 else
                     _tempReceiveLines.Add( line );
-            }
-
-            if( wasRunning != _isRunning )
-            {
-                _lastStateChange = _isRunning ? StateChange.Started : StateChange.Stopped;
             }
 
             return _tempReceiveLines;

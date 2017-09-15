@@ -9,8 +9,8 @@ namespace VSCodeDebugger
 {
     public class Adapter
 	{
-	    static ZEsarUX.Connection _zesarux;
 	    static VSCode.Connection _vscode;
+	    static Debugger _debugger;
 	    static bool _running;
 
 	    static string _folder;
@@ -21,50 +21,53 @@ namespace VSCodeDebugger
 
 	    static Machine _machine;
 
-	    static bool _analysing;
-
     	static void Main(string[] argv)
 	    {
 	        // set up 
              
             Log.OnLog += Log_SendToVSCode;
-	        Log.MaxSeverity = Log.Severity.Message;
+	        Log.MaxSeverityConsole = Log.Severity.Message;
+            Log.MaxSeverityLog = Log.Severity.Debug;
 
 
             // vscode events
 
             _vscode = new VSCode.Connection();
+            _vscode.OnInitialize += VSCode_OnInitialize;
+	        _vscode.OnDisconnect += VSCode_OnDisconnect;
+	        _vscode.OnLaunch += VSCode_OnLaunch;
+	        _vscode.OnAttach += VSCode_OnAttach;
+	        _vscode.OnConfigurationDone += VSCode_OnConfigurationDone;
+
 	        _vscode.OnPause += VSCode_OnPause;
 	        _vscode.OnContinue += VSCode_OnContinue;
 	        _vscode.OnNext += VSCode_OnNext;
 	        _vscode.OnStepIn += VSCode_OnStepIn;
 	        _vscode.OnStepOut += VSCode_OnStepOut;
-            _vscode.OnInitialize += VSCode_OnInitialize;
-	        _vscode.OnLaunch += VSCode_OnLaunch;
-	        _vscode.OnAttach += VSCode_OnAttach;
-	        _vscode.OnConfigurationDone += VSCode_OnConfigurationDone;
+
 	        _vscode.OnGetThreads += VSCode_OnGetThreads;
 	        _vscode.OnGetStackTrace += VSCode_OnGetStackTrace;
 	        _vscode.OnGetScopes += VSCode_OnGetScopes;
+
 	        _vscode.OnGetVariables += VSCode_OnGetVariables;
 	        _vscode.OnSetVariable += VSCode_OnSetVariable;
-	        _vscode.OnGetSource += VSCode_OnGetSource;
+	        // _vscode.OnGetSource += VSCode_OnGetSource;
+	        // _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 			_vscode.OnGetCompletions += VSCode_OnGetCompletions;
-	        _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
-	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 	        _vscode.OnEvaluate += VSCode_OnEvaluate;
 
 
             // zesarux events
 
-            _zesarux = new ZEsarUX.Connection();	       
-			_zesarux.OnData += Z_OnData; 
+            _debugger = new ZEsarUX.Connection();	       
+			// _debugger.OnData += Z_OnData; 
 
 
 			// machine events
 
-            _machine = new Machine( _zesarux );
-
+            _machine = new Machine( _debugger );
+			_machine.OnPause += Machine_OnPause;
+			_machine.OnContinue += Machine_OnContinue;
 
 			// tie all the values together
 
@@ -75,65 +78,33 @@ namespace VSCodeDebugger
 
 	        _running = true;
 
-	        var wasActive = false;
 
 	        // event loop
 	        while( _running )
 	        {
-	            var vsactive = _vscode.Read();
-				var zactive = _zesarux.Read();
-
-	            switch( _zesarux.GetLastStateChange() )
-	            {
-					case StateChange.None:
-						break;
-
-					case StateChange.Started:
-						_vscode.Continued( true );
-						_zesarux.ClearLastStateChange();
-						break;
-
-					case StateChange.Stopped:
-						_vscode.Stopped( 1, "step", "step" );
-						_zesarux.ClearLastStateChange();
-						break;
-	            }
-
-	            if( !vsactive )
-	            {
-	                if( wasActive )
-	                    Log.Write( Log.Severity.Debug, "" );
-
-					if( !zactive )
-	                	System.Threading.Thread.Sleep( 10 );
-	            }
-
-	            wasActive = vsactive;
+	            var vsactive = _vscode.Process();
+				var zactive = _debugger.Process();
 	        }
 	    }
 
-        static void Z_OnData( List<string> pList )
-        {
-            if( _analysing )
-            {
-                // _machine.UpdateDisassembly( pList, DisassemblyFile );
 
-                _vscode.Send( new OutputEvent( OutputEvent.OutputEventType.console, "." ) );
-                _zesarux.Send( "run verbose 10000" );
+        /////////////////
+        // machine events
 
-                return;
-            }
+		static void Machine_OnPause()
+		{
+			_vscode.Stopped( 1, "step", "step" );
+		}
 
-            _vscode.Send( 
-                new OutputEvent( 
-                    OutputEvent.OutputEventType.stdout, 
-                    string.Join( "\n", pList ) + "\n"
-                )
-            );
-        }
+		static void Machine_OnContinue()
+		{
+			_vscode.Continued( true );
+		}
 
 
-        // events coming in from VSCode
+
+        /////////////////
+        // vscode events
 
         static void VSCode_OnInitialize( Request pRequest )
 	    {
@@ -162,11 +133,13 @@ namespace VSCodeDebugger
 
         static void VSCode_OnNext( Request pRequest )
 	    {
+	        _vscode.Send( pRequest );
             _machine.StepOver();
 	    }
 
         static void VSCode_OnStepIn( Request pRequest )
 	    {
+	        _vscode.Send( pRequest );
 	        _machine.Step();
 	    }
 
@@ -203,6 +176,7 @@ namespace VSCodeDebugger
 
 
             // get map[]
+			// list of .dbg files that list bank/address/filename/line number associations
 
             foreach( string map in pRequest.arguments.maps )
 	            Log.Write( Log.Severity.Message, map );
@@ -213,7 +187,7 @@ namespace VSCodeDebugger
             _tempFolder = Path.Combine( _folder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
-            if( !_zesarux.Connect() )
+            if( !_debugger.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
@@ -307,35 +281,6 @@ namespace VSCodeDebugger
 			//Log.Write( Log.Severity.Error, pRequest.arguments.ToString() );
         }		
 
-	    static void VSCode_OnGetLoadedSources( Request pRequest )
-	    {
-	    //    _vscode.Send(
-        //        pRequest,
-        //        new LoadedSourcesResponseBody(
-        //            new List<Source>()
-        //            {
-        //                DisassemblySource()
-        //            }
-        //        )
-        //    );
-	    }
-
-	    static void VSCode_OnGetSource( Request pRequest )
-	    {
-        //    _zesarux.GetRegisters();
-        //
-        //    DisassemblePC();
-        //
-        //    _vscode.Send( 
-        //        pRequest,
-        //        new SourceResponseBody(
-        //            _zesarux.Disassembly,
-        //            ""
-        //        )
-        //    );
-	    }
-
-
         static void VSCode_OnEvaluate( Request pRequest )
 	    {
 			if( DynString( pRequest.arguments, "context", "" ) == "repl" )
@@ -348,29 +293,29 @@ namespace VSCodeDebugger
 		{
 			string command = DynString( pRequest.arguments, "expression", "" );
 
-		    if( !_analysing && command == "heat" )
-		    {
-		        _vscode.Send( pRequest, new EvaluateResponseBody("Analysing - type 'stop' to end ..." ) );
+		    // if( !_analysing && command == "heat" )
+		    // {
+		    //     _vscode.Send( pRequest, new EvaluateResponseBody("Analysing - type 'stop' to end ..." ) );
 
-                _analysing = true;
-		        _zesarux.Send( "run verbose 10000" );
-		        return;
-		    }
+            //     _analysing = true;
+		    //     _debugger.Send( "run verbose 10000" );
+		    //     return;
+		    // }
 
-            if( _analysing && command == "stop" )
-		    {
-		        _vscode.Send( pRequest, new EvaluateResponseBody( "Stopped." ) );
+            // if( _analysing && command == "stop" )
+		    // {
+		    //     _vscode.Send( pRequest, new EvaluateResponseBody( "Stopped." ) );
 
-                _analysing = false;
-		        return;
-		    }
+            //     _analysing = false;
+		    //     return;
+		    // }
 
-			var result = _zesarux.SendAndReceive( command );
+			var result = _debugger.CustomCommand( command );
 			
 			_vscode.Send(
 				 pRequest, 
 				 new EvaluateResponseBody(
-					 string.Join( "\n", result )
+					 result
 				 )
 			);
 		}
@@ -418,6 +363,10 @@ namespace VSCodeDebugger
 				value = reg.Content;
 				formatted = reg.Formatted;
 				parseIndex++;
+			}
+			else
+			{
+				// todo: hand over anything else to the Debugger if it supports evaluation
 			}
 
 	        if( split.Length > parseIndex )
