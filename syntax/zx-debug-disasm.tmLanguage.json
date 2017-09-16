@@ -4,7 +4,7 @@
   "fileTypes": ["zdis"],
   "patterns": [
     {
-        "match": "(?i)^(Slot)(.*?) [(](.*?)[)]",
+        "match": "(?i)^(Slot_)(.*?) [(](.*?)[)]",
         "captures": {
             "1": { "comment": "Slot text",     "name": "punctuation.definition.tag.asm" },
             "2": { "comment": "Slot number",   "name": "punctuation.definition.tag.asm" },
@@ -13,7 +13,7 @@
         "comment": "Slot"    
     },
     {
-        "match": "(?i)^  ((ROM|RAM).*)$",
+        "match": "(?i)^  ((ROM|RAM)_.*)$",
         "captures": {
             "1": { "comment": "Bank", "name": "punctuation.definition.tag.asm" }
         },

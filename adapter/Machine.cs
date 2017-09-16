@@ -190,7 +190,7 @@ namespace Spectrum
                         continue;
 
                     lineNumber++;
-                    stream.WriteLine( "Slot{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
+                    stream.WriteLine( "Slot_{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
 
                     _tempBankDone.Add( slot.Bank.ID );
                     
