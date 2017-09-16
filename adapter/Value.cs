@@ -33,9 +33,9 @@ namespace ZXDebug
             _children = new Dictionary<int, Value>();
             _childrenByName = new Dictionary<string, Value>();
 
-            _getter = pGet;
-            _setter = pSet;
-            _formatter = pFormatter;
+            Getter = pGet;
+            Setter = pSet;
+            Formatter = pFormatter;
         }
 
         public Value Create( string pName, Action<Value> pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormat = null )
@@ -100,40 +100,16 @@ namespace ZXDebug
         }
 
         public delegate string ValueGetter( Value pValue );
-
-        ValueGetter _getter;
-        public ValueGetter Getter
-        {
-            get { return _getter; }
-            set { _getter = value; }
-        }
-
+        public ValueGetter Getter { get; set; }
 
         public delegate void ValueSetter( Value pValue, string pNew );
-        
-        ValueSetter _setter;
-        public ValueSetter Setter
-        {
-            get { return _setter; }
-            set { _setter = value; }
-        }
+        public ValueSetter Setter { get; set; }
 
-        Action<Value> _refresher;
-        public Action<Value> Refresher
-        {
-            get { return _refresher; }
-            set { _refresher = value; }
-        }
-
+        public delegate void ValueRefresher( Value pValue );
+        public ValueRefresher Refresher { get; set; }
 
         public delegate string ValueFormatter( Value pValue );
-
-        ValueFormatter _formatter;
-        public ValueFormatter Formatter
-        {
-            get { return _formatter; }
-            set { _formatter = value; }
-        }
+        public ValueFormatter Formatter { get; set; }
 
         bool _doingRefresh;
         public void Refresh()
@@ -142,10 +118,9 @@ namespace ZXDebug
                 return;
 
             _doingRefresh = true;
-            _refresher?.Invoke( this );
+            Refresher?.Invoke( this );
             _doingRefresh = false;
         }
-
 
         bool _doingOnChange;
         string _content;
@@ -163,8 +138,8 @@ namespace ZXDebug
             }
             get 
             {
-                if( _getter != null )
-                    _content = _getter(this);
+                if( Getter != null )
+                    _content = Getter(this);
 
                  return _content; 
             }
@@ -174,8 +149,8 @@ namespace ZXDebug
         {
             get
             {
-                if( _formatter != null )
-                    return _formatter( this );
+                if( Formatter != null )
+                    return Formatter( this );
 
                 return _content;
             }
@@ -183,7 +158,7 @@ namespace ZXDebug
 
         public override string ToString()
         {
-            return string.Format( "{0} = {1}", Name, Content );
+            return $"{Name} = {Content}";
         }
     }
 }

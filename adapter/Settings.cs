@@ -1,13 +1,16 @@
 ﻿using System;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace ZXDebug
 {
     public class Settings : VSCode.Settings
     {
+        // ReSharper disable InconsistentNaming
         public string   cwd;
         public string[] maps;
         public bool     stopOnEntry;
+        // ReSharper restore InconsistentNaming
 
         public Settings()
         {

@@ -16,13 +16,10 @@ namespace ZEsarUX
         NetworkStream _stream;
         bool _connected;
 
-        public override Meta GetMeta()
+        public override Meta Meta => new Meta()
         {
-            return new Meta()
-            {
-                CanSetRegisters = true
-            };
-        }
+            CanSetRegisters = true
+        };
 
         public override bool Connect()
         {

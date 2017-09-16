@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using ZXDebug;
 
 namespace Spectrum
@@ -12,12 +13,16 @@ namespace Spectrum
         public Action OnPause;
         public Action OnContinue;
 
+        public Registers Registers { get; }
+        public Memory Memory { get; }
+        public Stack Stack { get; }
+
         public Machine( Debugger pConnection )
         {
             Connection = pConnection;
-            _registers = new Registers(this);
-            _memory    = new Memory(this);
-            _stack     = new Stack(this);
+            Registers = new Registers(this);
+            Memory    = new Memory(this);
+            Stack     = new Stack(this);
 
             Connection.OnPause += Connection_OnPause;
             Connection.OnContinue += Connection_OnContinue;
@@ -73,36 +78,6 @@ namespace Spectrum
         }
 
 
-        /////////////////
-        // registers
-
-        Registers _registers;
-        public Registers Registers
-        {
-            get { return _registers; }
-        }
-
-
-
-        /////////////////
-        // memory
-
-        Memory _memory;
-        public Memory Memory
-        {
-            get { return _memory; }
-        }
-
-
-        /////////////////
-        // stack
-
-        Stack _stack;
-        public Stack Stack
-        {
-            get { return _stack; }
-        }
-
 
         /////////////////
         // 
@@ -133,20 +108,18 @@ namespace Spectrum
 
 
             // find starting slot & bank
-            var minSlot = _memory.GetSlot( pAddress );
+            var minSlot = Memory.GetSlot( pAddress );
             var minBank = GetDisasmBank( minSlot.Bank.ID );
 
 
             //// don't update disassembly if we have at least 10 instructions worth already
             //
-            bool needDisasm = false;
-            ushort address = (ushort)(pAddress - minSlot.Min);
+            var needDisasm = false;
+            var address = (ushort)(pAddress - minSlot.Min);
 
-            for( int i = 0; i < 10; i++ )
+            for( var i = 0; i < 10; i++ )
             {
-                DisasmLine line;
-
-                if( !minBank.Lines.TryGetValue( address, out line ) )
+                if( !minBank.Lines.TryGetValue( address, out var line ) )
                 {
                     // we don't have data at this address so we need to disassemble to get it
                     needDisasm = true;
@@ -174,7 +147,7 @@ namespace Spectrum
 
 
             var maxLine = _tempDisasm[_tempDisasm.Count - 1];
-            var maxSlot = _memory.GetSlot( maxLine.Address );
+            var maxSlot = Memory.GetSlot( maxLine.Address );
             var maxBank = GetDisasmBank( maxSlot.Bank.ID );
 
             foreach( var line in _tempDisasm )
@@ -183,7 +156,7 @@ namespace Spectrum
                 var bank = line.Address <= minSlot.Max ? minBank : maxBank;
                 var lines = bank.Lines;
 
-                ushort offset = (ushort) ( line.Address - slot.Min );
+                var offset = (ushort) ( line.Address - slot.Min );
                 if( !lines.ContainsKey( offset ) )
                 {
                     var dline = new DisasmLine()
@@ -204,15 +177,13 @@ namespace Spectrum
             if( File.Exists(pFilename) )
                 File.SetAttributes( pFilename, 0 );
 
-            int lineNumber = 0;
+            var lineNumber = 0;
             using( var stream = new StreamWriter( pFilename ) )
             {
                 _tempBankDone.Clear();
-                foreach( var slot in _memory.Slots )
+                foreach( var slot in Memory.Slots )
                 {
-                    DisasmBank bank;
-
-                    if( !_disasmBanks.TryGetValue( slot.Bank.ID, out bank ) )
+                    if( !_disasmBanks.TryGetValue( slot.Bank.ID, out var bank ) )
                         continue;
 
                     if( bank.Lines.Count == 0 )
@@ -265,7 +236,7 @@ namespace Spectrum
             pLineNumber++;
             pStream.WriteLine( "  {0}", pBank.Name );
 
-            ushort prev = pBank.SortedLines[0].Offset;
+            var prev = pBank.SortedLines[0].Offset;
             foreach( var line in pBank.SortedLines )
             {
                 if( line.Offset - prev > 1 )
@@ -294,9 +265,7 @@ namespace Spectrum
 
         DisasmBank GetDisasmBank( int pBankID )
         {
-            DisasmBank d;
-
-            if( _disasmBanks.TryGetValue( pBankID, out d ) )
+            if( _disasmBanks.TryGetValue( pBankID, out var d ) )
                 return d;
 
             d = new DisasmBank()
@@ -311,12 +280,11 @@ namespace Spectrum
 
         public int FindLine( ushort pAddress )
         {
-            var slot = _memory.GetSlot( pAddress );
+            var slot = Memory.GetSlot( pAddress );
             var bank = GetDisasmBank( slot.Bank.ID );
             var offset = pAddress - slot.Min;
-            DisasmLine line;
 
-            if( bank.Lines.TryGetValue( (ushort) offset, out line ) )
+            if( bank.Lines.TryGetValue( (ushort)offset, out var line ) )
                 return line.LineNumber;
 
             return 0;
@@ -324,12 +292,11 @@ namespace Spectrum
 
         public bool PreloadDisassembly( ushort pAddress, string pFilename )
         {
-            var slot = _memory.GetSlot( pAddress );
+            var slot = Memory.GetSlot( pAddress );
             var bank = GetDisasmBank( slot.Bank.ID );
             var offset = pAddress - slot.Min;
-            DisasmLine line;
 
-            if( !bank.Lines.TryGetValue( (ushort) offset, out line ) )
+            if( !bank.Lines.TryGetValue( (ushort)offset, out var line ) )
                 return false;
 
             var opcodes = line.Opcodes;
@@ -462,7 +429,7 @@ namespace Spectrum
             {
 			    switch( pRegister )
 			    {
-                    ///
+                    //
 				    case "A":   return (ushort) A;
                     case "F":   return (ushort) F;
                     case "AF":  return (ushort) ((A << 8) | F);
@@ -479,7 +446,7 @@ namespace Spectrum
 				    case "L":   return (ushort) L;
 				    case "HL":  return (ushort) ((H << 8) | L);
 
-                    ///
+                    //
 				    case "A'":  return (ushort) AltA;
 				    case "F'":  return (ushort) AltF;
                     case "AF'": return (ushort) ((AltA << 8) | AltF);
@@ -496,7 +463,7 @@ namespace Spectrum
 				    case "L'":  return (ushort) AltL;
 				    case "HL'": return (ushort) ((AltH << 8) | AltL);
 
-                    ///
+                    //
 				    case "IXH": return (ushort) IXH;
 				    case "IXL": return (ushort) IXL;
 				    case "IX":  return (ushort) ((IXH << 8) | IXL);
@@ -505,22 +472,23 @@ namespace Spectrum
 				    case "IYL": return (ushort) IYL;
 				    case "IY":  return (ushort) ((IYH << 8) | IYL);
 
-                    ///                     
+                    //                     
 				    case "PC":  return (ushort) PC;
 				    case "SP":  return (ushort) SP;
                                             
 				    case "I":   return (ushort) I;
 				    case "R":   return (ushort) R;
-			    }
 
-                throw new Exception( "Unknown register '" + pRegister + "'" );
+                    default:
+			            throw new Exception( "Unknown register '" + pRegister + "'" );
+			    }
             }
 
             set
             {
                 switch( pRegister )
                 {
-                    ///
+                    //
                     case "A":   A     = (byte)value;          return;
 
                     case "B":   B     = (byte)value;          return;
@@ -538,7 +506,7 @@ namespace Spectrum
                     case "HL":  H     = (byte)(value >> 8);     
                                 L     = (byte)(value & 0xFF); return;
 
-                    ///
+                    //
                     case "A'":  AltA  = (byte)value;          return;
 
                     case "B'":  AltB  = (byte)value;          return;
@@ -556,7 +524,7 @@ namespace Spectrum
                     case "HL'": AltH  = (byte)(value >> 8);     
                                 AltL  = (byte)(value & 0xFF); return;
 
-                    ///
+                    //
                     case "IXH": IXH   = (byte)value;          return;
                     case "IXL": IXL   = (byte)value;          return;
                     case "IX":  IXH   = (byte)(value >> 8);     
@@ -567,15 +535,16 @@ namespace Spectrum
                     case "IY":  IYH   = (byte)(value >> 8);     
                                 IYL   = (byte)(value & 0xFF); return;
 
-                    ///
+                    //
                     case "PC":  PC    = value;                return;
                     case "SP":  SP    = value;                return;
                              
                     case "I":   I     = (byte)value;          return;
                     case "R":   R     = (byte)value;          return;
-                }
 
-                throw new Exception( "Unknown register '" + pRegister + "'" );
+                    default:
+                        throw new Exception( "Unknown register '" + pRegister + "'" );
+                }
             }
         }
 
@@ -589,7 +558,9 @@ namespace Spectrum
 
         Dictionary<int, Slot> _slots = new Dictionary<int, Slot>();
         Dictionary<int, Bank> _banks = new Dictionary<int, Bank>();
-            
+
+        public List<Slot> Slots { get; } = new List<Slot>();
+
         Machine _machine;
         public Memory( Machine pMachine )
         {
@@ -598,26 +569,19 @@ namespace Spectrum
 
         public Slot GetSlot( ushort pAddress )
         {
-            int slotIndex = (int)(pAddress / SlotSize);
-            ushort slotAddress = (ushort)(slotIndex * SlotSize);
-            Slot slot;
+            var slotIndex = (int)(pAddress / SlotSize);
+            var slotAddress = (ushort)(slotIndex * SlotSize);
 
-            if( !_slots.TryGetValue( slotIndex, out slot ) )
-            {
-                slot = new Slot() { ID = slotIndex, Min = slotAddress, Max = (ushort)(slotAddress + SlotSize - 1) };
-                _slots[slotIndex] = slot;
+            if( _slots.TryGetValue( slotIndex, out var slot ) )
+                return slot;
 
-                _sortedSlots.Add( slot );
-                _sortedSlots.Sort( ( pLeft, pRight ) => pLeft.Min.CompareTo( pRight.Min ) );
-            }
+            slot = new Slot() { ID = slotIndex, Min = slotAddress, Max = (ushort)( slotAddress + SlotSize - 1 ) };
+            _slots[slotIndex] = slot;
+
+            Slots.Add( slot );
+            Slots.Sort( ( pLeft, pRight ) => pLeft.Min.CompareTo( pRight.Min ) );
 
             return slot;
-        }
-
-        List<Slot> _sortedSlots = new List<Slot>();
-        public List<Slot> Slots
-        {
-            get { return _sortedSlots; }
         }
 
         public void ClearMemoryMap()
@@ -634,12 +598,10 @@ namespace Spectrum
 
         Bank Bank( int pID, bool pIsROM )
         {
-            Bank result;
-
             if( pIsROM )
                 pID = -2 - pID;
 
-            if( !_banks.TryGetValue( pID, out result ) )
+            if( !_banks.TryGetValue( pID, out var result ) )
                 result = new Bank() { ID = pID };
 
             return result;
@@ -659,7 +621,6 @@ namespace Spectrum
         {
             return _machine.Connection.ReadMemory( pAddress, pLength );
         }
-
         
         public void GetMapping()
         {
@@ -667,29 +628,69 @@ namespace Spectrum
         }
     }
 
-
-    public class Bank
+    public struct BankID
     {
-        // 0, 1, 2 etc = bank #
-        // -1 = default
-        // -2 = rom 0
-        // -3 = rom 1
-        public int ID;
-
-        public string Name
+        public enum BankType
         {
-            get
-            {
-                if( ID < -1 )
-                    return "ROM" + ( -2 - ID );
-                else if( ID == -1 )
-                    return "~";
-                else
-                    return "RAM" + ID;
-            }
+            NA  = 0,
+            ROM = 1,
+            RAM = 2
+        }
+
+        public BankType Type;
+        public int Number;
+
+        public BankID( BankType pType, int pNumber = 0 )
+        {
+            Type = pType;
+            Number = pNumber;
+        }
+
+        public static implicit operator int(BankID pValue)
+        {
+            if( pValue.Type == BankType.ROM )
+                return -2 - pValue.Number;
+
+            if( pValue.Type == BankType.NA )
+                return -1;
+
+            return pValue.Number;
+        }
+
+        public static implicit operator BankID( int pValue )
+        {
+            if( pValue < -1 )
+                return new BankID() { Type = BankType.ROM, Number = -2 - pValue };
+
+            if( pValue == -1 )
+                return new BankID() { Type = BankType.NA };
+
+            return new BankID() { Type = BankType.RAM, Number = pValue };
+        }
+
+        public override int GetHashCode()
+        {
+            return ((int)this).GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            if( Type == BankType.ROM )
+                return "ROM_" + Number;
+
+            if( Type == BankType.RAM )
+                return "RAM_" + Number;
+
+            return "";
         }
     }
 
+    public class Bank
+    {
+        public BankID ID;
+
+        public string Name => ID.ToString();
+    }
 
     public class Slot
     {

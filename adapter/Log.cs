@@ -35,7 +35,7 @@ public static class Log
     static Log()
     {
         Filename = Path.Combine(
-            Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location ),
+            Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location ) ?? "",
             "debug.log"
         );
     }

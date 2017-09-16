@@ -3,6 +3,13 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
+// ReSharper disable UnusedMember.Global
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable NotAccessedField.Global
+// ReSharper disable MemberCanBeProtected.Global
+// ReSharper disable InconsistentNaming
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+
 namespace VSCode
 {
     public class ProtocolMessage
@@ -63,11 +70,11 @@ namespace VSCode
             if( pResponse != null )
                 body = pResponse;
 
-            if( pErrorMessage != null )
-            {
-                success = false;
-                message = pErrorMessage;
-            }
+            if( pErrorMessage == null )
+                return;
+
+            success = false;
+            message = pErrorMessage;
         }
     }
 
@@ -177,9 +184,9 @@ namespace VSCode
         public Thread( int id, string name )
         {
             this.id = id;
-            if( name == null || name.Length == 0 )
+            if( string.IsNullOrEmpty( name ) )
             {
-                this.name = string.Format( "Thread #{0}", id );
+                this.name = $"Thread #{id}";
             }
             else
             {
@@ -390,10 +397,7 @@ namespace VSCode
 
         public StackTraceResponseBody( List<StackFrame> frames = null )
         {
-            if( frames == null )
-                stackFrames = new StackFrame[0];
-            else
-                stackFrames = frames.ToArray<StackFrame>();
+            stackFrames = frames?.ToArray<StackFrame>() ?? new StackFrame[0];
         }
     }
 

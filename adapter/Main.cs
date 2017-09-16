@@ -6,9 +6,9 @@ using VSCode;
 
 namespace ZXDebug
 {
-    public class Adapter
+    public static class Adapter
 	{
-	    static VSCode.Connection _vscode;
+	    static Connection _vscode;
 	    static Debugger _debugger;
 	    static bool _running;
 
@@ -32,7 +32,7 @@ namespace ZXDebug
 
             // vscode events
 
-            _vscode = new VSCode.Connection( _settings );
+            _vscode = new Connection( _settings );
             _vscode.OnInitialize += VSCode_OnInitialize;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 	        _vscode.OnLaunch += VSCode_OnLaunch;
@@ -59,7 +59,7 @@ namespace ZXDebug
 
             // zesarux events
 
-            _debugger = new ZEsarUX.Connection();	       
+            _debugger = new ZEsarUX.Connection();	  
 			// _debugger.OnData += Z_OnData; 
 
 
@@ -83,7 +83,7 @@ namespace ZXDebug
 	        while( _running )
 	        {
 	            var vsactive = _vscode.Process();
-				var zactive = _debugger.Process();
+				var dbgactive = _debugger.Process();
 
                 if( !vsactive )
                     System.Threading.Thread.Sleep( 10 );
@@ -182,9 +182,9 @@ namespace ZXDebug
             _vscode.Send( 
                 pRequest,
                 new ThreadsResponseBody( 
-                    new List<VSCode.Thread>()
+                    new List<Thread>()
                     {
-                        new VSCode.Thread( 1, "Main" )
+                        new Thread( 1, "Main" )
                     }
                 )
             );
@@ -214,12 +214,12 @@ namespace ZXDebug
             _stackFrames.Clear();
 
 	        var stack = _machine.Stack;
-	        for( int i = 0; i < stack.Count; i++ )
+	        for( var i = 0; i < stack.Count; i++ )
 	        {   
 	            _stackFrames.Add(
 	                new StackFrame(
 	                    i + 1,
-	                    string.Format( "${0:X4} / {0}", stack[i] ),
+	                    $"${stack[i]:X4} / {stack[i]}",
 	                    DisassemblySource(),
 	                    _machine.FindLine( stack[i] ),
 	                    0,
@@ -249,8 +249,7 @@ namespace ZXDebug
                 scopes.Add( 
                     new Scope( 
                         value.Name,
-                        value.ID,
-                        false
+                        value.ID
                     ) 
                 );
             }
@@ -305,13 +304,13 @@ namespace ZXDebug
 		static void VSCode_OnEvaluate_Variable( Request pRequest )
 		{
 	        var value = "";
-            string formatted = "";
+            var formatted = "";
 
-            string expression = pRequest.arguments.expression;
-	        string prefix = "";
+            var expression = (string)pRequest.arguments.expression.ToString();
+	        var prefix = "";
 
 	        var split = expression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
-	        int parseIndex = 0;
+	        var parseIndex = 0;
 
 	        if( split[parseIndex].StartsWith( "(" ) && split[parseIndex].EndsWith( ")" ) )
 	        {
@@ -321,12 +320,12 @@ namespace ZXDebug
 	            if( _registersValues.HasAllByName( target ) )
 	            {
 	                address = Convert.ToUInt16( _registersValues.AllByName( target ).Content );
-	                prefix = string.Format( "${0:X4}: ", address );
+	                prefix = $"${address:X4}: ";
 	            }
 	            else
 	                address = Format.Parse( target );
 
-	            int length = 2;
+	            var length = 2;
 	            parseIndex++;
 
                 if( split.Length > parseIndex )
@@ -348,8 +347,11 @@ namespace ZXDebug
 			}
 			else
 			{
-				// todo: hand over anything else to the Debugger if it supports evaluation
-			}
+			    if( _debugger.Meta.CanEvaluate )
+			    {
+			        // todo: hand over anything else to the Debugger if it supports evaluation
+                }
+            }
 
 	        if( split.Length > parseIndex )
 				if( Format.ApplyRule( split[parseIndex], value, ref formatted ) )
@@ -545,11 +547,7 @@ namespace ZXDebug
 	    }
 
 	    static string _tempFolder;
-        static string DisassemblyFile
-	    {
-	        get { return Path.Combine( _tempFolder, "disasm.zdis" ); }
-	    }
-
-    }
+        static string DisassemblyFile => Path.Combine( _tempFolder, "disasm.zdis" );
+	}
 }
 

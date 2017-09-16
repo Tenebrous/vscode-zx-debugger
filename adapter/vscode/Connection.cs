@@ -181,7 +181,7 @@ namespace VSCode
                     default:
                         Log.Write( 
                             Log.Severity.Error,
-                            string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
+                            pMessage: string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
                         );
 
                         break;
@@ -191,7 +191,7 @@ namespace VSCode
             {
                 Log.Write(
                     Log.Severity.Error,
-                    string.Format( "vscode: error during request '{0}' [{1}] (exception: {2})\n{3}", Format.Encode( pRequest.arguments.ToString() ), pCommand, e.Message, e )
+                    $"vscode: error during request '{Format.Encode( pRequest.arguments.ToString() )}' [{pCommand}] (exception: {e.Message})\n{e}"
                 );
 
                 Send( new Response( pRequest, pErrorMessage: e.Message ) );
@@ -326,7 +326,7 @@ namespace VSCode
             var asJson = JsonConvert.SerializeObject( pMessage );
             var jsonBytes = _encoding.GetBytes(asJson);
 
-            var header = string.Format( "Content-Length: {0}\r\n\r\n", jsonBytes.Length );
+            var header = $"Content-Length: {jsonBytes.Length}\r\n\r\n";
             var headerBytes = _encoding.GetBytes(header);
 
             Log.Write( Log.Severity.Verbose, "vscode: (out) [" + asJson + "]" );

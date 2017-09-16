@@ -8,13 +8,13 @@ namespace ZXDebug
         public static string ToHex16( Value pValue )
         {
             uint value = Convert.ToUInt16( pValue.Content );
-            return string.Format( "${0:X4} / {0}", value );
+            return $"${value:X4} / {value}";
         }
 
         public static string ToHex8( Value pValue )
         {
-            byte value = Convert.ToByte( pValue.Content );
-            return string.Format( "${0:X2} / {0}", value );
+            var value = Convert.ToByte( pValue.Content );
+            return $"${value:X2} / {value}";
         }
 
         public static ushort Parse( string pValue )
@@ -32,7 +32,7 @@ namespace ZXDebug
             }
             catch( Exception e )
 	        {
-	            Log.Write( Log.Severity.Error, "Can't parse '" + pValue + "': " + e.ToString() );
+	            Log.Write( Log.Severity.Error, $"Can\'t parse \'{pValue}\': {e}" );
 	        }
 
             return result;
@@ -48,8 +48,8 @@ namespace ZXDebug
         {
 	        _tempHexToBin.Clear();
 
-	        int count = 0;
-	        for( int i = 0; i < pHex.Length; i += 2 )
+	        var count = 0;
+	        for( var i = 0; i < pHex.Length; i += 2 )
 	        {
 	            var part = Convert.ToByte( pHex.Substring( i, 2 ), 16 );
 	            var binary = Convert.ToString( part, 2 ).PadLeft( 8, '0' );
@@ -70,7 +70,7 @@ namespace ZXDebug
         public static bool ApplyRule( string pRule, string pValue, ref string pResult )
         {
             var result = false;
-            int count = 2;
+            int count;
 
             if( pRule == "b" )
             {
@@ -106,7 +106,7 @@ namespace ZXDebug
             var count = pHex.Length / 2;
             var result = new byte[count];
 
-            for( int i = 0; i < count; i++ )
+            for( var i = 0; i < count; i++ )
                 result[i] = Convert.ToByte( pHex.Substring( i*2, 2 ), 16 );
 
             return result;
@@ -116,11 +116,6 @@ namespace ZXDebug
         public static string ToHex( byte[] pBytes )
         {
             return BitConverter.ToString( pBytes ).Replace( "-", "" );
-        }
-
-        public static char ToHex( byte pByte )
-        {
-            return pByte < 10 ? (char)( pByte + 48 ) : (char)( pByte - 10 + 65 );
         }
 
         public static string Encode( string pString )

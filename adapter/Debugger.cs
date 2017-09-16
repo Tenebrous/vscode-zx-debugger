@@ -9,7 +9,7 @@ namespace ZXDebug
     /// <summary>
     /// Abstraction of interface to a Spectrum debugger
     /// </summary>
-    public class Debugger
+    public abstract class Debugger
     {
         public Action OnPause;
         public Action OnContinue;
@@ -18,10 +18,7 @@ namespace ZXDebug
         /// Returns details on what this debugger provides
         /// </summary>
         /// <returns></returns>
-        public virtual Meta GetMeta()
-        {
-            return new Meta();
-        }
+        public virtual Meta Meta => new Meta();
 
         /// <summary>
         /// Retrieve the current state of the registers and update the provided pRegisters class
@@ -77,7 +74,7 @@ namespace ZXDebug
             return true;
         }
 
-        public virtual bool IsConnected { get; }
+        public virtual bool IsConnected { get; } = false;
                
         public virtual bool Pause()
         {
@@ -104,15 +101,6 @@ namespace ZXDebug
             return pOutput;
         }
 
-        public virtual StateChange GetLastStateChange()
-        {
-            return StateChange.None;
-        }
-
-        public virtual void ClearLastStateChange()
-        {
-        }
-
         public virtual string CustomCommand( string pCommand )
         {
             return null;
@@ -126,15 +114,9 @@ namespace ZXDebug
         public string Text;
     }
 
-    public enum StateChange
-    {
-        None,
-        Stopped,
-        Started
-    }
-
     public class Meta
     {
         public bool CanSetRegisters;
+        public bool CanEvaluate;
     }
 }
