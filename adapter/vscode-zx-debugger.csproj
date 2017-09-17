@@ -52,6 +52,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cache.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Format.cs" />
     <Compile Include="Log.cs" />

@@ -27,7 +27,9 @@ namespace ZXDebug
 	                result = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
 	            else if( pValue.StartsWith( "0x" ) )
 	                result = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
-	            else
+                else if( pValue.EndsWith( "h" ) )
+	                result = Convert.ToUInt16( pValue.Substring( 0, pValue.Length - 1 ), 16 );
+                else
 	                result = ushort.Parse( pValue );
             }
             catch( Exception e )

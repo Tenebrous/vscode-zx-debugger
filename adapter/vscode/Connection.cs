@@ -10,8 +10,8 @@ namespace VSCode
     public class Connection
     {
         public Action<Request> OnInitialize;
-        public Action<Request> OnLaunch;
-        public Action<Request> OnAttach;
+        public Action<Request, string> OnLaunch;
+        public Action<Request, string> OnAttach;
         public Action<Request> OnDisconnect;
         public Action<Request> OnPause;
         public Action<Request> OnContinue;
@@ -38,12 +38,9 @@ namespace VSCode
         StringBuilder _rawData = new StringBuilder();
 
         Request _currentRequest;
-        Settings _settings;
 
-        public Connection( Settings pSettings )
+        public Connection()
         {
-            _settings = pSettings;
-
             _input = Console.OpenStandardInput();
             _inputReader = new Reader( _input );
 
@@ -90,19 +87,15 @@ namespace VSCode
                         break;
 
                     case "launch":
-                        OnLaunch?.Invoke( pRequest );
+                        OnLaunch?.Invoke( pRequest, JsonConvert.SerializeObject( pRequest.arguments ) );
                         break;
 
                     case "attach":
-
-                        PopulateSettings( pRequest.arguments );
-                        OnAttach?.Invoke( pRequest );
+                        OnAttach?.Invoke( pRequest, JsonConvert.SerializeObject( pRequest.arguments ) );
 
                         break;
 
                     case "disconnect":
-
-                        PopulateSettings( pRequest.arguments );
                         OnDisconnect?.Invoke( pRequest );
                         break;
 
@@ -198,12 +191,6 @@ namespace VSCode
             }
         }
 
-        void PopulateSettings( dynamic pSettings )
-        {
-            var json = JsonConvert.SerializeObject( pSettings );
-            JsonConvert.PopulateObject( json, _settings );
-            _settings.Validate();
-        }
 
         //
 

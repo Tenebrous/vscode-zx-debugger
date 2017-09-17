@@ -1,7 +1,7 @@
 {
     "name": "vscode-zx-debugger",
     "displayName": "ZX Debugger",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "preview": true,
     "publisher": "Tenebrous",
     "description": "ZX debugger extension",
@@ -40,6 +40,9 @@
                     ]
                 },
                 "program": "./bin/vscode-zx-debugger.exe",
+                "args": [
+                    "${cwd}"
+                ],
                 "osx": {
                     "runtime": "mono"
                 },

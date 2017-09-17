@@ -16,6 +16,7 @@ namespace Spectrum
         public Registers Registers { get; }
         public Memory Memory { get; }
         public Stack Stack { get; }
+        public List<Map> Maps { get; } = new List<Map>();
 
         public Machine( Debugger pConnection )
         {
@@ -126,7 +127,7 @@ namespace Spectrum
                     break;
                 }
 
-                if( TerminateDisassembly( line.Opcodes ) )
+                if( FinishDisassembling( line.Opcodes ) )
                     break;
 
                 address += (ushort)line.Opcodes.Length;
@@ -170,7 +171,7 @@ namespace Spectrum
                     bank.SortedLines.Add( dline );
                 }
 
-                if( TerminateDisassembly( line.Opcodes ) )
+                if( FinishDisassembling( line.Opcodes ) )
                     break;
             }
 
@@ -231,7 +232,7 @@ namespace Spectrum
             return true;
         }
 
-        static void WriteDisasmLines( TextWriter pStream, DisasmBank pBank, ushort pOffset, ref int pLineNumber )
+        void WriteDisasmLines( TextWriter pStream, DisasmBank pBank, ushort pOffset, ref int pLineNumber )
         {
             pLineNumber++;
             pStream.WriteLine( "  {0}", pBank.Name );
@@ -247,8 +248,20 @@ namespace Spectrum
 
                 prev = (ushort) ( line.Offset + line.Opcodes.Length );
 
+                foreach( var map in Maps )
+                {
+                    if( !map.Banks.TryGetValue( pBank.ID, out var bank ) )
+                        continue;
+
+                    if( !bank.Symbols.TryGetValue( (ushort)( line.Offset + pOffset ), out var sym ) )
+                        continue;
+
+                    pLineNumber++;
+                    pStream.WriteLine( "   " + string.Join( ": ", sym.Labels ) + ":" );
+                }
+
                 pLineNumber++;
-                pStream.WriteLine( "    {0:X4} {1,-8} {2}",
+                pStream.WriteLine( "      {0:X4} {1,-8} {2}",
                     line.Offset + pOffset,
                     Format.ToHex( line.Opcodes ),
                     line.Text
@@ -350,7 +363,7 @@ namespace Spectrum
             return false;
         }
 
-        bool TerminateDisassembly( byte[] pOpcodes )
+        bool FinishDisassembling( byte[] pOpcodes )
         {
             // temporarily end disasm on a RET to see if it simplifies things
 
@@ -646,6 +659,20 @@ namespace Spectrum
             Number = pNumber;
         }
 
+        public BankID( string pType, int pNumber )
+        {
+            Type = BankType.NA;
+
+            if( string.Compare( pType, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
+                Type = BankType.ROM;
+            else if( string.Compare( pType, "RAM", StringComparison.OrdinalIgnoreCase ) == 0 )
+                Type = BankType.RAM;
+            else if( string.Compare( pType, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
+                Type = BankType.RAM;
+
+            Number = pNumber;
+        }
+
         public static implicit operator int(BankID pValue)
         {
             if( pValue.Type == BankType.ROM )
@@ -679,7 +706,7 @@ namespace Spectrum
                 return "ROM_" + Number;
 
             if( Type == BankType.RAM )
-                return "RAM_" + Number;
+                return "BANK_" + Number;
 
             return "";
         }

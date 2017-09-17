@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
 
 namespace ZXDebug
 {
@@ -11,6 +11,8 @@ namespace ZXDebug
         public string[] maps;
         public bool     stopOnEntry;
         // ReSharper restore InconsistentNaming
+
+        public string ExtensionPath;
 
         public Settings()
         {
@@ -26,6 +28,19 @@ namespace ZXDebug
 
             if( !Directory.Exists( cwd ) )
                 throw new Exception( "Property 'cwd' refers to a folder that could not be found." );
+
+
+            // get extension path for additional files
+
+            var exe = new FileInfo( System.Reflection.Assembly.GetEntryAssembly().Location );
+            var path = exe.Directory;
+            
+            if( path.Name == "bin" )
+                path = path.Parent;
+
+            ExtensionPath = path.FullName;
+
+            Log.Write( Log.Severity.Message, "Extension path: " + ExtensionPath );
         }
     }
 }

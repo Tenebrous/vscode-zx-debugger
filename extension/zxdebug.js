@@ -26,26 +26,6 @@ function activate(context) {
             // console.log( "refreshDisasm" );
         }
     });
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('zxdebug.attachToDebugger', function () {
-
-            var config = {
-                name:string,
-                type:"zesarux",
-                request:"attach"
-            };
-
-            vscode.commands.executeCommand("vscode.startDebug", config).then(
-                function(response) {
-                    console.log(response);
-                }, function(error) {
-                    console.log(error);
-                }
-            );
-
-        })
-    );
 }
 exports.activate = activate;
 

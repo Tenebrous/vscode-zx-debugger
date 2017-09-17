@@ -5,6 +5,7 @@
 !extension/zxdebug.js
 !package.json
 !bin/**
+!maps/**
 !syntax/**
 !Changelog.txt
 !README.md

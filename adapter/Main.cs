@@ -25,6 +25,8 @@ namespace ZXDebug
 	    {
 	        // set up 
              
+
+            // wire the logging stuff up to VSCode's console output
             Log.OnLog += Log_SendToVSCode;
 	        Log.MaxSeverityConsole = Log.Severity.Message;
             Log.MaxSeverityLog = Log.Severity.Debug;
@@ -32,7 +34,7 @@ namespace ZXDebug
 
             // vscode events
 
-            _vscode = new Connection( _settings );
+            _vscode = new Connection();
             _vscode.OnInitialize += VSCode_OnInitialize;
 	        _vscode.OnDisconnect += VSCode_OnDisconnect;
 	        _vscode.OnLaunch += VSCode_OnLaunch;
@@ -136,7 +138,7 @@ namespace ZXDebug
 
         static void VSCode_OnNext( Request pRequest )
 	    {
-	        _vscode.Send( pRequest );
+            _vscode.Send( pRequest );
             _machine.StepOver();
 	    }
 
@@ -151,29 +153,42 @@ namespace ZXDebug
 	        _vscode.Send( pRequest, pErrorMessage: "Step Out is not supported" );
 	    }
 
-        static void VSCode_OnLaunch( Request pRequest )
+        static void VSCode_OnLaunch( Request pRequest, string pJSONSettings )
         {
+            InitialiseSettings( pJSONSettings );
+
             if( !_machine.Start())
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 	    }
 
-	    static void VSCode_OnAttach( Request pRequest )
+	    static void VSCode_OnAttach( Request pRequest, string pJSONSettings )
 	    {
-            // vscode interface will have filled in our Settings object here
+	        InitialiseSettings( pJSONSettings );
 
-	        _tempFolder = Path.Combine( _settings.cwd, ".zxdbg" );
+            _tempFolder = Path.Combine( _settings.cwd, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
             if( !_debugger.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 
 	        if( _settings.stopOnEntry )
-	        {
 	            _machine.Pause();
-	        }
 	    }
 
-	    static void VSCode_OnConfigurationDone( Request pRequest )
+	    static void InitialiseSettings( string pJSONSettings )
+	    {
+	        _settings.FromJSON( pJSONSettings );
+	        _settings.Validate();
+
+            _machine.Maps.Clear();
+	        foreach( var map in _settings.maps )
+	        {
+	            var fullpath = Path.Combine( _settings.cwd, map );
+	            _machine.Maps.Add( new Map( fullpath ) );
+	        }
+        }
+
+        static void VSCode_OnConfigurationDone( Request pRequest )
 	    {
 	    }
 
