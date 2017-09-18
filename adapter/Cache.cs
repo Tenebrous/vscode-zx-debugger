@@ -13,11 +13,12 @@ namespace ZXDebug
     {
         Func<TKey, TValue> _factory;
 
-        Dictionary<TKey, TValue> _dictionary = new Dictionary<TKey, TValue>();
+        Dictionary<TKey, TValue> _dictionary;
 
-        public Cache( Func<TKey, TValue> pFactory )
+        public Cache( Func<TKey, TValue> pFactory, IEqualityComparer<TKey> pCompare = null )
         {
             _factory = pFactory;
+            _dictionary = new Dictionary<TKey, TValue>(pCompare);
         }
 
         public TValue this[ TKey pKey ]

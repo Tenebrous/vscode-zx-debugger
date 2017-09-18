@@ -7,6 +7,7 @@
 !bin/**
 !maps/**
 !syntax/**
+!opcodes/**
 !Changelog.txt
 !README.md
 **/*.pdb

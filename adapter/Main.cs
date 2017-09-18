@@ -130,6 +130,9 @@ namespace ZXDebug
 
         static void VSCode_OnNext( Request pRequest )
 	    {
+	        //var dis = new Disassembler();
+	        //dis.AddFile( Path.Combine( _settings.ExtensionPath, "opcodes\\z80.tbl" ) );
+	        //var op = dis.Get( new byte[] { 0x21, 0x00, 0x5B }, 0 );
             _vscode.Send( pRequest );
             _machine.StepOver();
 	    }
@@ -147,7 +150,7 @@ namespace ZXDebug
 
         static void VSCode_OnLaunch( Request pRequest, string pJSONSettings )
         {
-            InitialiseSettings( pJSONSettings );
+            Initialise( pJSONSettings );
 
             if( !_machine.Start())
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
@@ -155,7 +158,7 @@ namespace ZXDebug
 
 	    static void VSCode_OnAttach( Request pRequest, string pJSONSettings )
 	    {
-	        InitialiseSettings( pJSONSettings );
+	        Initialise( pJSONSettings );
 
             _tempFolder = Path.Combine( _settings.cwd, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
@@ -167,7 +170,7 @@ namespace ZXDebug
 	            _machine.Pause();
 	    }
 
-	    static void InitialiseSettings( string pJSONSettings )
+	    static void Initialise( string pJSONSettings )
 	    {
 	        _settings.FromJSON( pJSONSettings );
 	        _settings.Validate();

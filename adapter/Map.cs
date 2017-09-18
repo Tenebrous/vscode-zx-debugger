@@ -1,19 +1,22 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Text.RegularExpressions;
 using Spectrum;
 
 namespace ZXDebug
 {
     /// <summary>
-    /// Stores parsed information from a memory map (e.g. .dbg)
+    /// Stores parsed information from a single memory map (e.g. .dbg)
     /// </summary>
     public class Map
     {
-        public SymbolBanks Banks = new SymbolBanks();
-        public SymbolFiles Files = new SymbolFiles();
+        public MapBanks Banks = new MapBanks();
+        public MapSources Files = new MapSources();
 
         public Map( string pFilename )
         {
+            // banktype_bankid addr(h) ("filename":line) (label1 (label2...)) (; comment)
+            //
             // ROM_0 0000h start                 ; cold start restart
             // BANK_02 8000h "C:\Users\m\AppData\Local\Temp\zcc53216.asm":1367 __Start
 
@@ -65,56 +68,78 @@ namespace ZXDebug
                 }
             }
         }
-    }
 
-    public class SymbolBanks : Cache<BankID, SymbolBank>
-    {
-        public SymbolBanks() : base( NewBank ) { }
-
-        static SymbolBank NewBank( BankID pBank )
+        public class MapBanks : Cache<BankID, MapBank>
         {
-            return new SymbolBank() { Bank = pBank };
+            public MapBanks() : base( NewBank ) { }
+
+            static MapBank NewBank( BankID pBank )
+            {
+                return new MapBank() { Bank = pBank };
+            }
+        }
+
+        public class MapBank
+        {
+            public BankID Bank;
+
+            public Cache<ushort, MapAddress> Symbols;
+
+            public MapBank()
+            {
+                Symbols = new Cache<ushort, MapAddress>( NewSymbol );
+            }
+
+            MapAddress NewSymbol( ushort pAddress )
+            {
+                return new MapAddress() { Address = pAddress };
+            }
+        }
+
+        public class MapAddress
+        {
+            public ushort Address;
+            public MapSource File;
+            public int Line;
+            public string[] Labels;
+            public string Comment;
+        }
+
+        public class MapSources : Cache<string, MapSource>
+        {
+            public MapSources() : base( NewSource ) { }
+
+            static MapSource NewSource( string pFile )
+            {
+                return new MapSource() { Filename = pFile };
+            }
+        }
+
+        public class MapSource
+        {
+            public string Filename;
         }
     }
 
-    public class SymbolBank
+    /// <summary>
+    /// A collection of Map files
+    /// </summary>
+    public class Maps : List<Map>
     {
-        public BankID Bank;
-
-        public Cache<ushort, SymbolAddress> Symbols;
-
-        public SymbolBank()
+        public Map.MapAddress Find( BankID pBank, ushort pAddress )
         {
-            Symbols = new Cache<ushort, SymbolAddress>( NewSymbol );
+            Map.MapAddress value = null;
+
+            foreach( var map in this )
+            {
+                if( !map.Banks.TryGetValue( pBank, out var bank ) )
+                    continue;
+
+                if( !bank.Symbols.TryGetValue( pAddress, out value ) )
+                    continue;
+            }
+
+            return value;
         }
-
-        SymbolAddress NewSymbol( ushort pAddress )
-        {
-            return new SymbolAddress() { Address = pAddress };
-        }
-    }
-
-    public class SymbolAddress
-    {
-        public ushort Address;
-        public SymbolFile File;
-        public int Line;
-        public string[] Labels;
-        public string Comment;
-    }
-
-    public class SymbolFiles : Cache<string, SymbolFile>
-    {
-        public SymbolFiles() : base( NewFile ) { }
-
-        static SymbolFile NewFile( string pFile )
-        {
-            return new SymbolFile() { Filename = pFile };
-        }
-    }
-
-    public class SymbolFile
-    {
-        public string Filename;
     }
 }

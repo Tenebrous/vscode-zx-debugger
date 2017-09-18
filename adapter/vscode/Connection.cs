@@ -234,7 +234,9 @@ namespace VSCode
             }
             catch( Exception e )
             {
-                Log.Write(
+                Log.Write( Log.Severity.Error, e.ToString() );
+
+                Log.Write(  
                     Log.Severity.Error,
                     $"vscode: error during request '{Format.Encode( pRequest.arguments.ToString() )}' [{pCommand}] (exception: {e.Message})\n{e}"
                 );

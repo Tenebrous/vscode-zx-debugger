@@ -16,7 +16,7 @@ namespace Spectrum
         public Registers Registers { get; }
         public Memory Memory { get; }
         public Stack Stack { get; }
-        public List<Map> Maps { get; } = new List<Map>();
+        public Maps Maps { get; } = new Maps();
 
         public Machine( Debugger pConnection )
         {
@@ -248,17 +248,7 @@ namespace Spectrum
 
                 prev = (ushort) ( line.Offset + line.Opcodes.Length );
 
-                foreach( var map in Maps )
-                {
-                    if( !map.Banks.TryGetValue( pBank.ID, out var bank ) )
-                        continue;
-
-                    if( !bank.Symbols.TryGetValue( (ushort)( line.Offset + pOffset ), out var sym ) )
-                        continue;
-
-                    pLineNumber++;
-                    pStream.WriteLine( "   " + string.Join( ": ", sym.Labels ) + ":" );
-                }
+                var symbol = Maps.Find( pBank.ID, (ushort)(line.Offset + pOffset) );
 
                 pLineNumber++;
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
