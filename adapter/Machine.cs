@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using ZXDebug;
 
 namespace Spectrum
@@ -17,6 +16,7 @@ namespace Spectrum
         public Memory Memory { get; }
         public Stack Stack { get; }
         public Maps Maps { get; } = new Maps();
+        public Disassembler Disassembler { get; } = new Disassembler();
 
         public Machine( Debugger pConnection )
         {
@@ -142,10 +142,28 @@ namespace Spectrum
             _tempDisasm.Clear();
             Connection.Disassemble( pAddress, 30, _tempDisasm );
 
+            var b = new byte[50];
+            Connection.ReadMemory( pAddress, b, 50 );
+
+            var index = 0;
+            Disassembler.Op op;
+
+            try
+            {
+                while( ( op = Disassembler.Get( b, index ) ) != null )
+                {
+                    Log.Write( Log.Severity.Message, op.Length + " " + op.Text );
+                    index += op.Length;
+                }
+            }
+            catch( Exception e )
+            {
+                Log.Write( Log.Severity.Error, e.ToString() );
+                throw;
+            }
 
             if( _tempDisasm.Count == 0 )
                 return false;
-
 
             var maxLine = _tempDisasm[_tempDisasm.Count - 1];
             var maxSlot = Memory.GetSlot( maxLine.Address );
@@ -624,7 +642,12 @@ namespace Spectrum
         {
             return _machine.Connection.ReadMemory( pAddress, pLength );
         }
-        
+
+        public int Get( ushort pAddress, int pLength, byte[] pBuffer )
+        {
+            return _machine.Connection.ReadMemory( pAddress, pBuffer, pLength );
+        }
+
         public void GetMapping()
         {
             _machine.Connection.RefreshMemoryPages( this );

@@ -50,6 +50,12 @@ namespace ZXDebug
             return null;
         }
 
+        public virtual int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
+        {
+            return 0;
+        }
+
+
         public virtual void RefreshStack( Stack pStack )
         {
         }

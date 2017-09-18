@@ -45,6 +45,12 @@ namespace ZXDebug
             return Convert.ToUInt16( pHex, 16 );
         }
 
+        public static byte FromHex( char pHex )
+        {
+            var val = (int)char.ToUpper(pHex);
+            return (byte)(val - ( val <= 57 ? 48 : 55 ));
+        }
+
 	    static StringBuilder _tempHexToBin = new StringBuilder();
         public static string HexToBin( string pHex, int pSplit )
         {

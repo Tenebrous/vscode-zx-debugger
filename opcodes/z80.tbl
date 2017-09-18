@@ -1,9 +1,9 @@
 >START
   | 0         | 1         | 2          | 3          | 4          | 5         | 6          | 7         | 8         | 9         | A          | B        | C          | D       | E          | F
 0 | nop       | ld bc,**  | ld (bc),a  | inc bc     | inc b      | dec b     | ld b,*     | rlca      | ex af,af' | add hl,bc | ld a,(bc)  | dec bc   | inc c      | dec c   | ld c,*     | rrca
-1 | djnz *    | ld de,**  | ld (de),a  | inc de     | inc d      | dec d     | ld d,*     | rla       | jr *      | add hl,de | ld a,(de)  | dec de   | inc e      | dec e   | ld e,*     | rra
-2 | jr nz,*   | ld hl,**  | ld (**),hl | inc hl     | inc h      | dec h     | ld h,*     | daa       | jr z,*    | add hl,hl | ld hl,(**) | dec hl   | inc l      | dec l   | ld l,*     | cpl
-3 | jr nc,*   | ld sp,**  | ld (**),a  | inc sp     | inc (hl)   | dec (hl)  | ld (hl),*  | scf       | jr c,*    | add hl,sp | ld a,(**)  | dec sp   | inc a      | dec a   | ld a,*     | ccf
+1 | djnz +*   | ld de,**  | ld (de),a  | inc de     | inc d      | dec d     | ld d,*     | rla       | jr +*     | add hl,de | ld a,(de)  | dec de   | inc e      | dec e   | ld e,*     | rra
+2 | jr nz,+*  | ld hl,**  | ld (**),hl | inc hl     | inc h      | dec h     | ld h,*     | daa       | jr z,+*   | add hl,hl | ld hl,(**) | dec hl   | inc l      | dec l   | ld l,*     | cpl
+3 | jr nc,+*  | ld sp,**  | ld (**),a  | inc sp     | inc (hl)   | dec (hl)  | ld (hl),*  | scf       | jr c,+*   | add hl,sp | ld a,(**)  | dec sp   | inc a      | dec a   | ld a,*     | ccf
 4 | ld b,b    | ld b,c    | ld b,d     | ld b,e     | ld b,h     | ld b,l    | ld b,(hl)  | ld b,a    | ld c,b    | ld c,c    | ld c,d     | ld c,e   | ld c,h     | ld c,l  | ld c,(hl)  | ld c,a
 5 | ld d,b    | ld d,c    | ld d,d     | ld d,e     | ld d,h     | ld d,l    | ld d,(hl)  | ld d,a    | ld e,b    | ld e,c    | ld e,d     | ld e,e   | ld e,h     | ld e,l  | ld e,(hl)  | ld e,a
 6 | ld h,b    | ld h,c    | ld h,d     | ld h,e     | ld h,h     | ld h,l    | ld h,(hl)  | ld h,a    | ld l,b    | ld l,c    | ld l,d     | ld l,e   | ld l,h     | ld l,l  | ld l,(hl)  | ld l,a
@@ -13,8 +13,8 @@
 A | and b     | and c     | and d      | and e      | and h      | and l     | and (hl)   | and a     | xor b     | xor c     | xor d      | xor e    | xor h      | xor l   | xor (hl)   | xor a
 B | or b      | or c      | or d       | or e       | or h       | or l      | or (hl)    | or a      | cp b      | cp c      | cp d       | cp e     | cp h       | cp l    | cp (hl)    | cp a
 C | ret nz    | pop bc    | jp nz,**   | jp **      | call nz,** | push bc   | add a,*    | rst 00h   | ret z     | ret       | jp z,**    | >BITS    | call z,**  | call ** | adc a,*    | rst 08h
-D | ret nc    | pop de    | jp nc,**   | out (*),a  | call nc,** | push de   | sub *      | rst 10h   | ret c     | exx       | jp c,**    | in a,(*) | call c,**  | >iy     | sbc a,*    | rst 18h
-E | ret po    | pop hl    | jp po,**   | ex (sp),hl | call po,** | push hl   | and *      | rst 20h   | ret pe    | jp (hl)   | jp pe,**   | ex de,hl | call pe,** | >EXTD   | xor *      | rst 28h
+D | ret nc    | pop de    | jp nc,**   | out (*),a  | call nc,** | push de   | sub *      | rst 10h   | ret c     | exx       | jp c,**    | in a,(*) | call c,**  | >IX     | sbc a,*    | rst 18h
+E | ret po    | pop hl    | jp po,**   | ex (sp),hl | call po,** | push hl   | and *      | rst 20h   | ret pe    | jp (hl)   | jp pe,**   | ex de,hl | call pe,** | >ED     | xor *      | rst 28h
 F | ret p     | pop af    | jp p,**    | di         | call p,**  | push af   | or *       | rst 30h   | ret m     | ld sp,hl  | jp m,**    | ei       | call m,**  | >IY     | cp *       | rst 38h
 
 >BITS
@@ -36,64 +36,64 @@ D | set 2,b | set 2,c | set 2,d | set 2,e | set 2,h | set 2,l | set 2,(hl) | set
 E | set 4,b | set 4,c | set 4,d | set 4,e | set 4,h | set 4,l | set 4,(hl) | set 4,a | set 5,b | set 5,c | set 5,d | set 5,e | set 5,h | set 5,l | set 5,(hl) | set 5,a
 F | set 6,b | set 6,c | set 6,d | set 6,e | set 6,h | set 6,l | set 6,(hl) | set 6,a | set 7,b | set 7,c | set 7,d | set 7,e | set 7,h | set 7,l | set 7,(hl) | set 7,a
 
->iy
-  | 0           | 1           | 2           | 3           | 4           | 5           | 6            | 7           | 8        | 9         | A          | B        | C          | D          | E            | F
-0 |             |             |             |             |             |             |              |             |          | add iy,bc |            |          |            |            |              |
-1 |             |             |             |             |             |             |              |             |          | add iy,de |            |          |            |            |              |
-2 |             | ld iy,**    | ld (**),iy  | inc iy      | inc iyh     | dec iyh     | ld iyh,*     |             |          | add iy,iy | ld iy,(**) | dec iy   | inc iyl    | dec iyl    | ld iyl,*     |
-3 |             |             |             |             | inc (iy+*)  | dec (iy+*)  | ld (iy+*),*  |             |          | add iy,sp |            |          |            |            |              |
-4 |             |             |             |             | ld b,iyh    | ld b,iyl    | ld b,(iy+*)  |             |          |           |            |          | ld c,iyh   | ld c,iyl   | ld c,(iy+*)  |
-5 |             |             |             |             | ld d,iyh    | ld d,iyl    | ld d,(iy+*)  |             |          |           |            |          | ld e,iyh   | ld e,iyl   | ld e,(iy+*)  |
-6 | ld iyh,b    | ld iyh,c    | ld iyh,d    | ld iyh,e    | ld iyh,iyh  | ld iyh,iyl  | ld h,(iy+*)  | ld iyh,a    | ld iyl,b | ld iyl,c  | ld iyl,d   | ld iyl,e | ld iyl,iyh | ld iyl,iyl | ld l,(iy+*)  | ld iyl,a
-7 | ld (iy+*),b | ld (iy+*),c | ld (iy+*),d | ld (iy+*),e | ld (iy+*),h | ld (iy+*),l |              | ld (iy+*),a |          |           |            |          | ld a,iyh   | ld a,iyl   | ld a,(iy+*)  |
-8 |             |             |             |             | add a,iyh   | add a,iyl   | add a,(iy+*) |             |          |           |            |          | adc a,iyh  | adc a,iyl  | adc a,(iy+*) |
-9 |             |             |             |             | sub iyh     | sub iyl     | sub (iy+*)   |             |          |           |            |          | sbc a,iyh  | sbc a,iyl  | sbc a,(iy+*) |
-A |             |             |             |             | and iyh     | and iyl     | and (iy+*)   |             |          |           |            |          | xor iyh    | xor iyl    | xor (iy+*)   |
-B |             |             |             |             | or iyh      | or iyl      | or (iy+*)    |             |          |           |            |          | cp iyh     | cp iyl     | cp (iy+*)    |
-C |             |             |             |             |             |             |              |             |          |           |            | >iyBITS  |            |            |              |
-D |             |             |             |             |             |             |              |             |          |           |            |          |            |            |              |
-E |             | pop iy      |             | ex (sp),iy  |             | push iy     |              |             |          | jp (iy)   |            |          |            |            |              |
-F |             |             |             |             |             |             |              |             |          | ld sp,iy  |            |          |            |            |              |
+>IX
+  | 0           | 1           | 2           | 3           | 4           | 5           | 6            | 7           | 8        | 9         | A          | B         | C          | D          | E            | F
+0 |             |             |             |             |             |             |              |             |          | add ix,bc |            |           |            |            |              |
+1 |             |             |             |             |             |             |              |             |          | add ix,de |            |           |            |            |              |
+2 |             | ld ix,**    | ld (**),ix  | inc ix      | inc ixh     | dec ixh     | ld ixh,*     |             |          | add ix,ix | ld ix,(**) | dec ix    | inc ixl    | dec ixl    | ld ixl,*     |
+3 |             |             |             |             | inc (ix+*)  | dec (ix+*)  | ld (ix+*),*  |             |          | add ix,sp |            |           |            |            |              |
+4 |             |             |             |             | ld b,ixh    | ld b,ixl    | ld b,(ix+*)  |             |          |           |            |           | ld c,ixh   | ld c,ixl   | ld c,(ix+*)  |
+5 |             |             |             |             | ld d,ixh    | ld d,ixl    | ld d,(ix+*)  |             |          |           |            |           | ld e,ixh   | ld e,ixl   | ld e,(ix+*)  |
+6 | ld ixh,b    | ld ixh,c    | ld ixh,d    | ld ixh,e    | ld ixh,ixh  | ld ixh,ixl  | ld h,(ix+*)  | ld ixh,a    | ld ixl,b | ld ixl,c  | ld ixl,d   | ld ixl, e | ld ixl,ixh | ld ixl,ixl | ld l,(ix+*)  | ld ixl,a
+7 | ld (ix+*),b | ld (ix+*),c | ld (ix+*),d | ld (ix+*),e | ld (ix+*),h | ld (ix+*),l |              | ld (ix+*),a |          |           |            |           | ld a,ixh   | ld a,ixl   | ld a,(ix+*)  |
+8 |             |             |             |             | add a,ixh   | add a,ixl   | add a,(ix+*) |             |          |           |            |           | adc a,ixh  | adc a,ixl  | adc a,(ix+*) |
+9 |             |             |             |             | sub ixh     | sub ixl     | sub (ix+*)   |             |          |           |            |           | sbc a,ixh  | sbc a,ixl  | sbc a,(ix+*) |
+A |             |             |             |             | and ixh     | and ixl     | and (ix+*)   |             |          |           |            |           | xor ixh    | xor ixl    | xor (ix+*)   |
+B |             |             |             |             | or ixh      | or ixl      | or (ix+*)    |             |          |           |            |           | cp ixh     | cp ixl     | cp (ix+*)    |
+C |             |             |             |             |             |             |              |             |          |           |            | >IXBITS * |            |            |              |
+D |             |             |             |             |             |             |              |             |          |           |            |           |            |            |              |
+E |             | pop ix      |             | ex (sp),ix  |             | push ix     |              |             |          | jp (ix)   |            |           |            |            |              |
+F |             |             |             |             |             |             |              |             |          | ld sp,ix  |            |           |            |            |              |
 
->IYBIT
+>IXBITS
   | 0              | 1              | 2              | 3              | 4              | 5              | 6            | 7              | 8              | 9              | A              | B              | C              | D              | E            | F
-0 | rlc (iy+*),b   | rlc (iy+*),c   | rlc (iy+*),d   | rlc (iy+*),e   | rlc (iy+*),h   | rlc (iy+*),l   | rlc (iy+*)   | rlc (iy+*),a   | rrc (iy+*),b   | rrc (iy+*),c   | rrc (iy+*),d   | rrc (iy+*),e   | rrc (iy+*),h   | rrc (iy+*),l   | rrc (iy+*)   | rrc (iy+*),a
-1 | rl (iy+*),b    | rl (iy+*),c    | rl (iy+*),d    | rl (iy+*),e    | rl (iy+*),h    | rl (iy+*),l    | rl (iy+*)    | rl (iy+*),a    | rr (iy+*),b    | rr (iy+*),c    | rr (iy+*),d    | rr (iy+*),e    | rr (iy+*),h    | rr (iy+*),l    | rr (iy+*)    | rr (iy+*),a
-2 | sla (iy+*),b   | sla (iy+*),c   | sla (iy+*),d   | sla (iy+*),e   | sla (iy+*),h   | sla (iy+*),l   | sla (iy+*)   | sla (iy+*),a   | sra (iy+*),b   | sra (iy+*),c   | sra (iy+*),d   | sra (iy+*),e   | sra (iy+*),h   | sra (iy+*),l   | sra (iy+*)   | sra (iy+*),a
-3 | sll (iy+*),b   | sll (iy+*),c   | sll (iy+*),d   | sll (iy+*),e   | sll (iy+*),h   | sll (iy+*),l   | sll (iy+*)   | sll (iy+*),a   | srl (iy+*),b   | srl (iy+*),c   | srl (iy+*),d   | srl (iy+*),e   | srl (iy+*),h   | srl (iy+*),l   | srl (iy+*)   | srl (iy+*),a
-4 | bit 0,(iy+*)   | bit 0,(iy+*)   | bit 0,(iy+*)   | bit 0,(iy+*)   | bit 0,(iy+*)   | bit 0,(iy+*)   | bit 0,(iy+*) | bit 0,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*)   | bit 1,(iy+*) | bit 1,(iy+*)
-5 | bit 2,(iy+*)   | bit 2,(iy+*)   | bit 2,(iy+*)   | bit 2,(iy+*)   | bit 2,(iy+*)   | bit 2,(iy+*)   | bit 2,(iy+*) | bit 2,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*)   | bit 3,(iy+*) | bit 3,(iy+*)
-6 | bit 4,(iy+*)   | bit 4,(iy+*)   | bit 4,(iy+*)   | bit 4,(iy+*)   | bit 4,(iy+*)   | bit 4,(iy+*)   | bit 4,(iy+*) | bit 4,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*)   | bit 5,(iy+*) | bit 5,(iy+*)
-7 | bit 6,(iy+*)   | bit 6,(iy+*)   | bit 6,(iy+*)   | bit 6,(iy+*)   | bit 6,(iy+*)   | bit 6,(iy+*)   | bit 6,(iy+*) | bit 6,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*)   | bit 7,(iy+*) | bit 7,(iy+*)
-8 | res 0,(iy+*),b | res 0,(iy+*),c | res 0,(iy+*),d | res 0,(iy+*),e | res 0,(iy+*),h | res 0,(iy+*),l | res 0,(iy+*) | res 0,(iy+*),a | res 1,(iy+*),b | res 1,(iy+*),c | res 1,(iy+*),d | res 1,(iy+*),e | res 1,(iy+*),h | res 1,(iy+*),l | res 1,(iy+*) | res 1,(iy+*),a
-9 | res 2,(iy+*),b | res 2,(iy+*),c | res 2,(iy+*),d | res 2,(iy+*),e | res 2,(iy+*),h | res 2,(iy+*),l | res 2,(iy+*) | res 2,(iy+*),a | res 3,(iy+*),b | res 3,(iy+*),c | res 3,(iy+*),d | res 3,(iy+*),e | res 3,(iy+*),h | res 3,(iy+*),l | res 3,(iy+*) | res 3,(iy+*),a
-A | res 4,(iy+*),b | res 4,(iy+*),c | res 4,(iy+*),d | res 4,(iy+*),e | res 4,(iy+*),h | res 4,(iy+*),l | res 4,(iy+*) | res 4,(iy+*),a | res 5,(iy+*),b | res 5,(iy+*),c | res 5,(iy+*),d | res 5,(iy+*),e | res 5,(iy+*),h | res 5,(iy+*),l | res 5,(iy+*) | res 5,(iy+*),a
-B | res 6,(iy+*),b | res 6,(iy+*),c | res 6,(iy+*),d | res 6,(iy+*),e | res 6,(iy+*),h | res 6,(iy+*),l | res 6,(iy+*) | res 6,(iy+*),a | res 7,(iy+*),b | res 7,(iy+*),c | res 7,(iy+*),d | res 7,(iy+*),e | res 7,(iy+*),h | res 7,(iy+*),l | res 7,(iy+*) | res 7,(iy+*),a
-C | set 0,(iy+*),b | set 0,(iy+*),c | set 0,(iy+*),d | set 0,(iy+*),e | set 0,(iy+*),h | set 0,(iy+*),l | set 0,(iy+*) | set 0,(iy+*),a | set 1,(iy+*),b | set 1,(iy+*),c | set 1,(iy+*),d | set 1,(iy+*),e | set 1,(iy+*),h | set 1,(iy+*),l | set 1,(iy+*) | set 1,(iy+*),a
-D | set 2,(iy+*),b | set 2,(iy+*),c | set 2,(iy+*),d | set 2,(iy+*),e | set 2,(iy+*),h | set 2,(iy+*),l | set 2,(iy+*) | set 2,(iy+*),a | set 3,(iy+*),b | set 3,(iy+*),c | set 3,(iy+*),d | set 3,(iy+*),e | set 3,(iy+*),h | set 3,(iy+*),l | set 3,(iy+*) | set 3,(iy+*),a
-E | set 4,(iy+*),b | set 4,(iy+*),c | set 4,(iy+*),d | set 4,(iy+*),e | set 4,(iy+*),h | set 4,(iy+*),l | set 4,(iy+*) | set 4,(iy+*),a | set 5,(iy+*),b | set 5,(iy+*),c | set 5,(iy+*),d | set 5,(iy+*),e | set 5,(iy+*),h | set 5,(iy+*),l | set 5,(iy+*) | set 5,(iy+*),a
-F | set 6,(iy+*),b | set 6,(iy+*),c | set 6,(iy+*),d | set 6,(iy+*),e | set 6,(iy+*),h | set 6,(iy+*),l | set 6,(iy+*) | set 6,(iy+*),a | set 7,(iy+*),b | set 7,(iy+*),c | set 7,(iy+*),d | set 7,(iy+*),e | set 7,(iy+*),h | set 7,(iy+*),l | set 7,(iy+*) | set 7,(iy+*),a
+0 | rlc (ix+*),b   | rlc (ix+*),c   | rlc (ix+*),d   | rlc (ix+*),e   | rlc (ix+*),h   | rlc (ix+*),l   | rlc (ix+*)   | rlc (ix+*),a   | rrc (ix+*),b   | rrc (ix+*),c   | rrc (ix+*),d   | rrc (ix+*),e   | rrc (ix+*),h   | rrc (ix+*),l   | rrc (ix+*)   | rrc (ix+*),a
+1 | rl (ix+*),b    | rl (ix+*),c    | rl (ix+*),d    | rl (ix+*),e    | rl (ix+*),h    | rl (ix+*),l    | rl (ix+*)    | rl (ix+*),a    | rr (ix+*),b    | rr (ix+*),c    | rr (ix+*),d    | rr (ix+*),e    | rr (ix+*),h    | rr (ix+*),l    | rr (ix+*)    | rr (ix+*),a
+2 | sla (ix+*),b   | sla (ix+*),c   | sla (ix+*),d   | sla (ix+*),e   | sla (ix+*),h   | sla (ix+*),l   | sla (ix+*)   | sla (ix+*),a   | sra (ix+*),b   | sra (ix+*),c   | sra (ix+*),d   | sra (ix+*),e   | sra (ix+*),h   | sra (ix+*),l   | sra (ix+*)   | sra (ix+*),a
+3 | sll (ix+*),b   | sll (ix+*),c   | sll (ix+*),d   | sll (ix+*),e   | sll (ix+*),h   | sll (ix+*),l   | sll (ix+*)   | sll (ix+*),a   | srl (ix+*),b   | srl (ix+*),c   | srl (ix+*),d   | srl (ix+*),e   | srl (ix+*),h   | srl (ix+*),l   | srl (ix+*)   | srl (ix+*),a
+4 | bit 0,(ix+*)   | bit 0,(ix+*)   | bit 0,(ix+*)   | bit 0,(ix+*)   | bit 0,(ix+*)   | bit 0,(ix+*)   | bit 0,(ix+*) | bit 0,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*)   | bit 1,(ix+*) | bit 1,(ix+*)
+5 | bit 2,(ix+*)   | bit 2,(ix+*)   | bit 2,(ix+*)   | bit 2,(ix+*)   | bit 2,(ix+*)   | bit 2,(ix+*)   | bit 2,(ix+*) | bit 2,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*)   | bit 3,(ix+*) | bit 3,(ix+*)
+6 | bit 4,(ix+*)   | bit 4,(ix+*)   | bit 4,(ix+*)   | bit 4,(ix+*)   | bit 4,(ix+*)   | bit 4,(ix+*)   | bit 4,(ix+*) | bit 4,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*)   | bit 5,(ix+*) | bit 5,(ix+*)
+7 | bit 6,(ix+*)   | bit 6,(ix+*)   | bit 6,(ix+*)   | bit 6,(ix+*)   | bit 6,(ix+*)   | bit 6,(ix+*)   | bit 6,(ix+*) | bit 6,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*)   | bit 7,(ix+*) | bit 7,(ix+*)
+8 | res 0,(ix+*),b | res 0,(ix+*),c | res 0,(ix+*),d | res 0,(ix+*),e | res 0,(ix+*),h | res 0,(ix+*),l | res 0,(ix+*) | res 0,(ix+*),a | res 1,(ix+*),b | res 1,(ix+*),c | res 1,(ix+*),d | res 1,(ix+*),e | res 1,(ix+*),h | res 1,(ix+*),l | res 1,(ix+*) | res 1,(ix+*),a
+9 | res 2,(ix+*),b | res 2,(ix+*),c | res 2,(ix+*),d | res 2,(ix+*),e | res 2,(ix+*),h | res 2,(ix+*),l | res 2,(ix+*) | res 2,(ix+*),a | res 3,(ix+*),b | res 3,(ix+*),c | res 3,(ix+*),d | res 3,(ix+*),e | res 3,(ix+*),h | res 3,(ix+*),l | res 3,(ix+*) | res 3,(ix+*),a
+A | res 4,(ix+*),b | res 4,(ix+*),c | res 4,(ix+*),d | res 4,(ix+*),e | res 4,(ix+*),h | res 4,(ix+*),l | res 4,(ix+*) | res 4,(ix+*),a | res 5,(ix+*),b | res 5,(ix+*),c | res 5,(ix+*),d | res 5,(ix+*),e | res 5,(ix+*),h | res 5,(ix+*),l | res 5,(ix+*) | res 5,(ix+*),a
+B | res 6,(ix+*),b | res 6,(ix+*),c | res 6,(ix+*),d | res 6,(ix+*),e | res 6,(ix+*),h | res 6,(ix+*),l | res 6,(ix+*) | res 6,(ix+*),a | res 7,(ix+*),b | res 7,(ix+*),c | res 7,(ix+*),d | res 7,(ix+*),e | res 7,(ix+*),h | res 7,(ix+*),l | res 7,(ix+*) | res 7,(ix+*),a
+C | set 0,(ix+*),b | set 0,(ix+*),c | set 0,(ix+*),d | set 0,(ix+*),e | set 0,(ix+*),h | set 0,(ix+*),l | set 0,(ix+*) | set 0,(ix+*),a | set 1,(ix+*),b | set 1,(ix+*),c | set 1,(ix+*),d | set 1,(ix+*),e | set 1,(ix+*),h | set 1,(ix+*),l | set 1,(ix+*) | set 1,(ix+*),a
+D | set 2,(ix+*),b | set 2,(ix+*),c | set 2,(ix+*),d | set 2,(ix+*),e | set 2,(ix+*),h | set 2,(ix+*),l | set 2,(ix+*) | set 2,(ix+*),a | set 3,(ix+*),b | set 3,(ix+*),c | set 3,(ix+*),d | set 3,(ix+*),e | set 3,(ix+*),h | set 3,(ix+*),l | set 3,(ix+*) | set 3,(ix+*),a
+E | set 4,(ix+*),b | set 4,(ix+*),c | set 4,(ix+*),d | set 4,(ix+*),e | set 4,(ix+*),h | set 4,(ix+*),l | set 4,(ix+*) | set 4,(ix+*),a | set 5,(ix+*),b | set 5,(ix+*),c | set 5,(ix+*),d | set 5,(ix+*),e | set 5,(ix+*),h | set 5,(ix+*),l | set 5,(ix+*) | set 5,(ix+*),a
+F | set 6,(ix+*),b | set 6,(ix+*),c | set 6,(ix+*),d | set 6,(ix+*),e | set 6,(ix+*),h | set 6,(ix+*),l | set 6,(ix+*) | set 6,(ix+*),a | set 7,(ix+*),b | set 7,(ix+*),c | set 7,(ix+*),d | set 7,(ix+*),e | set 7,(ix+*),h | set 7,(ix+*),l | set 7,(ix+*) | set 7,(ix+*),a
 
 >IY
-  | 0           | 1           | 2           | 3           | 4           | 5           | 6            | 7           | 8        | 9         | A          | B        | C          | D          | E            | F
-0 |             |             |             |             |             |             |              |             |          | add iy,bc |            |          |            |            |              |
-1 |             |             |             |             |             |             |              |             |          | add iy,de |            |          |            |            |              |
-2 |             | ld iy,**    | ld (**),iy  | inc iy      | inc iyh     | dec iyh     | ld iyh,*     |             |          | add iy,iy | ld iy,(**) | dec iy   | inc iyl    | dec iyl    | ld iyl,*     |
-3 |             |             |             |             | inc (iy+*)  | dec (iy+*)  | ld (iy+*),*  |             |          | add iy,sp |            |          |            |            |              |
-4 |             |             |             |             | ld b,iyh    | ld b,iyl    | ld b,(iy+*)  |             |          |           |            |          | ld c,iyh   | ld c,iyl   | ld c,(iy+*)  |
-5 |             |             |             |             | ld d,iyh    | ld d,iyl    | ld d,(iy+*)  |             |          |           |            |          | ld e,iyh   | ld e,iyl   | ld e,(iy+*)  |
-6 | ld iyh,b    | ld iyh,c    | ld iyh,d    | ld iyh,e    | ld iyh,iyh  | ld iyh,iyl  | ld h,(iy+*)  | ld iyh,a    | ld iyl,b | ld iyl,c  | ld iyl,d   | ld iyl,e | ld iyl,iyh | ld iyl,iyl | ld l,(iy+*)  | ld iyl,a
-7 | ld (iy+*),b | ld (iy+*),c | ld (iy+*),d | ld (iy+*),e | ld (iy+*),h | ld (iy+*),l |              | ld (iy+*),a |          |           |            |          | ld a,iyh   | ld a,iyl   | ld a,(iy+*)  |
-8 |             |             |             |             | add a,iyh   | add a,iyl   | add a,(iy+*) |             |          |           |            |          | adc a,iyh  | adc a,iyl  | adc a,(iy+*) |
-9 |             |             |             |             | sub iyh     | sub iyl     | sub (iy+*)   |             |          |           |            |          | sbc a,iyh  | sbc a,iyl  | sbc a,(iy+*) |
-A |             |             |             |             | and iyh     | and iyl     | and (iy+*)   |             |          |           |            |          | xor iyh    | xor iyl    | xor (iy+*)   |
-B |             |             |             |             | or iyh      | or iyl      | or (iy+*)    |             |          |           |            |          | cp iyh     | cp iyl     | cp (iy+*)    |
-C |             |             |             |             |             |             |              |             |          |           |            | >iyBITS  |            |            |              |
-D |             |             |             |             |             |             |              |             |          |           |            |          |            |            |              |
-E |             | pop iy      |             | ex (sp),iy  |             | push iy     |              |             |          | jp (iy)   |            |          |            |            |              |
-F |             |             |             |             |             |             |              |             |          | ld sp,iy  |            |          |            |            |              |
+  | 0           | 1           | 2           | 3           | 4           | 5           | 6            | 7           | 8        | 9         | A          | B         | C          | D          | E            | F
+0 |             |             |             |             |             |             |              |             |          | add iy,bc |            |           |            |            |              |
+1 |             |             |             |             |             |             |              |             |          | add iy,de |            |           |            |            |              |
+2 |             | ld iy,**    | ld (**),iy  | inc iy      | inc iyh     | dec iyh     | ld iyh,*     |             |          | add iy,iy | ld iy,(**) | dec iy    | inc iyl    | dec iyl    | ld iyl,*     |
+3 |             |             |             |             | inc (iy+*)  | dec (iy+*)  | ld (iy+*),*  |             |          | add iy,sp |            |           |            |            |              |
+4 |             |             |             |             | ld b,iyh    | ld b,iyl    | ld b,(iy+*)  |             |          |           |            |           | ld c,iyh   | ld c,iyl   | ld c,(iy+*)  |
+5 |             |             |             |             | ld d,iyh    | ld d,iyl    | ld d,(iy+*)  |             |          |           |            |           | ld e,iyh   | ld e,iyl   | ld e,(iy+*)  |
+6 | ld iyh,b    | ld iyh,c    | ld iyh,d    | ld iyh,e    | ld iyh,iyh  | ld iyh,iyl  | ld h,(iy+*)  | ld iyh,a    | ld iyl,b | ld iyl,c  | ld iyl,d   | ld iyl, e | ld iyl,iyh | ld iyl,iyl | ld l,(iy+*)  | ld iyl,a
+7 | ld (iy+*),b | ld (iy+*),c | ld (iy+*),d | ld (iy+*),e | ld (iy+*),h | ld (iy+*),l |              | ld (iy+*),a |          |           |            |           | ld a,iyh   | ld a,iyl   | ld a,(iy+*)  |
+8 |             |             |             |             | add a,iyh   | add a,iyl   | add a,(iy+*) |             |          |           |            |           | adc a,iyh  | adc a,iyl  | adc a,(iy+*) |
+9 |             |             |             |             | sub iyh     | sub iyl     | sub (iy+*)   |             |          |           |            |           | sbc a,iyh  | sbc a,iyl  | sbc a,(iy+*) |
+A |             |             |             |             | and iyh     | and iyl     | and (iy+*)   |             |          |           |            |           | xor iyh    | xor iyl    | xor (iy+*)   |
+B |             |             |             |             | or iyh      | or iyl      | or (iy+*)    |             |          |           |            |           | cp iyh     | cp iyl     | cp (iy+*)    |
+C |             |             |             |             |             |             |              |             |          |           |            | >IYBITS * |            |            |              |
+D |             |             |             |             |             |             |              |             |          |           |            |           |            |            |              |
+E |             | pop iy      |             | ex (sp),iy  |             | push iy     |              |             |          | jp (iy)   |            |           |            |            |              |
+F |             |             |             |             |             |             |              |             |          | ld sp,iy  |            |           |            |            |              |
 
->IYBIT
+>IYBITS
   | 0              | 1              | 2              | 3              | 4              | 5              | 6            | 7              | 8              | 9              | A              | B              | C              | D              | E            | F
 0 | rlc (iy+*),b   | rlc (iy+*),c   | rlc (iy+*),d   | rlc (iy+*),e   | rlc (iy+*),h   | rlc (iy+*),l   | rlc (iy+*)   | rlc (iy+*),a   | rrc (iy+*),b   | rrc (iy+*),c   | rrc (iy+*),d   | rrc (iy+*),e   | rrc (iy+*),h   | rrc (iy+*),l   | rrc (iy+*)   | rrc (iy+*),a
 1 | rl (iy+*),b    | rl (iy+*),c    | rl (iy+*),d    | rl (iy+*),e    | rl (iy+*),h    | rl (iy+*),l    | rl (iy+*)    | rl (iy+*),a    | rr (iy+*),b    | rr (iy+*),c    | rr (iy+*),d    | rr (iy+*),e    | rr (iy+*),h    | rr (iy+*),l    | rr (iy+*)    | rr (iy+*),a
@@ -112,7 +112,7 @@ D | set 2,(iy+*),b | set 2,(iy+*),c | set 2,(iy+*),d | set 2,(iy+*),e | set 2,(i
 E | set 4,(iy+*),b | set 4,(iy+*),c | set 4,(iy+*),d | set 4,(iy+*),e | set 4,(iy+*),h | set 4,(iy+*),l | set 4,(iy+*) | set 4,(iy+*),a | set 5,(iy+*),b | set 5,(iy+*),c | set 5,(iy+*),d | set 5,(iy+*),e | set 5,(iy+*),h | set 5,(iy+*),l | set 5,(iy+*) | set 5,(iy+*),a
 F | set 6,(iy+*),b | set 6,(iy+*),c | set 6,(iy+*),d | set 6,(iy+*),e | set 6,(iy+*),h | set 6,(iy+*),l | set 6,(iy+*) | set 6,(iy+*),a | set 7,(iy+*),b | set 7,(iy+*),c | set 7,(iy+*),d | set 7,(iy+*),e | set 7,(iy+*),h | set 7,(iy+*),l | set 7,(iy+*) | set 7,(iy+*),a
 
->EXTD
+>ED
   | 0        | 1         | 2         | 3          | 4   | 5    | 6    | 7      | 8        | 9         | A         | B          | C   | D    | E      | F
 4 | in b,(c) | out (c),b | sbc hl,bc | ld (**),bc | neg | retn | im 0 | ld i,a | in c,(c) | out (c),c | adc hl,bc | ld bc,(**) | neg | reti | im 0/1 | ld r,a
 5 | in d,(c) | out (c),d | sbc hl,de | ld (**),de | neg | retn | im 1 | ld a,i | in e,(c) | out (c),e | adc hl,de | ld de,(**) | neg | retn | im 2   | ld a,r

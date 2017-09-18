@@ -130,9 +130,6 @@ namespace ZXDebug
 
         static void VSCode_OnNext( Request pRequest )
 	    {
-	        //var dis = new Disassembler();
-	        //dis.AddFile( Path.Combine( _settings.ExtensionPath, "opcodes\\z80.tbl" ) );
-	        //var op = dis.Get( new byte[] { 0x21, 0x00, 0x5B }, 0 );
             _vscode.Send( pRequest );
             _machine.StepOver();
 	    }
@@ -181,7 +178,11 @@ namespace ZXDebug
 	            var fullpath = Path.Combine( _settings.cwd, map );
 	            _machine.Maps.Add( new Map( fullpath ) );
 	        }
-        }
+
+	        _machine.Disassembler.ClearLayers();
+	        _machine.Disassembler.AddLayer( Path.Combine( _settings.ExtensionPath, "opcodes\\z80.tbl" ) );
+	        _machine.Disassembler.AddLayer( Path.Combine( _settings.ExtensionPath, "opcodes\\next.tbl" ) );
+	    }
 
         static void VSCode_OnConfigurationDone( Request pRequest )
 	    {

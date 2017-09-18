@@ -67,3 +67,18 @@ write-memory-raw         Writes a sequence of bytes starting at desired address 
 
 You can get descriptive help for every command with: help command
 Note: When help shows an argument in brackets [], it means the argument is optional, and when written, you must not write these brackets
+
+
+
+command> help set-debug-settings
+Syntax: set-debug-settings|sds setting
+
+Description
+Set debug settings on remote command protocol. It's a numeric value with bitmask with different meaning:
+Bit 0: show all cpu registers on cpu stepping or only pc+opcode.
+Bit 1: show 8 next opcodes on cpu stepping.
+Bit 2: Do not add a L preffix when searching source code labels.
+Bit 3: Show bytes when debugging opcodes.
+Bit 4: Repeat last command only by pressing enter.
+Bit 5: Step over interrupt when running cpu-step, cpu-step-over and run verbose. It's the same setting as Step Over Interrupt on menu
+

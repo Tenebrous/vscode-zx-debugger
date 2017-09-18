@@ -138,8 +138,11 @@ namespace ZEsarUX
             //   Bit 1: show 8 next opcodes on cpu stepping.
             //   Bit 2: Do not add a L preffix when searching source code labels.
             //   Bit 3: Show bytes when debugging opcodes"
+            //   Bit 4: Repeat last command only by pressing enter.
+            //   Bit 5: Step over interrupt when running cpu-step, cpu - step - over and run verbose.It's the same setting as Step Over Interrupt on menu"
+            var debugSettings = ( 1 << 3 ) | ( 1 << 5 );
 
-            SendAndReceiveSingle( "set-debug-settings 8" );
+            SendAndReceiveSingle( "set-debug-settings " + debugSettings );
 
             SendAndReceiveSingle( "set-memory-zone -1" );
         }
@@ -181,6 +184,16 @@ namespace ZEsarUX
         {
             var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
             return memory;
+        }
+
+        public override int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
+        {
+            var memory = ReadMemory( pAddress, pLength );
+
+            for( var i = 0; i < pLength; i++ )
+                pBuffer[i] = (byte)((Format.FromHex( memory[i*2] ) << 4) | Format.FromHex( memory[i * 2 + 1] ));
+
+            return pLength;
         }
 
         public override void RefreshStack( Stack pStack )
