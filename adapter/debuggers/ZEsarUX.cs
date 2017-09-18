@@ -283,9 +283,9 @@ namespace ZEsarUX
             if( _isRunning != wasRunning )
             {
                 if( _isRunning )
-                    OnContinue?.Invoke();
+                    OnContinued();
                 else
-                    OnPause?.Invoke();
+                    OnPaused();
             }
 
             //if( result.Count > 0 )

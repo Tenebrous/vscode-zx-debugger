@@ -25,8 +25,8 @@ namespace Spectrum
             Memory    = new Memory(this);
             Stack     = new Stack(this);
 
-            Connection.OnPause += Connection_OnPause;
-            Connection.OnContinue += Connection_OnContinue;
+            Connection.PausedEvent += Connection_OnPause;
+            Connection.ContinuedEvent += Connection_OnContinue;
         }
 
         /////////////////

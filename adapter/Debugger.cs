@@ -11,8 +11,11 @@ namespace ZXDebug
     /// </summary>
     public abstract class Debugger
     {
-        public Action OnPause;
-        public Action OnContinue;
+        public delegate void PausedHandler();
+        public event PausedHandler PausedEvent;
+
+        public delegate void ContinuedHandler();
+        public event ContinuedHandler ContinuedEvent;
 
         /// <summary>
         /// Returns details on what this debugger provides
@@ -104,6 +107,16 @@ namespace ZXDebug
         public virtual string CustomCommand( string pCommand )
         {
             return null;
+        }
+
+        public void OnPaused()
+        {
+            PausedEvent?.Invoke();
+        }
+
+        public void OnContinued()
+        {
+            ContinuedEvent?.Invoke();
         }
     }
 
