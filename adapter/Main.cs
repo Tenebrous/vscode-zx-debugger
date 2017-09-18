@@ -35,28 +35,28 @@ namespace ZXDebug
             // vscode events
 
             _vscode = new Connection();
-            _vscode.OnInitialize += VSCode_OnInitialize;
-	        _vscode.OnDisconnect += VSCode_OnDisconnect;
-	        _vscode.OnLaunch += VSCode_OnLaunch;
-	        _vscode.OnAttach += VSCode_OnAttach;
-	        _vscode.OnConfigurationDone += VSCode_OnConfigurationDone;
+            _vscode.InitializeEvent += VSCode_OnInitialize;
+	        _vscode.DisconnectEvent += VSCode_OnDisconnect;
+	        _vscode.LaunchEvent += VSCode_OnLaunch;
+	        _vscode.AttachEvent += VSCode_OnAttach;
+	        _vscode.ConfigurationDoneEvent += VSCode_OnConfigurationDone;
 
-	        _vscode.OnPause += VSCode_OnPause;
-	        _vscode.OnContinue += VSCode_OnContinue;
-	        _vscode.OnNext += VSCode_OnNext;
-	        _vscode.OnStepIn += VSCode_OnStepIn;
-	        _vscode.OnStepOut += VSCode_OnStepOut;
+	        _vscode.PauseEvent += VSCode_OnPause;
+	        _vscode.ContinueEvent += VSCode_OnContinue;
+	        _vscode.NextEvent += VSCode_OnNext;
+	        _vscode.StepInEvent += VSCode_OnStepIn;
+	        _vscode.StepOutEvent += VSCode_OnStepOut;
 
-	        _vscode.OnGetThreads += VSCode_OnGetThreads;
-	        _vscode.OnGetStackTrace += VSCode_OnGetStackTrace;
-	        _vscode.OnGetScopes += VSCode_OnGetScopes;
+	        _vscode.GetThreadsEvent += VSCode_OnGetThreads;
+	        _vscode.GetStackTraceEvent += VSCode_OnGetStackTrace;
+	        _vscode.GetScopesEvent += VSCode_OnGetScopes;
 
-	        _vscode.OnGetVariables += VSCode_OnGetVariables;
-	        _vscode.OnSetVariable += VSCode_OnSetVariable;
+	        _vscode.GetVariablesEvent += VSCode_OnGetVariables;
+	        _vscode.SetVariableEvent += VSCode_OnSetVariable;
 	        // _vscode.OnGetSource += VSCode_OnGetSource;
 	        // _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
-			_vscode.OnGetCompletions += VSCode_OnGetCompletions;
-	        _vscode.OnEvaluate += VSCode_OnEvaluate;
+			_vscode.GetCompletionsEvent += VSCode_OnGetCompletions;
+	        _vscode.EvaluateEvent += VSCode_OnEvaluate;
 
 
             // zesarux events
@@ -111,18 +111,10 @@ namespace ZXDebug
         /////////////////
         // vscode events
 
-        static void VSCode_OnInitialize( Request pRequest )
+        static void VSCode_OnInitialize( Request pRequest, VSCode.Capabilities pCapabilities )
 	    {
-	        _vscode.Send(
-	            pRequest,
-	            new VSCode.Capabilities()
-	            {
-	                supportsConfigurationDoneRequest = true,
-					supportsCompletionsRequest = true
-                }
-	        );
-
-	        _vscode.Initialized();
+			pCapabilities.supportsConfigurationDoneRequest = true;
+			pCapabilities.supportsCompletionsRequest = true;
 	    }
 
          
@@ -251,11 +243,9 @@ namespace ZXDebug
             );
         }
 
-        static void VSCode_OnGetScopes( Request pRequest )
+        static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
         {
-            int frameId = pRequest.arguments.frameId;
-
-            _machine.UpdateDisassembly( _machine.Stack[frameId-1], DisassemblyFile );
+            _machine.UpdateDisassembly( _machine.Stack[pFrameID-1], DisassemblyFile );
 
             var scopes = new List<Scope>();
 
@@ -272,59 +262,32 @@ namespace ZXDebug
             _vscode.Send( pRequest, new ScopesResponseBody( scopes ) );
         }
 
-        static void VSCode_OnGetCompletions( Request pRequest )
+        static void VSCode_OnGetCompletions( Request pRequest, int pFrameID, string pText, int pColumn, int pLine )
         {
 			//Log.Write( Log.Severity.Error, pRequest.arguments.ToString() );
         }		
 
-        static void VSCode_OnEvaluate( Request pRequest )
+        static void VSCode_OnEvaluate( Request pRequest, int pFrameID, string pContext, string pExpression, bool bHex, ref string pResult )
 	    {
-			if( DynString( pRequest.arguments, "context", "" ) == "repl" )
-				VSCode_OnEvaluate_REPL( pRequest );
+			if( pContext == "repl" )
+				pResult = VSCode_OnEvaluate_REPL( pRequest, pExpression );
 			else
-				VSCode_OnEvaluate_Variable( pRequest );
+				pResult = VSCode_OnEvaluate_Variable( pRequest, pExpression );
 		}
 
-		static void VSCode_OnEvaluate_REPL( Request pRequest )
+		static string VSCode_OnEvaluate_REPL( Request pRequest, string pExpression )
 		{
-			string command = DynString( pRequest.arguments, "expression", "" );
-
-		    // if( !_analysing && command == "heat" )
-		    // {
-		    //     _vscode.Send( pRequest, new EvaluateResponseBody("Analysing - type 'stop' to end ..." ) );
-
-            //     _analysing = true;
-		    //     _debugger.Send( "run verbose 10000" );
-		    //     return;
-		    // }
-
-            // if( _analysing && command == "stop" )
-		    // {
-		    //     _vscode.Send( pRequest, new EvaluateResponseBody( "Stopped." ) );
-
-            //     _analysing = false;
-		    //     return;
-		    // }
-
-			var result = _debugger.CustomCommand( command );
-			
-			_vscode.Send(
-				 pRequest, 
-				 new EvaluateResponseBody(
-					 result
-				 )
-			);
+			return _debugger.CustomCommand( pExpression );
 		}
 
-		static void VSCode_OnEvaluate_Variable( Request pRequest )
+		static string VSCode_OnEvaluate_Variable( Request pRequest, string pExpression )
 		{
 	        var value = "";
             var formatted = "";
 
-            var expression = (string)pRequest.arguments.expression.ToString();
 	        var prefix = "";
 
-	        var split = expression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
+	        var split = pExpression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
 	        var parseIndex = 0;
 
 	        if( split[parseIndex].StartsWith( "(" ) && split[parseIndex].EndsWith( ")" ) )
@@ -372,36 +335,21 @@ namespace ZXDebug
 				if( Format.ApplyRule( split[parseIndex], value, ref formatted ) )
 					parseIndex++;
 
-            _vscode.Send(
-                pRequest, 
-                new EvaluateResponseBody(
-                    prefix + formatted
-                )
-            );
+			return prefix + formatted;
 	    }
 
 
-
-        static List<Variable> _tempVariables = new List<Variable>();
-        static void VSCode_OnGetVariables( Request pRequest )
+        static void VSCode_OnGetVariables( Request pRequest, int pReference, List<Variable> pResult )
         {
-            _tempVariables.Clear();
-
-            int id = pRequest.arguments.variablesReference;
-            var value = _rootValues.All(id);
+            var value = _rootValues.All( pReference );
 
             if( value != null )
             {
                 value.Refresh();
 
                 foreach( var child in value.Children )
-                    _tempVariables.Add( CreateVariableForValue( child ) );
+                    pResult.Add( CreateVariableForValue( child ) );
             }
-
-            _vscode.Send(
-                pRequest,
-                new VariablesResponseBody(_tempVariables)
-            );
         }
 
 	    static Variable CreateVariableForValue( Value pValue )
@@ -416,37 +364,12 @@ namespace ZXDebug
 	    }
 
 
-	    static void VSCode_OnSetVariable( Request pRequest )
+	    static void VSCode_OnSetVariable( Request pRequest, Variable pVariable )
 	    {
-	        string name = pRequest.arguments.name.ToString();
-	        string val = pRequest.arguments.value.ToString();
+            // Log.Write( Log.Severity.Message, name + " -> " + val );
 
-            Log.Write( Log.Severity.Message, name + " -> " + val );
-
-	        var value = _rootValues.AllByName( name );
-
-			if( value.Setter != null )
-			{
-				try
-				{
-					value.Setter.Invoke( value, val );
-				}
-				catch( Exception e )
-				{
-					_vscode.Send(
-						pRequest,
-						pErrorMessage: e.Message
-					);
-					return;
-				}
-			}
-
-	        var var   = CreateVariableForValue( value );
-
-            _vscode.Send(
-                pRequest,
-	            new SetVariableResponseBody( var.value, var.variablesReference )
-            );
+	        var value = _rootValues.AllByName( pVariable.name );
+			value.Setter?.Invoke( value, pVariable.value );
 	    }
 
 

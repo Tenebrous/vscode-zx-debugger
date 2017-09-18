@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,25 +10,45 @@ namespace VSCode
 {
     public class Connection
     {
-        public Action<Request> OnInitialize;
-        public Action<Request, string> OnLaunch;
-        public Action<Request, string> OnAttach;
-        public Action<Request> OnDisconnect;
-        public Action<Request> OnPause;
-        public Action<Request> OnContinue;
-        public Action<Request> OnNext;
-        public Action<Request> OnStepIn;
-        public Action<Request> OnStepOut;
-        public Action<Request> OnGetStackTrace;
-        public Action<Request> OnGetVariables;
-        public Action<Request> OnSetVariable;
-        public Action<Request> OnGetThreads;
-        public Action<Request> OnGetCompletions;
-        public Action<Request> OnGetScopes;
-        public Action<Request> OnGetSource;
-        public Action<Request> OnGetLoadedSources;
-        public Action<Request> OnConfigurationDone;
-        public Action<Request> OnEvaluate;
+        public delegate void EventHandler( Request pRequest );
+
+        public delegate void InitialiseHandler( Request pRequest, Capabilities pResult );
+        public event InitialiseHandler  InitializeEvent;
+
+        public delegate void LaunchHandler( Request pRequest, string pJSON );
+        public event LaunchHandler LaunchEvent;
+
+        public delegate void AttachHandler( Request pRequest, string pJSON );
+        public event AttachHandler AttachEvent;
+
+        public event EventHandler DisconnectEvent;
+        public event EventHandler PauseEvent;
+        public event EventHandler ContinueEvent;
+        public event EventHandler NextEvent;
+        public event EventHandler StepInEvent;
+        public event EventHandler StepOutEvent;
+        public event EventHandler GetStackTraceEvent;
+
+        public delegate void GetVariablesHandler( Request pRequest, int pReference, List<Variable> pResult );
+        public event GetVariablesHandler GetVariablesEvent;
+
+        public delegate void SetVariablesHandler( Request pRequest, Variable pVariable );
+        public event SetVariablesHandler SetVariableEvent;
+
+        public event EventHandler GetThreadsEvent;
+
+        public delegate void GetCompletionsHandler( Request pRequest, int pFrameID, string pText, int pColumn, int pLine );
+        public event GetCompletionsHandler GetCompletionsEvent;
+
+        public delegate void GetScopesHandler( Request pRequest, int pFrameID );
+        public event GetScopesHandler GetScopesEvent;
+
+        public event EventHandler GetSourceEvent;
+        public event EventHandler GetLoadedSourcesEvent;
+        public event EventHandler ConfigurationDoneEvent;
+
+        public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool bHex, ref string pResult );
+        public event EvaluateHandler EvaluateEvent;
 
         static readonly Regex _contentLength = new Regex(@"Content-Length: (\d+)\r\n\r\n");
         static readonly Encoding _encoding = System.Text.Encoding.UTF8;
@@ -65,7 +86,7 @@ namespace VSCode
         }
 
 
-        // commands/events from vscode
+        static List<Variable> _tempVariables = new List<Variable>();
 
         void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
         {
@@ -79,80 +100,111 @@ namespace VSCode
                 switch( pCommand )
                 {
                     case "initialize":
-                        OnInitialize?.Invoke(pRequest);
+                        var cap = new Capabilities();
+                        InitializeEvent?.Invoke( pRequest, cap );
+                        Send( pRequest, cap );
+                        Initialized();
                         break;
 
                     case "configurationDone":
-                        OnConfigurationDone?.Invoke(pRequest);
+                        ConfigurationDoneEvent?.Invoke(pRequest);
                         break;
 
                     case "launch":
-                        OnLaunch?.Invoke( pRequest, JsonConvert.SerializeObject( pRequest.arguments ) );
+                        LaunchEvent?.Invoke( pRequest, JsonConvert.SerializeObject( pArgs ) );
                         break;
 
                     case "attach":
-                        OnAttach?.Invoke( pRequest, JsonConvert.SerializeObject( pRequest.arguments ) );
-
+                        AttachEvent?.Invoke( pRequest, JsonConvert.SerializeObject( pArgs ) );
                         break;
 
                     case "disconnect":
-                        OnDisconnect?.Invoke( pRequest );
+                        DisconnectEvent?.Invoke( pRequest );
                         break;
 
                     case "next":
-                        OnNext?.Invoke( pRequest );
+                        NextEvent?.Invoke( pRequest );
                         break;
 
                     case "continue":
-                        OnContinue?.Invoke( pRequest );
+                        ContinueEvent?.Invoke( pRequest );
                         break;
 
                     case "stepIn":
-                        OnStepIn?.Invoke( pRequest );
+                        StepInEvent?.Invoke( pRequest );
                         break;
 
                     case "stepOut":
-                        OnStepOut?.Invoke( pRequest );
+                        StepOutEvent?.Invoke( pRequest );
                         break;
 
                     case "pause":
-                        OnPause?.Invoke( pRequest );
+                        PauseEvent?.Invoke( pRequest );
                         break;
 
                     case "threads":
-                        OnGetThreads?.Invoke(pRequest);
+                        GetThreadsEvent?.Invoke( pRequest );
                         break;
 
                     case "scopes":
-                        OnGetScopes?.Invoke(pRequest);
+                        GetScopesEvent?.Invoke( pRequest, (int)pArgs.frameId );
                         break;
 
                     case "stackTrace":
-                        OnGetStackTrace?.Invoke(pRequest);
+                        GetStackTraceEvent?.Invoke( pRequest );
                         break;
 
                     case "variables":
-                        OnGetVariables?.Invoke( pRequest );
+                        _tempVariables.Clear();
+                        GetVariablesEvent?.Invoke( pRequest, (int)pArgs.variablesReference, _tempVariables );
+                        Send( pRequest, new VariablesResponseBody( _tempVariables ) );
                         break;
 
                     case "setVariable":
-                        OnSetVariable?.Invoke( pRequest );
+
+	                    string val = pArgs.value.ToString();
+                        var variable = new Variable( (string)pArgs.name, (string)pArgs.value, "", (int)pArgs.variablesReference );
+                    
+                        SetVariableEvent?.Invoke( 
+                            pRequest, variable
+                        );
+
+                        Send(
+                            pRequest,
+                            new SetVariableResponseBody( variable.value, variable.variablesReference )
+                        );
+
                         break;
 
                     case "loadedSources":
-                        OnGetLoadedSources?.Invoke( pRequest );
+                        GetLoadedSourcesEvent?.Invoke( pRequest );
                         break;
 
                     case "source":
-                        OnGetSource?.Invoke( pRequest );
+                        GetSourceEvent?.Invoke( pRequest );
                         break;
 
                     case "evaluate":
-                        OnEvaluate?.Invoke( pRequest );
+
+                        string resultEval = "";
+                        EvaluateEvent?.Invoke(
+                             pRequest, (int)pArgs.frameId, (string)pArgs.context, (string)pArgs.expression, (bool)pArgs.format.hex,
+                             ref resultEval
+                        );
+
+                        Send(
+                            pRequest, 
+                            new EvaluateResponseBody(
+                                resultEval
+                            )
+	            		);
+
                         break;
 
                     case "completions":
-                        OnGetCompletions?.Invoke( pRequest );
+                        GetCompletionsEvent?.Invoke( 
+                            pRequest, (int)pArgs.frameId, (string)pArgs.text, (int)pArgs.column, (int)pArgs.line 
+                        );
                         break;
 
 //                    case "runInTerminal":
