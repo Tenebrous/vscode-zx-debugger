@@ -1,0 +1,46 @@
+{
+  "Tables": {
+    "ED": {
+      "SubTables": {},
+      "Opcodes": {
+        "32": "ld a32,dehl",
+        "33": "ld dehl,a32",
+        "34": "ex a32,dehl",
+        "35": "swapnib",
+        "36": "mirror a",
+        "37": "ld hl,sp",
+        "38": "mirror de",
+        "39": "test *",
+        "48": "mul",
+        "49": "add hl,a",
+        "50": "add de,a",
+        "51": "add bc,a",
+        "52": "add hl,**",
+        "53": "add de,**",
+        "54": "add bc,**",
+        "55": "inc dehl",
+        "56": "dec dehl",
+        "57": "add dehl,a",
+        "58": "add dehl,bc",
+        "59": "add dehl,**",
+        "60": "sub dehl,a",
+        "61": "sub dehl,bc",
+        "138": "push **",
+        "139": "popx",
+        "144": "outinb",
+        "145": "nextreg *,*",
+        "146": "nextreg *,a",
+        "147": "pixeldn",
+        "148": "pixelad",
+        "149": "setae",
+        "164": "ldix",
+        "180": "ldirx",
+        "181": "fillde",
+        "182": "ldirscale",
+        "183": "ldpirx",
+        "188": "lddrx",
+        "196": "lddx"
+      }
+    }
+  }
+}
