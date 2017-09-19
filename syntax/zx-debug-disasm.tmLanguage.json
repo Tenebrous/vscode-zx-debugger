@@ -17,7 +17,14 @@
         "captures": {
             "1": { "comment": "Bank", "name": "punctuation.definition.tag.asm" }
         },
-        "comment": "Label"    
+        "comment": "Memory bank"
+    },
+    {
+        "match": "(?i)^    (.*):",
+        "captures": {
+            "1": { "comment": "Label", "name": "entity.name.function.asm" }
+        },
+        "comment": "Label"
     },
     {
         "match": "(?i)^    ([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
