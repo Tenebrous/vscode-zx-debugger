@@ -57,9 +57,16 @@
                                 "description": "Project folder",
                                 "default": "${workspaceRoot}"
                             },
-                            "maps": {
+                            "sourceMaps": {
                                 "type": "array",
-                                "default": [],
+                                "default": ["48k_rom.dbg"],
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "opcodeTables": {
+                                "type": "array",
+                                "default": ["z80.json"],
                                 "items": {
                                     "type": "string"
                                 }
@@ -67,6 +74,14 @@
                             "stopOnEntry": {
                                 "type": "boolean",
                                 "default": false
+                            },
+                            "hexPrefix": {
+                                "type": "string",
+                                "default": "$"
+                            },
+                            "hexSuffix": {
+                                "type": "string",
+                                "default": ""
                             }
                         }
                     }
@@ -78,7 +93,9 @@
                         "request": "attach",
                         "cwd": "${workspaceRoot}",
                         "maps": [],
-                        "stopOnEntry": true
+                        "stopOnEntry": true,
+                        "hexPrefix": "$",
+                        "hexSuffix": ""
                     }
                 ]
             }

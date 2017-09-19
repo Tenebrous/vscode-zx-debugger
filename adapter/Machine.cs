@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using ZXDebug;
 
 namespace Spectrum
@@ -15,8 +16,11 @@ namespace Spectrum
         public Registers Registers { get; }
         public Memory Memory { get; }
         public Stack Stack { get; }
-        public Maps Maps { get; } = new Maps();
+        public SourceMaps SourceMaps { get; } = new SourceMaps();
         public Disassembler Disassembler { get; } = new Disassembler();
+
+        public string HexPrefix = "$";
+        public string HexSuffix = "";
 
         public Machine( Debugger pConnection )
         {
@@ -83,27 +87,29 @@ namespace Spectrum
         /////////////////
         // 
 
-        class DisasmLine
-        {
-            public ushort Offset;
-            public byte[] Opcodes;
-            public string Text;
-            public int LineNumber;
-        }
-
         class DisasmBank : Bank
         {
-            public Dictionary<ushort, DisasmLine> Lines = new Dictionary<ushort, DisasmLine>();
-            public List<DisasmLine> SortedLines = new List<DisasmLine>();
+            public Dictionary<ushort, InstructionLine> Lines = new Dictionary<ushort, InstructionLine>();
+            public List<InstructionLine> SortedLines = new List<InstructionLine>();
         }
 
         Dictionary<int, DisasmBank> _disasmBanks = new Dictionary<int, DisasmBank>();
-            
-        List<AssemblyLine> _tempDisasm = new List<AssemblyLine>();
-
+        List<InstructionLine> _tempDisasm = new List<InstructionLine>();
         HashSet<int> _tempBankDone = new HashSet<int>();
+        string _disassemblyMemoryMap = "";
 
         public bool UpdateDisassembly( ushort pAddress, string pFilename )
+        {
+            if( UpdateDisassemblyInternal( pAddress, pFilename ) || _disassemblyMemoryMap != Memory.ToString() )
+            {
+                WriteDisassemblyFile( pFilename );
+                return true;
+            }
+
+            return false;
+        } 
+
+        bool UpdateDisassemblyInternal( ushort pAddress, string pFilename )
         {
             // note: assumes disassembly can only cover a maximum of two slots
 
@@ -127,10 +133,10 @@ namespace Spectrum
                     break;
                 }
 
-                if( FinishDisassembling( line.Opcodes ) )
+                if( FinishDisassembling( line.Instruction.Bytes ) )
                     break;
 
-                address += (ushort)line.Opcodes.Length;
+                address += (ushort)line.Instruction.Length;
             }
 
             if( !needDisasm )
@@ -139,21 +145,24 @@ namespace Spectrum
             ////
 
 
-            _tempDisasm.Clear();
-            Connection.Disassemble( pAddress, 30, _tempDisasm );
-
-            var b = new byte[50];
-            Connection.ReadMemory( pAddress, b, 50 );
+            var opcodes = new byte[50];
+            Connection.ReadMemory( pAddress, opcodes, opcodes.Length );
 
             var index = 0;
-            Disassembler.Op op;
 
             try
             {
-                while( ( op = Disassembler.Get( b, index ) ) != null )
+                Disassembler.Instruction instruction;
+
+                while( ( instruction = Disassembler.Get( opcodes, index ) ) != null && _tempDisasm.Count < 30 )
                 {
-                    Log.Write( Log.Severity.Message, op.Length + " " + op.Text );
-                    index += op.Length;
+                    _tempDisasm.Add( new InstructionLine()
+                        {
+                            Address = (ushort)(pAddress + index),
+                            Instruction = instruction
+                        } 
+                    );
+                    index += instruction.Length;
                 }
             }
             catch( Exception e )
@@ -178,22 +187,25 @@ namespace Spectrum
                 var offset = (ushort) ( line.Address - slot.Min );
                 if( !lines.ContainsKey( offset ) )
                 {
-                    var dline = new DisasmLine()
-                    {
-                        Offset = offset,
-                        Opcodes = line.Opcodes,
-                        Text = line.Text
-                    };
-
-                    lines[offset] = dline;
-                    bank.SortedLines.Add( dline );
+                    line.Address = offset;
+                    lines[offset] = line;
+                    bank.SortedLines.Add( line );
                 }
 
-                if( FinishDisassembling( line.Opcodes ) )
+                if( FinishDisassembling( line.Instruction.Bytes ) )
                     break;
             }
 
-            if( File.Exists(pFilename) )
+            _tempDisasm.Clear();
+
+            return true;
+        }
+
+        void WriteDisassemblyFile( string pFilename )
+        {
+            _disassemblyMemoryMap = Memory.ToString();
+
+            if( File.Exists( pFilename ) )
                 File.SetAttributes( pFilename, 0 );
 
             var lineNumber = 0;
@@ -208,12 +220,15 @@ namespace Spectrum
                     if( bank.Lines.Count == 0 )
                         continue;
 
-                    lineNumber++;
-                    stream.WriteLine( "Slot_{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
+                    if( slot.ID >= 0 )
+                    {
+                        lineNumber++;
+                        stream.WriteLine( "Slot_{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
+                    }
 
                     _tempBankDone.Add( slot.Bank.ID );
-                    
-                    bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Offset.CompareTo( pRight.Offset ) );
+
+                    bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
                     WriteDisasmLines( stream, bank, slot.Min, ref lineNumber );
 
                     lineNumber++;
@@ -234,49 +249,148 @@ namespace Spectrum
                     if( !doneHeader )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Not currently paged in:" );
+                        stream.WriteLine( "Not currently paged in (was {0}):", FormattedHex16( bank.LastAddress ) );
                         doneHeader = true;
                     }
 
-                    bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Offset.CompareTo( pRight.Offset ) );
+                    bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
                     WriteDisasmLines( stream, bank, 0, ref lineNumber );
                 }
             }
 
             File.SetAttributes( pFilename, FileAttributes.ReadOnly );
-
-            _tempDisasm.Clear();
-
-            return true;
         }
 
+        public string FormattedHex8( ushort pValue )
+        {
+            return string.Format( "{0}{1:X2}{2}", HexPrefix, pValue, HexSuffix );
+        }
+
+        public string FormattedHex16( ushort pValue )
+        {
+            return string.Format( "{0}{1:X4}{2}", HexPrefix, pValue, HexSuffix );
+        }
+
+        StringBuilder _tempLabelBuilder = new StringBuilder();
         void WriteDisasmLines( TextWriter pStream, DisasmBank pBank, ushort pOffset, ref int pLineNumber )
         {
-            pLineNumber++;
-            pStream.WriteLine( "  {0}", pBank.Name );
+            if( !string.IsNullOrWhiteSpace( pBank.Name ) && pBank.Name != "ALL" )
+            {
+                pLineNumber++;
+                pStream.WriteLine( "  {0}", pBank.Name );
+            }
 
-            var prev = pBank.SortedLines[0].Offset;
+            _tempLabelBuilder.Clear();
+            var prev = pBank.SortedLines[0].Address;
             foreach( var line in pBank.SortedLines )
             {
-                if( line.Offset - prev > 1 )
+                if( line.Address - prev > 1 )
                 {
                     pLineNumber++;
                     pStream.WriteLine();
                 }
+                
+                prev = (ushort) ( line.Address + line.Instruction.Length );
 
-                prev = (ushort) ( line.Offset + line.Opcodes.Length );
+                var symbol = SourceMaps.Find( pBank.ID, (ushort)(line.Address + pOffset) );
 
-                var symbol = Maps.Find( pBank.ID, (ushort)(line.Offset + pOffset) );
+                if( symbol != null )
+                {
+                    _tempLabelBuilder.Append( ' ', 4 );
+                    _tempLabelBuilder.Append( symbol.Labels[0] );
+                    _tempLabelBuilder.Append( ':' );
+
+                    if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
+                    {
+                        _tempLabelBuilder.Append( ' ', 30 - _tempLabelBuilder.Length );
+                        _tempLabelBuilder.Append( ';' );
+
+                        if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
+                        {
+                            _tempLabelBuilder.Append( ' ' );
+                            _tempLabelBuilder.Append( symbol.Comment );
+                        }
+
+                        if( symbol.File != null )
+                        {
+                            _tempLabelBuilder.Append( ' ' );
+                            _tempLabelBuilder.Append( symbol.File.Filename );
+                        }
+    
+                        if( symbol.Map != null )
+                        {
+                            _tempLabelBuilder.Append( ' ' );
+                            _tempLabelBuilder.Append( '(' );
+                            _tempLabelBuilder.Append( Path.GetFileName( symbol.Map.Filename ) );
+                            _tempLabelBuilder.Append( ')' );
+                        }
+                    }
+                }
+
+                if( _tempLabelBuilder.Length > 0 )
+                {
+                    pLineNumber++;
+                    pStream.WriteLine( _tempLabelBuilder.ToString() );
+                    _tempLabelBuilder.Clear();
+                }
 
                 pLineNumber++;
+
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
-                    line.Offset + pOffset,
-                    Format.ToHex( line.Opcodes ),
-                    line.Text
+                    line.Address + pOffset,
+                    Format.ToHex( line.Instruction.Bytes ),
+                    FormatInstruction(line.Instruction)
                 );
 
-                line.LineNumber = pLineNumber;
+                line.FileLine = pLineNumber;
             }
+        }
+
+        string FormatInstruction( Disassembler.Instruction pInstruction )
+        {
+            switch( pInstruction.OperandType )
+            {
+                case Disassembler.Instruction.TypeEnum.Imm8:
+                    return pInstruction.Text.Replace( "{b}", FormattedHex8( pInstruction.Operand ) );
+
+                case Disassembler.Instruction.TypeEnum.Imm16:
+                    return pInstruction.Text.Replace( "{w}", FormattedHex16( pInstruction.Operand ) );
+
+                case Disassembler.Instruction.TypeEnum.Rel8:
+                    return pInstruction.Text.Replace( "{+b}", "+" + FormattedHex8( pInstruction.Operand ) );
+
+                case Disassembler.Instruction.TypeEnum.DataAddr:
+
+                    var dataSymbol = Symbol( pInstruction.Operand );
+
+                    if( dataSymbol != null )
+                        return pInstruction.Text.Replace( 
+                            "{data}", 
+                            string.Format( "{0} ({1})", dataSymbol.Labels[0], FormattedHex16( pInstruction.Operand ) ) 
+                        );
+
+                    return pInstruction.Text.Replace( "{data}", FormattedHex16( pInstruction.Operand ) );
+
+                case Disassembler.Instruction.TypeEnum.CodeAddr:
+
+                    var codeSymbol = Symbol( pInstruction.Operand );
+
+                    if( codeSymbol != null )
+                        return pInstruction.Text.Replace(
+                            "{code}",
+                            string.Format( "{0} ({1})", codeSymbol.Labels[0], FormattedHex16( pInstruction.Operand ) )
+                        );
+
+                    return pInstruction.Text.Replace( "{code}", FormattedHex16( pInstruction.Operand ) );
+            }
+
+            return "";
+        }
+
+        SourceMap.SourceAddress Symbol( ushort pAddress )
+        {
+            var slot = Memory.GetSlot( pAddress );
+            return SourceMaps.Find( slot.Bank.ID, pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
@@ -306,7 +420,7 @@ namespace Spectrum
             var offset = pAddress - slot.Min;
 
             if( bank.Lines.TryGetValue( (ushort)offset, out var line ) )
-                return line.LineNumber;
+                return line.FileLine;
 
             return 0;
         }
@@ -320,53 +434,8 @@ namespace Spectrum
             if( !bank.Lines.TryGetValue( (ushort)offset, out var line ) )
                 return false;
 
-            var opcodes = line.Opcodes;
-            var preload = pAddress;
-
-            switch( opcodes[0] )
-            {
-                case 0x18: // jr     ± byte
-                case 0x20: // jr nz  ± byte
-                case 0x28: // jr z   ± byte
-                case 0x30: // jr nc  ± byte
-                case 0x38: // jr c   ± byte
-                    break;
-
-                case 0xCA: // jp z     word
-                case 0xC3: // jp       word
-                case 0xC4: // call     word
-                case 0xCC: // call z   word
-                case 0xCD: // call     word
-                case 0xD2: // jp nc    word
-                case 0xD4: // call nc  word
-                case 0xDA: // jp c     word
-                case 0xDC: // call c   word
-                case 0xE2: // jp po    word
-                case 0xE4: // call po  word
-                case 0xEA: // jp pe    word
-                case 0xEC: // call pe  word
-                case 0xF2: // jp p     word
-                case 0xF4: // call p   word
-                case 0xFA: // jp m     word
-                case 0xFE: // call m   word
-                    preload = (ushort)(opcodes[1] | opcodes[2] << 8);
-                    break;
-
-                case 0xE9: // jp (hl)
-                    break;
-
-                case 0xCF: // rst $08
-                case 0xD7: // rst $10
-                case 0xDF: // rst $18
-                case 0xE7: // rst $20
-                case 0xEF: // rst $28
-                case 0xF7: // rst $30
-                case 0xFF: // rst $38
-                    break;
-            }
-
-            if( preload != pAddress )
-                return UpdateDisassembly( preload, pFilename );
+            if( line.Instruction.OperandType == Disassembler.Instruction.TypeEnum.CodeAddr )
+                return UpdateDisassembly( line.Instruction.Operand, pFilename );
 
             return false;
         }
@@ -439,6 +508,29 @@ namespace Spectrum
             _machine.Connection.SetRegister( this, pRegister, Format.Parse( pValue ) );
         }
 
+        public bool IsValidRegister( string pRegister )
+        {
+            try
+            {
+                var x = this[pRegister];
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        HashSet<string> _wordRegs = new HashSet<string>()
+        {
+            "PC", "SP", "AF", "BC", "DE", "HL",  "AF'", "BC'", "DE'", "HL'", "IX", "IY"
+        };
+
+        public int Size( string pRegister )
+        {
+            return _wordRegs.Contains( pRegister.ToUpper() ) ? 2 : 1;
+        }
+
         /// <summary>
         /// Get/Set the buffered value of the selected register
         /// </summary>
@@ -448,7 +540,7 @@ namespace Spectrum
         {
             get
             {
-			    switch( pRegister )
+			    switch( pRegister.ToUpper() )
 			    {
                     //
 				    case "A":   return (ushort) A;
@@ -507,7 +599,7 @@ namespace Spectrum
 
             set
             {
-                switch( pRegister )
+                switch( pRegister.ToUpper() )
                 {
                     //
                     case "A":   A     = (byte)value;          return;
@@ -590,13 +682,27 @@ namespace Spectrum
 
         public Slot GetSlot( ushort pAddress )
         {
-            var slotIndex = (int)(pAddress / SlotSize);
-            var slotAddress = (ushort)(slotIndex * SlotSize);
+            int slotIndex;
+            ushort slotAddress;
+            int slotSize;
+
+            if( PagingEnabled )
+            {
+                slotSize = SlotSize;
+                slotIndex = (int) ( pAddress / SlotSize );
+                slotAddress = (ushort) ( slotIndex * SlotSize );
+            }
+            else
+            {
+                slotSize = 0x10000;
+                slotIndex = -1;
+                slotAddress = 0;
+            }
 
             if( _slots.TryGetValue( slotIndex, out var slot ) )
                 return slot;
 
-            slot = new Slot() { ID = slotIndex, Min = slotAddress, Max = (ushort)( slotAddress + SlotSize - 1 ) };
+            slot = new Slot() { ID = slotIndex, Min = slotAddress, Max = (ushort) ( slotAddress + slotSize - 1 ) };
             _slots[slotIndex] = slot;
 
             Slots.Add( slot );
@@ -614,6 +720,7 @@ namespace Spectrum
         public void SetAddressBank( ushort pMin, ushort pMax, Bank pBank )
         {
             GetSlot( pMin ).Bank = pBank;
+            pBank.LastAddress = pMin;
             _banks[pBank.ID] = pBank;
         }
 
@@ -628,19 +735,19 @@ namespace Spectrum
             return result;
         }
 
-        public Bank ROM( int pID )
+        public Bank ROMBank( int pID )
         {
             return Bank( pID, true );
         }
 
-        public Bank RAM( int pID )
+        public Bank RAMBank( int pID )
         {
             return Bank( pID, false );
         }
 
-        public string Get( ushort pAddress, int pLength )
+        public Bank UnpagedBank()
         {
-            return _machine.Connection.ReadMemory( pAddress, pLength );
+            return Bank( -1, false );
         }
 
         public int Get( ushort pAddress, int pLength, byte[] pBuffer )
@@ -651,6 +758,21 @@ namespace Spectrum
         public void GetMapping()
         {
             _machine.Connection.RefreshMemoryPages( this );
+        }
+
+        StringBuilder _tempToString = new StringBuilder();
+        public override string ToString()
+        {
+            _tempToString.Clear();
+            foreach( var kvp in _slots )
+            {
+                if( _tempToString.Length > 0 )
+                    _tempToString.Append( ' ' );
+
+                _tempToString.Append( kvp.Key + ":" + kvp.Value.Bank.ID );
+            }
+
+            return _tempToString.ToString();
         }
     }
 
@@ -721,14 +843,14 @@ namespace Spectrum
             if( Type == BankType.RAM )
                 return "BANK_" + Number;
 
-            return "";
+            return "ALL";
         }
     }
 
     public class Bank
     {
         public BankID ID;
-
+        public ushort LastAddress;
         public string Name => ID.ToString();
     }
 

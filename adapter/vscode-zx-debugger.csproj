@@ -57,7 +57,7 @@
     <Compile Include="Format.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Machine.cs" />
-    <Compile Include="Map.cs" />
+    <Compile Include="SourceMap.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Value.cs" />
     <Compile Include="Debugger.cs" />

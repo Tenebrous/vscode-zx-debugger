@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.RegularExpressions;
 using Spectrum;
@@ -8,20 +9,24 @@ namespace ZXDebug
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg)
     /// </summary>
-    public class Map
+    public class SourceMap
     {
-        public MapBanks Banks = new MapBanks();
-        public MapSources Files = new MapSources();
+        public string Filename;
 
-        public Map( string pFilename )
+        public SourceBanks Banks = new SourceBanks();
+        public Sources Files = new Sources();
+
+        public SourceMap( string pFilename )
         {
             // banktype_bankid addr(h) ("filename":line) (label1 (label2...)) (; comment)
             //
             // ROM_0 0000h start                 ; cold start restart
             // BANK_02 8000h "C:\Users\m\AppData\Local\Temp\zcc53216.asm":1367 __Start
 
+            Filename = pFilename;
+
             var fileLine = new Regex(
-                @"(?i)^(?'banktype'ROM|BANK)_(?'bankid'\d*) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)(?'comment' *;.*?)?$"
+                @"(?i)^(?'banktype'ROM|RAM|BANK|ALL)(?:_)?((?'bankid'\d*))? (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)(?'comment' *;.*?)?$"
             );
 
             using( var reader = new StreamReader( pFilename ) )
@@ -44,7 +49,9 @@ namespace ZXDebug
                         if( labels.Length == 0 )
                             continue;
 
-                        var bankID = int.Parse( bankIDStr );
+                        int bankID;
+                        int.TryParse( bankIDStr, out bankID );
+
                         var address = Format.Parse( addressStr );
 
                         var bank = new BankID( bankTypeStr, bankID );
@@ -54,9 +61,11 @@ namespace ZXDebug
                         var labelCaptures = labels.Captures;
                         sym.Labels = new string[labelCaptures.Count];
                         for( var i = 0; i < labelCaptures.Count; i++ )
-                            sym.Labels[i] = labelCaptures[i].Value;
+                            sym.Labels[i] = labelCaptures[i].Value.Trim();
 
-                        sym.Comment = commentStr;
+                        sym.Comment = commentStr.Trim();
+                        if( sym.Comment.StartsWith( ";" ) )
+                            sym.Comment = sym.Comment.Substring( 1 ).Trim();
 
                         if( !string.IsNullOrWhiteSpace( fileStr ) )
                         {
@@ -64,58 +73,61 @@ namespace ZXDebug
                             sym.File = file;
                             sym.Line = int.Parse( lineStr );
                         }
+
+                        sym.Map = this;
                     }
                 }
             }
         }
 
-        public class MapBanks : Cache<BankID, MapBank>
+        public class SourceBanks : Cache<BankID, SourceBank>
         {
-            public MapBanks() : base( NewBank ) { }
+            public SourceBanks() : base( NewBank ) { }
 
-            static MapBank NewBank( BankID pBank )
+            static SourceBank NewBank( BankID pBank )
             {
-                return new MapBank() { Bank = pBank };
+                return new SourceBank() { Bank = pBank };
             }
         }
 
-        public class MapBank
+        public class SourceBank
         {
             public BankID Bank;
 
-            public Cache<ushort, MapAddress> Symbols;
+            public Cache<ushort, SourceAddress> Symbols;
 
-            public MapBank()
+            public SourceBank()
             {
-                Symbols = new Cache<ushort, MapAddress>( NewSymbol );
+                Symbols = new Cache<ushort, SourceAddress>( NewSymbol );
             }
 
-            MapAddress NewSymbol( ushort pAddress )
+            SourceAddress NewSymbol( ushort pAddress )
             {
-                return new MapAddress() { Address = pAddress };
+                return new SourceAddress() { Address = pAddress };
             }
         }
 
-        public class MapAddress
+        public class SourceAddress
         {
-            public ushort Address;
-            public MapSource File;
-            public int Line;
-            public string[] Labels;
-            public string Comment;
+            public SourceMap Map;
+            public ushort    Address;
+            public Source    File;
+            public int       Line;
+            public string[]  Labels;
+            public string    Comment;
         }
 
-        public class MapSources : Cache<string, MapSource>
+        public class Sources : Cache<string, Source>
         {
-            public MapSources() : base( NewSource ) { }
+            public Sources() : base( NewSource ) { }
 
-            static MapSource NewSource( string pFile )
+            static Source NewSource( string pFile )
             {
-                return new MapSource() { Filename = pFile };
+                return new Source() { Filename = pFile };
             }
         }
 
-        public class MapSource
+        public class Source
         {
             public string Filename;
         }
@@ -124,11 +136,11 @@ namespace ZXDebug
     /// <summary>
     /// A collection of Map files
     /// </summary>
-    public class Maps : List<Map>
+    public class SourceMaps : List<SourceMap>
     {
-        public Map.MapAddress Find( BankID pBank, ushort pAddress )
+        public SourceMap.SourceAddress Find( BankID pBank, ushort pAddress )
         {
-            Map.MapAddress value = null;
+            SourceMap.SourceAddress value = null;
 
             foreach( var map in this )
             {

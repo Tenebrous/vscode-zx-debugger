@@ -107,9 +107,9 @@ namespace ZEsarUX
 
 
         char[] _space = new char[] { ' ' };
-        public override List<AssemblyLine> Disassemble( ushort pAddress, int pCount, List<AssemblyLine> pResults = null )
+        public override List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pResults = null )
         {
-            var result = pResults ?? new List<AssemblyLine>();
+            var result = pResults ?? new List<InstructionLine>();
 
             var lines = SendAndReceive( "disassemble " + pAddress + " " + pCount );
 
@@ -117,11 +117,15 @@ namespace ZEsarUX
             {
                 var split = line.Split( _space, 3, StringSplitOptions.RemoveEmptyEntries );
 
-                pResults.Add( new AssemblyLine()
+                result.Add( new InstructionLine()
                     {
                         Address = Format.FromHex( split[0] ),
-                        Opcodes = Format.HexToBytes( split[1] ),
-                        Text = split[2]
+                        Instruction = new Disassembler.Instruction()
+                        {
+                            Bytes = Format.HexToBytes( split[1] ),
+                            Text = split[2],
+                            Length = split[1].Length / 2
+                        }
                     } 
                 );
             }
@@ -137,9 +141,9 @@ namespace ZEsarUX
             //   Bit 0: show all cpu registers on cpu stepping or only pc+opcode.
             //   Bit 1: show 8 next opcodes on cpu stepping.
             //   Bit 2: Do not add a L preffix when searching source code labels.
-            //   Bit 3: Show bytes when debugging opcodes"
+            // * Bit 3: Show bytes when debugging opcodes"
             //   Bit 4: Repeat last command only by pressing enter.
-            //   Bit 5: Step over interrupt when running cpu-step, cpu - step - over and run verbose.It's the same setting as Step Over Interrupt on menu"
+            // * Bit 5: Step over interrupt when running cpu-step, cpu - step - over and run verbose.It's the same setting as Step Over Interrupt on menu"
             var debugSettings = ( 1 << 3 ) | ( 1 << 5 );
 
             SendAndReceiveSingle( "set-debug-settings " + debugSettings );
@@ -152,12 +156,21 @@ namespace ZEsarUX
             var pages = SendAndReceiveSingle( "get-memory-pages" );
             // RO1 RA5 RA2 RA7 SCR5 PEN
 
-            var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+            if( string.IsNullOrWhiteSpace( pages ) )
+            {
+                // no mapping info, so probably 16k/48k etc
+                pMemory.PagingEnabled = false;
+                var bank = pMemory.UnpagedBank();
+                pMemory.SetAddressBank( 0x0000, 0xFFFF, bank );
+                return;
+            }
 
-            // pMemory.ClearMemoryMap();
+            var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
 
             ushort slotSize = pMemory.SlotSize;
             ushort slotPos = 0;
+
+            pMemory.PagingEnabled = true;
 
             foreach( var part in split )
             {
@@ -167,28 +180,22 @@ namespace ZEsarUX
                     pMemory.PagingEnabled = false;
                 else if( part.StartsWith( "RO" ) )
                 {
-                    var bank = pMemory.ROM( int.Parse( part.Substring( 2 ) ) );
+                    var bank = pMemory.ROMBank( int.Parse( part.Substring( 2 ) ) );
                     pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
-                    var bank = pMemory.RAM( int.Parse( part.Substring( 2 ) ) );
+                    var bank = pMemory.RAMBank( int.Parse( part.Substring( 2 ) ) );
                     pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
             }
         }
 
-        public override string ReadMemory( ushort pAddress, int pLength )
-        {
-            var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
-            return memory;
-        }
-
         public override int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
         {
-            var memory = ReadMemory( pAddress, pLength );
+            var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
 
             for( var i = 0; i < pLength; i++ )
                 pBuffer[i] = (byte)((Format.FromHex( memory[i*2] ) << 4) | Format.FromHex( memory[i * 2 + 1] ));

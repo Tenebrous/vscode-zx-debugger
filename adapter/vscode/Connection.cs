@@ -188,7 +188,7 @@ namespace VSCode
 
                         string resultEval = "";
                         EvaluateEvent?.Invoke(
-                             pRequest, (int)pArgs.frameId, (string)pArgs.context, (string)pArgs.expression, (bool)pArgs.format.hex,
+                             pRequest, (int)pArgs.frameId, (string)pArgs.context, (string)pArgs.expression, (bool)(pArgs.format?.hex ?? false),
                              ref resultEval
                         );
 
@@ -234,8 +234,6 @@ namespace VSCode
             }
             catch( Exception e )
             {
-                Log.Write( Log.Severity.Error, e.ToString() );
-
                 Log.Write(  
                     Log.Severity.Error,
                     $"vscode: error during request '{Format.Encode( pRequest.arguments.ToString() )}' [{pCommand}] (exception: {e.Message})\n{e}"

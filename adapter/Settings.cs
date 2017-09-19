@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace ZXDebug
@@ -8,8 +7,11 @@ namespace ZXDebug
     {
         // ReSharper disable InconsistentNaming
         public string   cwd;
-        public string[] maps;
+        public string[] sourceMaps;
+        public string[] opcodeTables;
         public bool     stopOnEntry;
+        public string   hexPrefix;
+        public string   hexSuffix;
         // ReSharper restore InconsistentNaming
 
         public string ExtensionPath;

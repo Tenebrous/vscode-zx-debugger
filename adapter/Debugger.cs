@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using Spectrum;
 
 // todo: decide between throwing exceptions or returning success/failure, and make it consistent
@@ -43,11 +44,6 @@ namespace ZXDebug
         
         public virtual void RefreshMemoryPages( Memory pMemory )
         {
-        }
-
-        public virtual string ReadMemory( ushort pAddress, int pLength )
-        {
-            return null;
         }
 
         public virtual int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
@@ -105,7 +101,7 @@ namespace ZXDebug
             return false;
         }
 
-        public virtual List<AssemblyLine> Disassemble( ushort pAddress, int pCount, List<AssemblyLine> pOutput = null )
+        public virtual List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pOutput = null )
         {
             return pOutput;
         }
@@ -126,11 +122,11 @@ namespace ZXDebug
         }
     }
 
-    public class AssemblyLine
+    public class InstructionLine
     {
         public ushort Address;
-        public byte[] Opcodes;
-        public string Text;
+        public int    FileLine;
+        public Disassembler.Instruction Instruction;
     }
 
     public class Meta
@@ -139,3 +135,4 @@ namespace ZXDebug
         public bool CanEvaluate;
     }
 }
+ 

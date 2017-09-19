@@ -172,16 +172,44 @@ namespace ZXDebug
 	        _settings.FromJSON( pJSONSettings );
 	        _settings.Validate();
 
-            _machine.Maps.Clear();
-	        foreach( var map in _settings.maps )
+	        _machine.HexPrefix = _settings.hexPrefix;
+	        _machine.HexSuffix = _settings.hexSuffix;
+
+            _machine.SourceMaps.Clear();
+	        foreach( var map in _settings.sourceMaps )
 	        {
-	            var fullpath = Path.Combine( _settings.cwd, map );
-	            _machine.Maps.Add( new Map( fullpath ) );
+	            var file = FindFile( map, "maps" );
+                _machine.SourceMaps.Add( new SourceMap( file ) );
+	            Log.Write( Log.Severity.Message, "Loaded " + file );
 	        }
 
-	        _machine.Disassembler.ClearLayers();
-	        _machine.Disassembler.AddLayer( Path.Combine( _settings.ExtensionPath, "opcodes\\z80.tbl" ) );
-	        _machine.Disassembler.AddLayer( Path.Combine( _settings.ExtensionPath, "opcodes\\next.tbl" ) );
+            _machine.Disassembler.ClearLayers();
+	        foreach( var table in _settings.opcodeTables )
+	        {
+	            var file = FindFile( table, "opcodes" );
+	            _machine.Disassembler.AddLayer( file );
+	            Log.Write( Log.Severity.Message, "Loaded " + file );
+	        }
+	    }
+
+	    static string FindFile( string pFilename, string pSubFolder )
+	    {
+	        if( File.Exists( pFilename ) )
+	            return pFilename;
+
+	        var path = Path.Combine( _settings.cwd, pFilename );
+	        if( File.Exists( path ) )
+	            return path;
+
+	        path = Path.Combine( _settings.ExtensionPath, pFilename );
+	        if( File.Exists( path ) )
+	            return path;
+
+	        path = Path.Combine( _settings.ExtensionPath, pSubFolder, pFilename );
+	        if( File.Exists( path ) )
+	            return path;
+
+            throw new FileNotFoundException( "Can't find file", pFilename );
 	    }
 
         static void VSCode_OnConfigurationDone( Request pRequest )
@@ -284,64 +312,90 @@ namespace ZXDebug
 			return _debugger.CustomCommand( pExpression );
 		}
 
-		static string VSCode_OnEvaluate_Variable( Request pRequest, string pExpression )
-		{
-	        var value = "";
-            var formatted = "";
+	    static char[] _varSplitChar = new[] { ' ', ',' };
+	    static byte[] _tempVar = new byte[1024];
+	    static string VSCode_OnEvaluate_Variable( Request pRequest, string pExpression )
+	    {
+	        var result = "n/a";
 
-	        var prefix = "";
+	        var parts = pExpression.Split( _varSplitChar, StringSplitOptions.RemoveEmptyEntries );
 
-	        var split = pExpression.Split( new []{' ', ','}, StringSplitOptions.RemoveEmptyEntries );
-	        var parseIndex = 0;
+	        bool gotAddress = false;
+	        bool gotLength = false;
+	        bool gotData = false;
+	        var isPointer = false;
+	        var isRegister = false;
+	        ushort address = 0;
+	        int parsedLength = 0;
+	        int length = 0;
 
-	        if( split[parseIndex].StartsWith( "(" ) && split[parseIndex].EndsWith( ")" ) )
-	        {
-	            var target = split[parseIndex].Substring( 1, split[parseIndex].Length - 2 );
-	            ushort address;
+	        foreach( string part in parts )
+            {
+	            var text = part;
 
-	            if( _registersValues.HasAllByName( target ) )
+	            if( !gotAddress )
 	            {
-	                address = Convert.ToUInt16( _registersValues.AllByName( target ).Content );
-	                prefix = $"${address:X4}: ";
+	                if( text.StartsWith( "(" ) && text.EndsWith( ")" ) )
+	                {
+	                    isPointer = true;
+	                    text = text.Substring( 1, text.Length - 2 ).Trim();
+	                }
+
+	                if( _machine.Registers.IsValidRegister( text ) )
+	                {
+	                    address = _machine.Registers[text];
+	                    length = 2;
+	                    gotLength = true;
+	                    isRegister = true;
+
+                        if( !isPointer )
+	                    {
+	                        _tempVar[0] = (byte)( address & 0xFF );
+
+                            if( length == 2 )
+                            {
+                                _tempVar[1] = _tempVar[0];
+	                            _tempVar[0] = (byte)( address >> 8 );
+	                        }
+
+	                        length = _machine.Registers.Size( text );
+	                        gotLength = true;
+	                        gotData = true;
+                        }
+                    }
+	                else
+	                {
+	                    address = Format.Parse( text );
+	                    length = 1;
+	                    gotLength = true;
+	                }
+
+                    gotAddress = true;
+
+	                continue;
 	            }
-	            else
-	                address = Format.Parse( target );
 
-	            var length = 2;
-	            parseIndex++;
+	            if( gotAddress && int.TryParse( text, out parsedLength ) )
+	            {
+	                length = Math.Max( 0, Math.Min( parsedLength, _tempVar.Length ) );
+	                gotLength = true;
 
-                if( split.Length > parseIndex )
-                    if( int.TryParse( split[parseIndex], out length ) )
-                        parseIndex++;
-                    else
-                        length = 2;
-
-	            value = _machine.Memory.Get( address, length );
-	            formatted = value;
+	                continue;
+	            }
 	        }
-	        else if( _registersValues.HasAllByName( split[parseIndex] ) )
-			{
-				var reg = _registersValues.AllByName( split[parseIndex] );
 
-				value = reg.Content;
-				formatted = reg.Formatted;
-				parseIndex++;
-			}
-			else
-			{
-			    if( _debugger.Meta.CanEvaluate )
-			    {
-			        // todo: hand over anything else to the Debugger if it supports evaluation
-                }
-            }
+	        if( gotAddress && gotLength && !gotData )
+	        {
+	            _machine.Memory.Get( address, length, _tempVar );
+	        }
 
-	        if( split.Length > parseIndex )
-				if( Format.ApplyRule( split[parseIndex], value, ref formatted ) )
-					parseIndex++;
+            result = Format.ToHex( _tempVar, length );
 
-			return prefix + formatted;
+	        if( isPointer && isRegister )
+	            result = "(" + ( _machine.FormattedHex16( address ) ) + ") " + result;
+            
+	        return result;
 	    }
-
 
         static void VSCode_OnGetVariables( Request pRequest, int pReference, List<Variable> pResult )
         {

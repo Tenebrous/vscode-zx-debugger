@@ -20,17 +20,34 @@ namespace ZXDebug
         public static ushort Parse( string pValue )
         {
 	        ushort result = 0;
+            var isHex = false;
 
 	        try
 	        {
-	            if( pValue.StartsWith( "$" ) )
-	                result = Convert.ToUInt16( pValue.Substring( 1 ), 16 );
-	            else if( pValue.StartsWith( "0x" ) )
-	                result = Convert.ToUInt16( pValue.Substring( 2 ), 16 );
-                else if( pValue.EndsWith( "h" ) )
-	                result = Convert.ToUInt16( pValue.Substring( 0, pValue.Length - 1 ), 16 );
-                else
-	                result = ushort.Parse( pValue );
+	            while( true )
+	            {
+	                if( pValue.StartsWith( "&h" ) || pValue.StartsWith( "&H" ) || pValue.StartsWith( "0x" ) )
+	                {
+	                    pValue = pValue.Substring( 2 );
+	                    isHex = true;
+	                }
+	                else if( pValue.StartsWith( "$" ) || pValue.StartsWith( "&" ) || pValue.StartsWith( "h" ) || pValue.StartsWith( "H" ) || pValue.StartsWith( "#" ) )
+	                {
+	                    pValue = pValue.Substring( 1 );
+	                    isHex = true;
+	                }
+	                else if( pValue.EndsWith( "h" ) || pValue.EndsWith( "H" ) )
+	                {
+	                    pValue = pValue.Substring( 0, pValue.Length - 1 );
+	                    isHex = true;
+	                }
+	                else
+	                {
+	                    break;
+	                }
+	            }
+
+                result =  isHex ? Convert.ToUInt16( pValue, 16 ) : ushort.Parse( pValue );
             }
             catch( Exception e )
 	        {
@@ -120,15 +137,27 @@ namespace ZXDebug
             return result;
         }
 
-       
+
         public static string ToHex( byte[] pBytes )
         {
             return BitConverter.ToString( pBytes ).Replace( "-", "" );
         }
 
+        public static string ToHex( byte[] pBytes, int pLength )
+        {
+            return BitConverter.ToString( pBytes, 0, pLength ).Replace( "-", "" );
+        }
+
         public static string Encode( string pString )
         {
             return pString.Replace( "\r", "\\r" ).Replace( "\n", "\\n" );
+        }
+
+        public static T[] Extract<T>( this T[] pData, int pIndex, int pLength )
+        {
+            var result = new T[pLength];
+            Array.Copy( pData, pIndex, result, 0, pLength );
+            return result;
         }
     }
 }
