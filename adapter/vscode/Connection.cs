@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Newtonsoft.Json;
 using ZXDebug;
 
@@ -47,26 +48,127 @@ namespace VSCode
         public event EventHandler GetLoadedSourcesEvent;
         public event EventHandler ConfigurationDoneEvent;
 
-        public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool bHex, ref string pResult );
+        public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool pHex, ref string pResult );
         public event EvaluateHandler EvaluateEvent;
 
-        static readonly Regex _contentLength = new Regex(@"Content-Length: (\d+)\r\n\r\n");
-        static readonly Encoding _encoding = System.Text.Encoding.UTF8;
-
-        Stream _input;
-        Reader _inputReader;
+        
         Stream _output;
-        StringBuilder _rawData = new StringBuilder();
+        StringBuilder _inputBuffer = new StringBuilder();
 
-        Request _currentRequest;
+        System.Threading.Thread _inputThread;
+        Encoding _inputEncoding;
 
         public Connection()
         {
-            _input = Console.OpenStandardInput();
-            _inputReader = new Reader( _input );
-
+            _inputEncoding = Console.InputEncoding;
             _output = Console.OpenStandardOutput();
+
+            _inputThread = new System.Threading.Thread( ReadThread );
+            _inputThread.Start( Console.OpenStandardInput() );
         }
+
+        byte[] _tempReadBuffer = new byte[4096];
+        void ReadThread( object pStream )
+        {
+            var stream = (Stream)pStream;
+
+            try
+            {
+                while( true )
+                {
+                    var read = stream.Read( _tempReadBuffer, 0, _tempReadBuffer.Length );
+
+                    if( read > -1 )
+                        lock( _inputBuffer )
+                        {
+                            var str = _inputEncoding.GetString( _tempReadBuffer, 0, read );
+                            _inputBuffer.Append( str );
+                        }
+                }
+            }
+            catch( ThreadAbortException )
+            {
+                // this is fine, means we can exit the loop
+            }
+        }
+        
+        public void Stop()
+        {
+            _inputThread.Abort();
+        }
+
+
+        public bool Process()
+        {
+            lock( _inputBuffer )
+            {
+                if( _inputBuffer.Length <= 0 )
+                    return false;
+
+                ProcessData();
+            }
+
+            return true;
+        }
+
+        static Regex _contentLength = new Regex(@"Content-Length: (\d+)\r\n\r\n");
+        void ProcessData()
+        {
+            while( true )
+            {
+                var data = _inputBuffer.ToString();
+
+                // find size text
+                var match = _contentLength.Match( data );
+
+                if( !match.Success || match.Groups.Count != 2 )
+                    break;
+
+                var size = Convert.ToInt32( match.Groups[1].ToString() );
+                var end = match.Index + match.Length;
+
+                if( data.Length < end + size )
+                    break;
+
+                var message = data.Substring( end, size );
+
+                _inputBuffer.Remove( 0, end + size );
+
+                ProcessMessage( message );
+            }
+        }
+
+        void ProcessMessage( string pMessage )
+        {
+            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + pMessage );
+
+            Request request;
+
+            try
+            {
+                request = JsonConvert.DeserializeObject<Request>( pMessage );
+            }
+            catch( Exception e )
+            {
+                Log.Write( Log.Severity.Error, "The following message caused an error: [" + pMessage.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
+                Log.Write( Log.Severity.Error, e.ToString() );
+                return;
+            }
+
+            if( request == null )
+                return;
+
+            Log.Write( Log.Severity.Debug, "vscode: (in)  " + request.type + " " + request.command );
+
+            if( request.type == "request" )
+            {
+                HandleMessage( request.command, request.arguments, request );
+
+                if( !request.responded )
+                    Send( request );
+            }
+        }
+
 
         // commands/events sent to vscode
 
@@ -162,7 +264,6 @@ namespace VSCode
 
                     case "setVariable":
 
-	                    string val = pArgs.value.ToString();
                         var variable = new Variable( (string)pArgs.name, (string)pArgs.value, "", (int)pArgs.variablesReference );
                     
                         SetVariableEvent?.Invoke( 
@@ -244,81 +345,6 @@ namespace VSCode
         }
 
 
-        //
-
-        public bool Process()
-        {
-            if( !_inputReader.HasData )
-                return false;
-
-            var data = Encoding.ASCII.GetString( _inputReader.GetData() );
-            _rawData.Append(data);
-            ProcessData();
-
-            return true;
-        }
-
-        void ProcessData()
-        {
-            while( true )
-            {
-                var data = _rawData.ToString();
-
-                // find size text
-                var match = _contentLength.Match( data );
-
-                if( !match.Success || match.Groups.Count != 2 )
-                    break;
-
-                var size = Convert.ToInt32( match.Groups[1].ToString() );
-                var end = match.Index + match.Length;
-
-                if( data.Length < end + size )
-                    break;
-
-                var message = data.Substring( end, size );
-
-                _rawData.Remove( 0, end + size );
-
-                ProcessMessage( message );
-            }
-        }
-
-        void ProcessMessage(string pMessage)
-        {
-            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + pMessage );
-
-            Request request = null;
-
-            try
-            {
-                request = JsonConvert.DeserializeObject<Request>(pMessage);
-            }
-            catch( Exception e )
-            {
-                Log.Write( Log.Severity.Error, "The following message caused an error: [" + pMessage.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
-                Log.Write( Log.Severity.Error, e.ToString() );
-                return;
-            }
-
-            if( request == null )
-                return;
-
-            Log.Write( Log.Severity.Debug, "vscode: (in)  " + request.type + " " + request.command );
-
-            if( request.type == "request" )
-            {
-                _currentRequest = request;
-
-                HandleMessage( request.command, request.arguments, request );
-
-                if( !request.responded )
-                    Send( request );
-
-                _currentRequest = null;
-            }
-        }
-
         // send response to request
         public void Send( Request pRequest, ResponseBody pResponse = null, string pErrorMessage = null )
         {
@@ -326,7 +352,7 @@ namespace VSCode
 
             Log.Write( Log.Severity.Debug, "vscode: (out) response " +
                         pRequest.command
-                        + (pResponse == null ? "" : " response:" + pResponse.ToString())
+                        + (pResponse == null ? "" : " response:" + pResponse)
                         + (pErrorMessage == null ? "" : " error:'" + pErrorMessage + "'")
                      );
 
@@ -363,52 +389,18 @@ namespace VSCode
         static byte[] ConvertToBytes( ProtocolMessage pMessage )
         {
             var asJson = JsonConvert.SerializeObject( pMessage );
-            var jsonBytes = _encoding.GetBytes(asJson);
+            var jsonBytes = Encoding.UTF8.GetBytes(asJson);
 
             var header = $"Content-Length: {jsonBytes.Length}\r\n\r\n";
-            var headerBytes = _encoding.GetBytes(header);
+            var headerBytes = Encoding.UTF8.GetBytes(header);
 
             Log.Write( Log.Severity.Verbose, "vscode: (out) [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
-            System.Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);
-            System.Buffer.BlockCopy(jsonBytes, 0, data, headerBytes.Length, jsonBytes.Length);
+            Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);
+            Buffer.BlockCopy(jsonBytes, 0, data, headerBytes.Length, jsonBytes.Length);
 
             return data;
-        }
-    }
-
-    class Reader
-    {
-        byte[] _buffer = new byte[4096];
-        MemoryStream _stream = new MemoryStream();
-
-        public Reader( Stream pStream )
-        {
-            pStream.BeginRead( _buffer, 0, _buffer.Length, Callback, pStream );
-        }
-
-        void Callback( IAsyncResult pResult )
-        {
-            var stream = (Stream) pResult.AsyncState;
-            var bytes = stream.EndRead( pResult );
-            _stream.Write( _buffer, 0, bytes );
-
-            stream.BeginRead( _buffer, 0, _buffer.Length, Callback, stream );
-        }
-
-        public bool HasData
-        {
-            get { return _stream.Length > 0; }
-        }
-
-        public byte[] GetData()
-        {
-            var result = _stream.ToArray();
-
-            _stream = new MemoryStream();
-
-            return result;
         }
     }
 }
