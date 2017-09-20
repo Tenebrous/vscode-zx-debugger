@@ -1,18 +1,18 @@
 >ED
-  | 0           | 1               | 2             | 3        | 4          | 5          | 6          | 7        | 8        | 9          | A           | B            | C          | D           | E | F
-0 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-1 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-2 | ld a32,dehl | ld dehl,a32     | ex a32,dehl   | swapnib  | mirror a   | ld hl,sp   | mirror de  | test {b} |          |            |             |              |            |             |   |
-3 | mul         | add hl,a        | add de,a      | add bc,a | add hl,{w} | add de,{w} | add bc,{w} | inc dehl | dec dehl | add dehl,a | add dehl,bc | add dehl,{w} | sub dehl,a | sub dehl,bc |   |
-4 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-5 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-6 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-7 |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-8 |             |                 |               |          |            |            |            |          |          |            | push {w}    | popx         |            |             |   |
-9 | outinb      | nextreg {b},{b} | nextreg {b},a | pixeldn  | pixelad    | setae      |            |          |          |            |             |              |            |             |   |
-A |             |                 |               |          | ldix       |            |            |          |          |            |             |              |            |             |   |
-B |             |                 |               |          | ldirx      | fillde     | ldirscale  | ldpirx   |          |            |             |              | lddrx      |             |   |
-C |             |                 |               |          | lddx       |            |            |          |          |            |             |              |            |             |   |
-D |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-E |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
-F |             |                 |               |          |            |            |            |          |          |            |             |              |            |             |   |
+  | 0            | 1                | 2              | 3         | 4           | 5           | 6           | 7        | 8        | 9           | A            | B             | C           | D            | E | F
+0 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+1 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+2 | ld a32, dehl | ld dehl, a32     | ex a32, dehl   | swapnib   | mirror a    | ld hl, sp   | mirror de   | test {b} |          |             |              |               |             |              |   |
+3 | mul          | add hl, a        | add de, a      | add bc, a | add hl, {w} | add de, {w} | add bc, {w} | inc dehl | dec dehl | add dehl, a | add dehl, bc | add dehl, {w} | sub dehl, a | sub dehl, bc |   |
+4 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+5 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+6 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+7 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+8 |              |                  |                |           |             |             |             |          |          |             | push {w}     | popx          |             |              |   |
+9 | outinb       | nextreg {b}, {b} | nextreg {b}, a | pixeldn   | pixelad     | setae       |             |          |          |             |              |               |             |              |   |
+A |              |                  |                |           | ldix        |             |             |          |          |             |              |               |             |              |   |
+B |              |                  |                |           | ldirx       | fillde      | ldirscale   | ldpirx   |          |             |              |               | lddrx       |              |   |
+C |              |                  |                |           | lddx        |             |             |          |          |             |              |               |             |              |   |
+D |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+E |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
+F |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
