@@ -172,8 +172,8 @@ namespace ZXDebug
 	        _settings.FromJSON( pJSONSettings );
 	        _settings.Validate();
 
-	        _machine.HexPrefix = _settings.hexPrefix;
-	        _machine.HexSuffix = _settings.hexSuffix;
+	        Format.HexPrefix = _settings.hexPrefix;
+	        Format.HexSuffix = _settings.hexSuffix;
 
             _machine.SourceMaps.Clear();
 	        foreach( var map in _settings.sourceMaps )
@@ -392,7 +392,7 @@ namespace ZXDebug
             result = Format.ToHex( _tempVar, length );
 
 	        if( isPointer && isRegister )
-	            result = "(" + ( _machine.FormattedHex16( address ) ) + ") " + result;
+	            result = "(" + ( Format.ToHex( address, 2 ) ) + ") " + result;
             
 	        return result;
 	    }
@@ -434,13 +434,12 @@ namespace ZXDebug
         static void VSCode_OnDisconnect( Request pRequest )
 	    {
 	        _machine.Stop();
+            _vscode.Stop();
 	        _running = false;
 	    }
 
 
-
         // events from values/variables
-
 
         static void SetupValues( Value pValues, Machine pMachine )
         {

@@ -37,7 +37,8 @@ namespace ZXDebug
             _layers.Add( layer );
         }
 
-        Queue<byte> _saved = new Queue<byte>();
+        Queue<byte> _tempByteQueue = new Queue<byte>();
+        Operand[] _tempOperands = new Operand[2];
 
         /// <summary>
         /// Disassemble one instruction from the provided bytes starting from the indicated position
@@ -45,17 +46,36 @@ namespace ZXDebug
         /// <param name="pBytes">Bytes to be disassembled</param>
         /// <param name="pStart">Starting position</param>
         /// <returns>A new Op representing the instruction, or null if not valid</returns>
-        public Instruction Get( byte[] pBytes, int pStart )
+        public Instruction Disassemble( byte[] pBytes, int pStart )
         {
-            _saved.Clear();
 
-            var tableName = "start";
-
-            Instruction instruction = null;
             var stream = new MemoryStream( pBytes, pStart, pBytes.Length - pStart );
+
+            // decipher instruction
+
+            var instruction = GetInstruction( stream );
+
+            if( instruction == null )
+                return null;
+
+            // parse the opcode text to get any operands
+
+            GetOperands( instruction, stream );
+
+            instruction.Length = (int)stream.Position;
+            instruction.Bytes = pBytes.Extract( pStart, instruction.Length );
+
+            return instruction;
+        }
+
+        Instruction GetInstruction( MemoryStream pStream )
+        {
+            _tempByteQueue.Clear();
+            var tableName = "start";
+            Instruction instruction = null;
             int current;
 
-            while( ( current = stream.ReadByte() ) > -1 )
+            while( ( current = pStream.ReadByte() ) > -1 )
             {
                 var currentByte = (byte) current;
                 string nextTableName = null;
@@ -71,7 +91,7 @@ namespace ZXDebug
                         continue;
                     }
 
-                    // does the table have the byte as a sub table?
+                    // does the table entry indicate this goes to a sub table?
                     if( table.SubTables.TryGetValue( currentByte, out var subTable ) )
                     {
                         // yes, save table name to move to once we've finished the layers
@@ -80,7 +100,7 @@ namespace ZXDebug
                         continue;
                     }
 
-                    // does the table have the byte as a final opcode?
+                    // does the table entry indicate this is the final opcode?
                     if( table.Opcodes.TryGetValue( currentByte, out var opText ) && !string.IsNullOrWhiteSpace( opText ) )
                     {
                         // yes, save it
@@ -101,13 +121,13 @@ namespace ZXDebug
                         // "TABLE*" with asterisk at the end means we need save next 
                         // byte to be used after we decipher the instruction
 
-                        var saveByte = stream.ReadByte();
+                        var saveByte = pStream.ReadByte();
 
                         if( saveByte == -1 )
                             throw new Exception( "Ran out of bytes" );
 
                         tableName = tableName.Remove( tableName.Length - 3 ).Trim();
-                        _saved.Enqueue( (byte) saveByte );
+                        _tempByteQueue.Enqueue( (byte) saveByte );
                     }
                 }
                 else if( result != null )
@@ -123,111 +143,52 @@ namespace ZXDebug
                 }
             }
 
-            if( instruction == null )
-                return instruction;
+            return instruction;
+        }
 
+        void GetOperands( Instruction pInstruction, MemoryStream pStream )
+        {
+            var operands = 0;
 
-            // now process the opcode to get any immediate values
-
-            var pos = 0;
-
-            while( pos < instruction.Text.Length )
+            var start = pInstruction.Text.IndexOf( '{' );
+            while( start > -1 )
             {
-                var foundPos = 0;
+                var end = pInstruction.Text.IndexOf( '}', start );
 
-                if( ( foundPos = instruction.Text.IndexOf( "{b}", pos, StringComparison.Ordinal ) ) > -1 )
-                {
-                    // byte argument
-
-                    var b = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-
-                    if( b == -1 )
-                        throw new Exception( "Ran out of bytes" );
-
-                    instruction.OperandType = Instruction.TypeEnum.Imm8;
-                    instruction.Operand = (ushort)b;
-
-                    pos = foundPos + 3;
-
-                    //instruction.Text = $"{instruction.Text.Substring( 0, pos )}${b:X2}{instruction.Text.Substring( pos + 3 )}";
-                }
-                else if( ( foundPos = instruction.Text.IndexOf( "{w}", pos, StringComparison.Ordinal ) ) > -1 )
-                {
-                    // word argument
-
-                    var lo = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-                    var hi = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-
-                    if( lo == -1 || hi == -1 )
-                        throw new Exception( "Ran out of bytes" );
-
-                    instruction.OperandType = Instruction.TypeEnum.Imm16;
-                    instruction.Operand = (ushort)( hi << 8 | lo );
-
-                    pos = foundPos + 3;
-
-                    //instruction.Text = $"{instruction.Text.Substring( 0, pos )}${instruction.Operand:X4}{instruction.Text.Substring( pos + 3 )}";
-                }
-                else if( ( foundPos = instruction.Text.IndexOf( "{code}", pos, StringComparison.Ordinal ) ) > -1 )
-                {
-                    // code address
-
-                    var lo = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-                    var hi = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-
-                    if( lo == -1 || hi == -1 )
-                        throw new Exception( "Ran out of bytes" );
-
-                    instruction.OperandType = Instruction.TypeEnum.CodeAddr;
-                    instruction.Operand = (ushort)( hi << 8 | lo );
-
-                    pos = foundPos + 6;
-
-                    //instruction.Text = $"{instruction.Text.Substring( 0, pos )}${instruction.Operand:X4}{instruction.Text.Substring( pos + 6 )}";
-                }
-                else if( ( foundPos = instruction.Text.IndexOf( "{data}", pos, StringComparison.Ordinal ) ) > -1 )
-                {
-                    // data address
-
-                    var lo = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-                    var hi = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-
-                    if( lo == -1 || hi == -1 )
-                        throw new Exception( "Ran out of bytes" );
-
-                    instruction.OperandType = Instruction.TypeEnum.DataAddr;
-                    instruction.Operand = (ushort)( hi << 8 | lo );
-
-                    pos = foundPos + 6;
-
-                    //instruction.Text = $"{instruction.Text.Substring( 0, pos )}${instruction.Operand:X4}{instruction.Text.Substring( pos + 6 )}";
-                }
-                else if( ( foundPos = instruction.Text.IndexOf( "{+b}", pos, StringComparison.Ordinal ) ) > -1 )
-                {
-                    // offset arguments
-
-                    var b = _saved.Count > 0 ? _saved.Dequeue() : stream.ReadByte();
-
-                    if( b == -1 )
-                        throw new Exception( "Ran out of bytes" );
-
-                    instruction.OperandType = Instruction.TypeEnum.Rel8;
-                    instruction.Operand = (ushort)b;
-
-                    pos = foundPos + 4;
-
-                    //instruction.Text = $"{instruction.Text.Substring( 0, pos )}+${b:X2}{instruction.Text.Substring( pos + 4 )}";
-                }
-                else
-                {
+                if( end == -1 )
                     break;
+
+                var specifier = pInstruction.Text.Substring( start + 1, end - start - 1 );
+                var type = Operand.TypeEnum.Unknown;
+                var length = 0;
+                var lo = 0;
+                var hi = 0;
+
+                switch( specifier )
+                {
+                    case "b":    type = Operand.TypeEnum.Imm8;     length = 1; break;
+                    case "+b":   type = Operand.TypeEnum.Rel8;     length = 1; break;
+                    case "w":    type = Operand.TypeEnum.Imm16;    length = 2; break;
+                    case "code": type = Operand.TypeEnum.CodeAddr; length = 2; break;
+                    case "data": type = Operand.TypeEnum.DataAddr; length = 2; break;
                 }
+
+                if( length > 0 )
+                    lo = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : pStream.ReadByte();
+
+                if( length > 1 )
+                    hi = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : pStream.ReadByte();
+
+                if( lo == -1 || hi == -1 )
+                    throw new Exception( "Ran out of bytes processing {" + specifier + "} in '" + pInstruction.Text + "'" );
+
+                _tempOperands[operands++] = new Operand( type, hi << 8 | lo );
+
+                start = pInstruction.Text.IndexOf( '{', end );
             }
 
-            instruction.Length = (int) stream.Position;
-            instruction.Bytes = pBytes.Extract( pStart, instruction.Length );
-
-            return instruction;
+            if( operands > 0 )
+                pInstruction.Operands = _tempOperands.Extract( 0, operands );
         }
 
         /// <summary>
@@ -326,10 +287,11 @@ namespace ZXDebug
             public Dictionary<byte, string> Opcodes = new Dictionary<byte, string>();
         }
 
-        public class Instruction
+        public struct Operand
         {
             public enum TypeEnum : byte
             {
+                Unknown,
                 Imm8,
                 Imm16,
                 Rel8,
@@ -337,12 +299,29 @@ namespace ZXDebug
                 CodeAddr
             }
 
+            public TypeEnum Type;
+            public ushort Value;
+
+            public Operand( TypeEnum pType, ushort pValue )
+            {
+                Type = pType;
+                Value = pValue;
+            }
+
+            public Operand( TypeEnum pType, int pValue )
+            {
+                Type = pType;
+                Value = (ushort)pValue;
+            }
+        }
+
+        public class Instruction
+        {
             public int    Length;
             public byte[] Bytes;
             public string Text;
 
-            public TypeEnum OperandType;
-            public ushort Operand;
+            public Operand[] Operands;
         }
     }
 }

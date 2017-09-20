@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using ZXDebug;
 
 namespace Spectrum
@@ -154,7 +155,7 @@ namespace Spectrum
             {
                 Disassembler.Instruction instruction;
 
-                while( ( instruction = Disassembler.Get( opcodes, index ) ) != null && _tempDisasm.Count < 30 )
+                while( ( instruction = Disassembler.Disassemble( opcodes, index ) ) != null && _tempDisasm.Count < 30 )
                 {
                     _tempDisasm.Add( new InstructionLine()
                         {
@@ -249,7 +250,7 @@ namespace Spectrum
                     if( !doneHeader )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Not currently paged in (was {0}):", FormattedHex16( bank.LastAddress ) );
+                        stream.WriteLine( "Not currently paged in (was {0}):", Format.ToHex( bank.LastAddress, 2 ) );
                         doneHeader = true;
                     }
 
@@ -259,16 +260,6 @@ namespace Spectrum
             }
 
             File.SetAttributes( pFilename, FileAttributes.ReadOnly );
-        }
-
-        public string FormattedHex8( ushort pValue )
-        {
-            return string.Format( "{0}{1:X2}{2}", HexPrefix, pValue, HexSuffix );
-        }
-
-        public string FormattedHex16( ushort pValue )
-        {
-            return string.Format( "{0}{1:X4}{2}", HexPrefix, pValue, HexSuffix );
         }
 
         StringBuilder _tempLabelBuilder = new StringBuilder();
@@ -348,43 +339,82 @@ namespace Spectrum
 
         string FormatInstruction( Disassembler.Instruction pInstruction )
         {
-            switch( pInstruction.OperandType )
-            {
-                case Disassembler.Instruction.TypeEnum.Imm8:
-                    return pInstruction.Text.Replace( "{b}", FormattedHex8( pInstruction.Operand ) );
+            string comment = null;
+            var text = pInstruction.Text;
 
-                case Disassembler.Instruction.TypeEnum.Imm16:
-                    return pInstruction.Text.Replace( "{w}", FormattedHex16( pInstruction.Operand ) );
+            if( pInstruction.Operands == null || pInstruction.Operands.Length == 0 )
+                return text;
 
-                case Disassembler.Instruction.TypeEnum.Rel8:
-                    return pInstruction.Text.Replace( "{+b}", "+" + FormattedHex8( pInstruction.Operand ) );
+            foreach( var op in pInstruction.Operands )
+            { 
+                switch( op.Type )
+                {
+                    case Disassembler.Operand.TypeEnum.Imm8:
+                        text = ReplaceFirst( text, "{b}", Format.ToHex( op.Value, 1 ) );
+                        break;
 
-                case Disassembler.Instruction.TypeEnum.DataAddr:
+                    case Disassembler.Operand.TypeEnum.Imm16:
+                        text = ReplaceFirst( text, "{w}", Format.ToHex( op.Value, 2 ) );
+                        break;
 
-                    var dataSymbol = Symbol( pInstruction.Operand );
+                    case Disassembler.Operand.TypeEnum.Rel8:
+                        var offset = (int)op.Value;
+                        var sign = '+';
 
-                    if( dataSymbol != null )
-                        return pInstruction.Text.Replace( 
-                            "{data}", 
-                            string.Format( "{0} ({1})", dataSymbol.Labels[0], FormattedHex16( pInstruction.Operand ) ) 
-                        );
+                        if( ( op.Value & 0x80 ) == 0x80 )
+                        {
+                            offset = -(byte)~(byte)( op.Value - 1 );
+                            sign = '-';
+                        }
 
-                    return pInstruction.Text.Replace( "{data}", FormattedHex16( pInstruction.Operand ) );
+                        text = ReplaceFirst( text, "{+b}", sign + Format.ToHex( (ushort)Math.Abs(offset), 1 ) );
 
-                case Disassembler.Instruction.TypeEnum.CodeAddr:
+                        break;
 
-                    var codeSymbol = Symbol( pInstruction.Operand );
+                    case Disassembler.Operand.TypeEnum.DataAddr:
 
-                    if( codeSymbol != null )
-                        return pInstruction.Text.Replace(
-                            "{code}",
-                            string.Format( "{0} ({1})", codeSymbol.Labels[0], FormattedHex16( pInstruction.Operand ) )
-                        );
+                        var dataSymbol = Symbol( op.Value );
 
-                    return pInstruction.Text.Replace( "{code}", FormattedHex16( pInstruction.Operand ) );
+                        if( dataSymbol != null )
+                        {
+                            text = ReplaceFirst( text, "{data}", dataSymbol.Labels[0] );
+                            comment = Format.ToHex( op.Value, 2 );
+                        }
+                        else
+                            text = ReplaceFirst( text, "{data}", Format.ToHex( op.Value, 2 ) );
+
+                        break;
+
+                    case Disassembler.Operand.TypeEnum.CodeAddr:
+
+                        var codeSymbol = Symbol( op.Value );
+
+                        if( codeSymbol != null )
+                        {
+                            text = ReplaceFirst( text, "{code}", codeSymbol.Labels[0] );
+                            comment = Format.ToHex( op.Value, 2 );
+                        }
+                        else
+                            text = ReplaceFirst( text, "{code}", Format.ToHex( op.Value, 2 ) );
+
+                        break;
+                }
             }
 
-            return "";
+            if( comment != null )
+                text = text.PadRight( 30 ) + "; " + comment;
+
+            return text;
+        }
+
+        string ReplaceFirst( string pHaystack, string pNeedle, string pNewNeedle )
+        {
+            var pos = pHaystack.IndexOf( pNeedle, StringComparison.OrdinalIgnoreCase );
+
+            if( pos == -1 )
+                return pHaystack;
+
+            return pHaystack.Substring( 0, pos ) + pNewNeedle + pHaystack.Substring( pos + pNeedle.Length );
         }
 
         SourceMap.SourceAddress Symbol( ushort pAddress )
@@ -434,8 +464,9 @@ namespace Spectrum
             if( !bank.Lines.TryGetValue( (ushort)offset, out var line ) )
                 return false;
 
-            if( line.Instruction.OperandType == Disassembler.Instruction.TypeEnum.CodeAddr )
-                return UpdateDisassembly( line.Instruction.Operand, pFilename );
+            if( line.Instruction.Operands != null && line.Instruction.Operands.Length > 0 )
+                if( line.Instruction.Operands[0].Type == Disassembler.Operand.TypeEnum.CodeAddr )
+                    return UpdateDisassembly( line.Instruction.Operands[0].Value, pFilename );
 
             return false;
         }
@@ -444,7 +475,7 @@ namespace Spectrum
         {
             // temporarily end disasm on a RET to see if it simplifies things
 
-            if( pOpcodes.Length == 1 )
+            if( pOpcodes.Length > 0 )
                 if( pOpcodes[0] == 0xC9 )
                     return true;
 

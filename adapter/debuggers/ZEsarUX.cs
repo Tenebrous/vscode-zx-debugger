@@ -119,7 +119,7 @@ namespace ZEsarUX
 
                 result.Add( new InstructionLine()
                     {
-                        Address = Format.FromHex( split[0] ),
+                        Address = Format.Parse( split[0] ),
                         Instruction = new Disassembler.Instruction()
                         {
                             Bytes = Format.HexToBytes( split[1] ),
@@ -214,10 +214,7 @@ namespace ZEsarUX
             pStack.Add( _registers.PC );
 
             foreach( var frame in split )
-                if( frame.EndsWith("H") )
-                    pStack.Add( (ushort)( Format.FromHex( frame.Substring( 0, frame.Length - 1 ) ) - 3 ) );
-                else
-                    pStack.Add( (ushort)(int.Parse( frame ) - 3) );
+                pStack.Add( (ushort)( Format.Parse( frame ) - 3 ) );
         }
 
         Registers _registers;
@@ -243,7 +240,7 @@ namespace ZEsarUX
             foreach( Match match in matches )
             {
                 var register = match.Groups[1].ToString();
-                var value = Format.FromHex(match.Groups[2].ToString());
+                var value = Format.Parse(match.Groups[2].ToString(), pKnownHex:true);
 
                 try
                 {

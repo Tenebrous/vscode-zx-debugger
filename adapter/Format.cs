@@ -5,47 +5,97 @@ namespace ZXDebug
 {
     public static class Format
     {
+        public static string HexPrefix = "$";
+        public static string HexSuffix = "";
+
         public static string ToHex16( Value pValue )
         {
-            uint value = Convert.ToUInt16( pValue.Content );
-            return $"${value:X4} / {value}";
+            return ToHex16( Convert.ToUInt16( pValue.Content ) );
         }
 
         public static string ToHex8( Value pValue )
         {
-            var value = Convert.ToByte( pValue.Content );
-            return $"${value:X2} / {value}";
+            return ToHex8( Convert.ToUInt16( pValue.Content ) );
         }
 
-        public static ushort Parse( string pValue )
+        public static string ToHex16( ushort pValue )
+        {
+            return $"{HexPrefix}{pValue:X4}{HexSuffix}";
+        }
+
+        public static string ToHex8( ushort pValue )
+        {
+            return $"{HexPrefix}{pValue:X2}{HexSuffix}";
+        }
+
+        public static string ToHex( ushort pValue, int pBytes )
+        {
+            var format = $"{{0}}{{1:X{pBytes * 2}}}{{2}}";
+            return string.Format( format, HexPrefix, pValue, HexSuffix );
+        }
+
+        public static string ToHex( byte[] pBytes )
+        {
+            return BitConverter.ToString( pBytes ).Replace( "-", "" );
+        }
+
+        public static string ToHex( byte[] pBytes, int pLength )
+        {
+            return BitConverter.ToString( pBytes, 0, pLength ).Replace( "-", "" );
+        }
+
+        static bool RemovePrefix( ref string pValue, string pPrefix )
+        {
+            if( !pValue.StartsWith( pPrefix ) )
+                return false;
+
+            pValue = pValue.Substring( pPrefix.Length );
+            return true;
+        }
+
+        static bool RemoveSuffix( ref string pValue, string pSuffix )
+        {
+            if( !pValue.EndsWith( pSuffix ) )
+                return false;
+
+            pValue = pValue.Substring( 0, pValue.Length - pSuffix.Length );
+            return true;
+        }
+
+        public static ushort Parse( string pValue, bool pKnownHex = false )
         {
 	        ushort result = 0;
-            var isHex = false;
+            var isHex = pKnownHex;
 
-	        try
-	        {
-	            while( true )
-	            {
-	                if( pValue.StartsWith( "&h" ) || pValue.StartsWith( "&H" ) || pValue.StartsWith( "0x" ) )
-	                {
-	                    pValue = pValue.Substring( 2 );
-	                    isHex = true;
-	                }
-	                else if( pValue.StartsWith( "$" ) || pValue.StartsWith( "&" ) || pValue.StartsWith( "h" ) || pValue.StartsWith( "H" ) || pValue.StartsWith( "#" ) )
-	                {
-	                    pValue = pValue.Substring( 1 );
-	                    isHex = true;
-	                }
-	                else if( pValue.EndsWith( "h" ) || pValue.EndsWith( "H" ) )
-	                {
-	                    pValue = pValue.Substring( 0, pValue.Length - 1 );
-	                    isHex = true;
-	                }
-	                else
-	                {
-	                    break;
-	                }
-	            }
+            try
+            {
+                if( !isHex )
+                {
+                    var updated = true;
+                    while( updated )
+                    {
+                        updated = false;
+
+                        if( !string.IsNullOrWhiteSpace( HexPrefix ) )
+                            updated |= RemovePrefix( ref pValue, HexPrefix );
+
+                        updated |= RemovePrefix( ref pValue, "&h" );
+                        updated |= RemovePrefix( ref pValue, "&H" );
+                        updated |= RemovePrefix( ref pValue, "0x" );
+                        updated |= RemovePrefix( ref pValue, "$" );
+                        updated |= RemovePrefix( ref pValue, "&" );
+                        updated |= RemovePrefix( ref pValue, "h" );
+                        updated |= RemovePrefix( ref pValue, "H" );
+
+                        if( !string.IsNullOrWhiteSpace( HexSuffix ) )
+                            updated |= RemoveSuffix( ref pValue, HexSuffix );
+
+                        updated |= RemoveSuffix( ref pValue, "h" );
+                        updated |= RemoveSuffix( ref pValue, "H" );
+
+                        isHex |= updated;
+                    }
+                }
 
                 result =  isHex ? Convert.ToUInt16( pValue, 16 ) : ushort.Parse( pValue );
             }
@@ -55,11 +105,6 @@ namespace ZXDebug
 	        }
 
             return result;
-        }
-
-        public static ushort FromHex( string pHex )
-        {
-            return Convert.ToUInt16( pHex, 16 );
         }
 
         public static byte FromHex( char pHex )
@@ -92,40 +137,6 @@ namespace ZXDebug
             return _tempHexToBin.ToString().Trim();
         }
 
-        public static bool ApplyRule( string pRule, string pValue, ref string pResult )
-        {
-            var result = false;
-            int count;
-
-            if( pRule == "b" )
-            {
-                pResult = HexToBin( pValue, 8 );
-                result = true;
-            }
-            else if( pRule.StartsWith( "b" ) && int.TryParse( pRule.Substring( 1 ), out count ) )
-            {
-                pResult = HexToBin( pValue, count );
-                result = true;
-            }
-            else if( pRule == "n" )
-            {
-                pResult = HexToBin( pValue, 4 );
-                result = true;
-            }
-            else if( pRule == "w" )
-            {
-                pResult = HexToBin( pValue, 2 );
-                result = true;
-            }
-            else if( pRule == "dw" )
-            {
-                pResult = HexToBin( pValue, 4 );
-                result = true;
-            }
-
-            return result;
-        }
-
         public static byte[] HexToBytes( string pHex )
         {
             var count = pHex.Length / 2;
@@ -135,17 +146,6 @@ namespace ZXDebug
                 result[i] = Convert.ToByte( pHex.Substring( i*2, 2 ), 16 );
 
             return result;
-        }
-
-
-        public static string ToHex( byte[] pBytes )
-        {
-            return BitConverter.ToString( pBytes ).Replace( "-", "" );
-        }
-
-        public static string ToHex( byte[] pBytes, int pLength )
-        {
-            return BitConverter.ToString( pBytes, 0, pLength ).Replace( "-", "" );
         }
 
         public static string Encode( string pString )
