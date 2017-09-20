@@ -24,11 +24,11 @@ Disassembler always starts with table named "START"
 
 each "entry" can be:
 
-    >NEXTTABLE  further bytes are interpreted by the next table specified
+    ">NEXT"     further bytes are interpreted by the NEXT table
 
-    >NEXTTABLE* as above, but the next byte is saved for use later
+    ">NEXT {b}" as above, but the next byte is saved for use later
 
-    text        the opcode text to be used
+    "text"      the opcode text to be used
                 {b} immediate byte
                 {w} immediate word
                 {data} 16-bit data address
