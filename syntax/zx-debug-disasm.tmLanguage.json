@@ -6,78 +6,88 @@
     {
         "match": "(?i)^(Slot_)(.*?) [(](.*?)[)]",
         "captures": {
-            "1": { "comment": "Slot text",     "name": "punctuation.definition.tag.asm" },
-            "2": { "comment": "Slot number",   "name": "punctuation.definition.tag.asm" },
-            "3": { "comment": "Address range", "name": "punctuation.definition.tag.asm" }
+            "1": { "comment": "Slot text",     "name": "punctuation.definition.tag" },
+            "2": { "comment": "Slot number",   "name": "punctuation.definition.tag" },
+            "3": { "comment": "Address range", "name": "punctuation.definition.tag" }
         },
         "comment": "Slot"    
     },
     {
-        "match": "(?i)^  ((ROM|RAM)_.*)$",
+        "match": "(?i)^\\s*((ROM|RAM)_.*)$",
         "captures": {
-            "1": { "comment": "Bank", "name": "punctuation.definition.tag.asm" }
+            "1": { "comment": "Bank", "name": "punctuation.definition.tag" }
         },
         "comment": "Memory bank"
     },
     {
-        "match": "(?i)^    (.*):",
+        "match": "(?i)^\\s*(.*):",
         "captures": {
             "1": { "comment": "Label", "name": "entity.name.function.asm" }
         },
         "comment": "Label"
     },
     {
-        "match": "(?i)^    ([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
+        "match": "(?i)^\\s*([0-9a-f]{4}) ([0-9a-f\\s]{8}) ",
         "captures": {
-            "1": { "comment": "Memory address", "name": "punctuation.definition.tag.asm" },
-            "2": { "comment": "Opcodes",        "name": "constant.numeric.asm" }
+            "1": { "comment": "Memory address", "name": "punctuation.definition.tag" },
+            "2": { "comment": "Opcodes",        "name": "punctuation.definition.tag" }
         },
         "comment": "Label"
     },
     {
-        "match": "(?i)\\b(call|jp|jr)\\s+(?:(z|nz|c|nc|po|pe|p|m)\\s*,\\s*)",
+        "match": "(?i)\\b(call|jp|jr)((?:\\s+)(z|nz|c|nc|po|pe|p|m)\\s*,)?(\\s*[a-z0-9_]*)",
         "captures": {
-                "1": { "name": "keyword.other.command.asm" },
+                "1": { "name": "keyword.control.asm" },
                 "2": { "name": "constant.other.flag.asm" },
-                "3": { "name": "entity.name.label.asm" }
+                "4": { "name": "entity.name.function.asm" }
             },
         "comment": "Special case: conditional call/jmp"
     },
     {
-        "match": "(?i)\\b(djnz)",
+        "match": "(?i)\\b(djnz)(\\s*[a-z0-9_]*)",
         "captures": {
-                "1": { "name": "keyword.other.command.asm" },
-                "2": { "name": "entity.name.label.asm" }
+                "1": { "name": "keyword.control.asm" },
+                "2": { "name": "entity.name.function.asm" }
             },
         "comment": "Special case: djnz"
     },
     {
         "match": "(?i)\\b(ret)(?:\\s+(z|nz|c|nc|po|pe|p|m))",
         "captures": {
-                "1": { "name": "keyword.other.command.asm" },
+                "1": { "name": "keyword.control.asm" },
                 "2": { "name": "constant.other.flag.asm" }
             },
         "comment": "Special case: conditional ret"
     },
     {
-        "match": "(?i)\\b(adc|add|and|bit|call|ccf|cp|cpl|cpd|cpdr|cpi|cpir|daa|dec|di|djnz|ei|ex|exx|halt|im|in|inc|ind|indr|inf|ini|inir|jp|jr|ld|ldd|lddr|ldi|ldir|neg|nop|exx|or|otdr|otir|out|outd|outi|pop|push|res|ret|reti|retn|rl|rla|rlc|rlca|rld|rr|rra|rrc|rrca|rrd|rst|sbc|scf|set|sla|sli|sll|sra|srl|sub|xor)\\b",
-        "name": "keyword.other.command.asm",
+        "match": "(?i)\\b(adc|add|and|bit|call|ccf|cp|cpl|cpd|cpdr|cpi|cpir|daa|dec|di|djnz|ei|ex|exx|halt|im|in|inc|ind|indr|inf|ini|inir|jp|jr|ld|ldd|lddr|ldi|ldir|neg|nop|exx|or|otdr|otir|out|outd|outi|pop|push|res|rl|rla|rlc|rlca|rld|rr|rra|rrc|rrca|rrd|rst|sbc|scf|set|sla|sli|sll|sra|srl|sub|xor)\\b",        "name": "keyword.other.command.asm",
         "comment": "Z80 commands"
     },
     {
+        "match": "(?i)\\b(ret|reti|retn)\\b",
+        "name": "keyword.control.asm",
+        "comment": "Flow control"
+    },
+    {
         "match": "(?i)\\b(a|b|c|d|e|h|l|i|r|ixl|ixh|iyl|iyh)\\b",
-        "name": "variable.symbol.register.asm",
+        "name": "variable.asm",
         "comment": "8 bit register set"
     },
     {
         "match": "(?i)(\\baf')|(\\b(af|bc|de|hl|sp|ix|iy)\\b)",
-        "name": "variable.symbol.register.asm",
+        "name": "variable.asm",
         "comment": "16 bit register set"
     },
     {
         "match": "(?i)([0-9a-f].*?)",
         "name": "constant.numeric.asm",
         "comment": "HEX/DEC/BIN number"
+    },
+    {
+        "match": "(?i)\\(([0-9a-z_]{3,})\\)",
+        "captures": {
+            "1": { "name": "entity.name.function.asm" }
+        }
     },
     {
         "match": ";.*$",
