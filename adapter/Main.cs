@@ -23,8 +23,8 @@ namespace ZXDebug
 
     	static void Main(string[] argv)
 	    {
-	        // set up 
-             
+            // set up 
+
 
             // wire the logging stuff up to VSCode's console output
             Log.OnLog += Log_SendToVSCode;
@@ -392,7 +392,7 @@ namespace ZXDebug
             result = Format.ToHex( _tempVar, length );
 
 	        if( isPointer && isRegister )
-	            result = "(" + ( Format.ToHex( address, 2 ) ) + ") " + result;
+	            result = $"({address.ToHex()}) {result}";
             
 	        return result;
 	    }

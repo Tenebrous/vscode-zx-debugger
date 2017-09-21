@@ -20,9 +20,6 @@ namespace Spectrum
         public SourceMaps SourceMaps { get; } = new SourceMaps();
         public Disassembler Disassembler { get; } = new Disassembler();
 
-        public string HexPrefix = "$";
-        public string HexSuffix = "";
-
         public Machine( Debugger pConnection )
         {
             Connection = pConnection;
@@ -250,7 +247,7 @@ namespace Spectrum
                     if( !doneHeader )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Not currently paged in (was {0}):", Format.ToHex( bank.LastAddress, 2 ) );
+                        stream.WriteLine( "Not currently paged in (was {0}):", bank.LastAddress.ToHex() );
                         doneHeader = true;
                     }
 
@@ -293,7 +290,8 @@ namespace Spectrum
 
                     if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
                     {
-                        _tempLabelBuilder.Append( ' ', 30 - _tempLabelBuilder.Length );
+                        // line up comment with start of mnemonic at col 21
+                        _tempLabelBuilder.Append( ' ', 20 - _tempLabelBuilder.Length );
                         _tempLabelBuilder.Append( ';' );
 
                         if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
@@ -350,17 +348,18 @@ namespace Spectrum
             foreach( var op in instruction.Operands )
             {
                 int offset;
+                int absOffset;
                 char sign;
                 SourceMap.SourceAddress symbol;
 
                 switch( op.Type )
                 {
                     case Disassembler.Operand.TypeEnum.Imm8:
-                        text = ReplaceFirst( text, "{b}", Format.ToHex( op.Value, 1 ) );
+                        text = text.ReplaceFirst( "{b}", ((byte)op.Value).ToHex() );
                         break;
 
                     case Disassembler.Operand.TypeEnum.Imm16:
-                        text = ReplaceFirst( text, "{w}", Format.ToHex( op.Value, 2 ) );
+                        text = text.ReplaceFirst( "{w}", op.Value.ToHex() );
                         break;
 
                     case Disassembler.Operand.TypeEnum.Index:
@@ -373,11 +372,13 @@ namespace Spectrum
                             sign = '-';
                         }
 
-                        text = ReplaceFirst( text, "{+i}", sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 ) );
+                        absOffset = Math.Abs(offset);
+                        text = text.ReplaceFirst( "{+i}", sign + ((byte)absOffset).ToHex() );
+
                         break;
 
                     case Disassembler.Operand.TypeEnum.CodeRel:
-                        offset = (int)op.Value;
+                        offset = op.Value;
                         sign = '+';
 
                         if( ( op.Value & 0x80 ) == 0x80 )
@@ -388,16 +389,17 @@ namespace Spectrum
 
                         var addr = (ushort)( pLine.Address + offset + pLine.Instruction.Length );
                         symbol = Symbol( addr );
+                        absOffset = Math.Abs( offset );
 
                         if( symbol != null )
                         {
-                            text = ReplaceFirst( text, "{+b}", symbol.Labels[0] );
-                            comment = sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 ) + " " + Format.ToHex( addr, 2 ) + " ";
+                            text = text.ReplaceFirst( "{+b}", symbol.Labels[0] );
+                            comment = sign + ( (byte)absOffset ).ToHex() + " " + addr.ToHex() + " ";
                         }
                         else
                         {
-                            text = ReplaceFirst( text, "{+b}", Format.ToHex( addr, 2 ) );
-                            comment = sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 );
+                            text = text.ReplaceFirst( "{+b}", addr.ToHex() );
+                            comment = sign + ( (byte)absOffset ).ToHex();
                         }
 
                         break;
@@ -408,11 +410,11 @@ namespace Spectrum
 
                         if( symbol != null )
                         {
-                            text = ReplaceFirst( text, "{data}", symbol.Labels[0] );
-                            comment = Format.ToHex( op.Value, 2 );
+                            text = text.ReplaceFirst( "{data}", symbol.Labels[0] );
+                            comment = op.Value.ToHex();
                         }
                         else
-                            text = ReplaceFirst( text, "{data}", Format.ToHex( op.Value, 2 ) );
+                            text = text.ReplaceFirst( "{data}", op.Value.ToHex() );
 
                         break;
 
@@ -422,11 +424,11 @@ namespace Spectrum
 
                         if( symbol != null )
                         {
-                            text = ReplaceFirst( text, "{code}", symbol.Labels[0] );
-                            comment = Format.ToHex( op.Value, 2 );
+                            text = text.ReplaceFirst( "{code}", symbol.Labels[0] );
+                            comment = op.Value.ToHex();
                         }
                         else
-                            text = ReplaceFirst( text, "{code}", Format.ToHex( op.Value, 2 ) );
+                            text = text.ReplaceFirst( "{code}", op.Value.ToHex() );
 
                         break;
                 }
@@ -438,15 +440,6 @@ namespace Spectrum
             return text;
         }
 
-        string ReplaceFirst( string pHaystack, string pNeedle, string pNewNeedle )
-        {
-            var pos = pHaystack.IndexOf( pNeedle, StringComparison.OrdinalIgnoreCase );
-
-            if( pos == -1 )
-                return pHaystack;
-
-            return pHaystack.Substring( 0, pos ) + pNewNeedle + pHaystack.Substring( pos + pNeedle.Length );
-        }
 
         SourceMap.SourceAddress Symbol( ushort pAddress )
         {
@@ -842,9 +835,10 @@ namespace Spectrum
     {
         public enum BankType
         {
-            NA  = 0,
-            ROM = 1,
-            RAM = 2
+            All  = 0,
+            ROM  = 1,
+            Bank = 2,
+            Div  = 3
         }
 
         public BankType Type;
@@ -856,16 +850,39 @@ namespace Spectrum
             Number = pNumber;
         }
 
+        static Regex _parseBank = new Regex( @"(?'type'BANK|DIV)_(?'number'\d*)(_(?'part'L|H))?" );
+        public BankID( string pBank )
+        {
+            Type = BankType.All;
+            Number = 0;
+
+            var match = _parseBank.Match( pBank );
+            if( match.Success )
+            {
+                Number = int.Parse( match.Groups["number"].Value );
+
+                var type = match.Groups["type"].Value;
+                var part = match.Groups["part"].Value;
+
+                if( type == "ROM" )
+                    Type = BankType.ROM;
+                else if( type == "BANK" )
+                    Type = BankType.Bank;
+                else if( type == "DIV" )
+                    Type = BankType.Div;
+            }
+        }
+
         public BankID( string pType, int pNumber )
         {
-            Type = BankType.NA;
+            Type = BankType.All;
 
             if( string.Compare( pType, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = BankType.ROM;
-            else if( string.Compare( pType, "RAM", StringComparison.OrdinalIgnoreCase ) == 0 )
-                Type = BankType.RAM;
             else if( string.Compare( pType, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
-                Type = BankType.RAM;
+                Type = BankType.Bank;
+            else if( string.Compare( pType, "DIV", StringComparison.OrdinalIgnoreCase ) == 0 )
+                Type = BankType.Div;
 
             Number = pNumber;
         }
@@ -875,7 +892,7 @@ namespace Spectrum
             if( pValue.Type == BankType.ROM )
                 return -2 - pValue.Number;
 
-            if( pValue.Type == BankType.NA )
+            if( pValue.Type == BankType.All )
                 return -1;
 
             return pValue.Number;
@@ -887,9 +904,9 @@ namespace Spectrum
                 return new BankID() { Type = BankType.ROM, Number = -2 - pValue };
 
             if( pValue == -1 )
-                return new BankID() { Type = BankType.NA };
+                return new BankID() { Type = BankType.All };
 
-            return new BankID() { Type = BankType.RAM, Number = pValue };
+            return new BankID() { Type = BankType.Bank, Number = pValue };
         }
 
         public override int GetHashCode()
@@ -902,8 +919,11 @@ namespace Spectrum
             if( Type == BankType.ROM )
                 return "ROM_" + Number;
 
-            if( Type == BankType.RAM )
+            if( Type == BankType.Bank )
                 return "BANK_" + Number;
+
+            if( Type == BankType.Div )
+                return "DIV_" + Number;
 
             return "ALL";
         }

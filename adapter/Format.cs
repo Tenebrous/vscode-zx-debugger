@@ -10,28 +10,12 @@ namespace ZXDebug
 
         public static string ToHex16( Value pValue )
         {
-            return ToHex16( Convert.ToUInt16( pValue.Content ) );
+            return Convert.ToUInt16( pValue.Content ).ToHex();
         }
 
         public static string ToHex8( Value pValue )
         {
-            return ToHex8( Convert.ToUInt16( pValue.Content ) );
-        }
-
-        public static string ToHex16( ushort pValue )
-        {
-            return $"{HexPrefix}{pValue:X4}{HexSuffix}";
-        }
-
-        public static string ToHex8( ushort pValue )
-        {
-            return $"{HexPrefix}{pValue:X2}{HexSuffix}";
-        }
-
-        public static string ToHex( ushort pValue, int pBytes )
-        {
-            var format = $"{{0}}{{1:X{pBytes * 2}}}{{2}}";
-            return string.Format( format, HexPrefix, pValue, HexSuffix );
+            return Convert.ToByte( pValue.Content ).ToHex();
         }
 
         public static string ToHex( byte[] pBytes )
@@ -158,6 +142,26 @@ namespace ZXDebug
             var result = new T[pLength];
             Array.Copy( pData, pIndex, result, 0, pLength );
             return result;
+        }
+
+        public static string ReplaceFirst( this string pHaystack, string pNeedle, string pNewNeedle )
+        {
+            var pos = pHaystack.IndexOf( pNeedle, StringComparison.OrdinalIgnoreCase );
+
+            if( pos == -1 )
+                return pHaystack;
+
+            return pHaystack.Substring( 0, pos ) + pNewNeedle + pHaystack.Substring( pos + pNeedle.Length );
+        }
+
+        public static string ToHex( this byte pValue )
+        {
+            return $"{HexPrefix}{pValue:X2}{HexSuffix}";
+        }
+
+        public static string ToHex( this ushort pValue )
+        {
+            return $"{HexPrefix}{pValue:X4}{HexSuffix}";
         }
     }
 }
