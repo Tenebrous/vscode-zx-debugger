@@ -330,23 +330,29 @@ namespace Spectrum
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
                     line.Address + pOffset,
                     Format.ToHex( line.Instruction.Bytes ),
-                    FormatInstruction(line.Instruction)
+                    FormatInstruction(line)
                 );
 
                 line.FileLine = pLineNumber;
             }
         }
 
-        string FormatInstruction( Disassembler.Instruction pInstruction )
+        string FormatInstruction( InstructionLine pLine )
         {
-            string comment = null;
-            var text = pInstruction.Text;
+            var instruction = pLine.Instruction;
 
-            if( pInstruction.Operands == null || pInstruction.Operands.Length == 0 )
+            string comment = null;
+            var text = instruction.Text;
+
+            if( instruction.Operands == null || instruction.Operands.Length == 0 )
                 return text;
 
-            foreach( var op in pInstruction.Operands )
-            { 
+            foreach( var op in instruction.Operands )
+            {
+                int offset;
+                char sign;
+                SourceMap.SourceAddress symbol;
+
                 switch( op.Type )
                 {
                     case Disassembler.Operand.TypeEnum.Imm8:
@@ -357,9 +363,9 @@ namespace Spectrum
                         text = ReplaceFirst( text, "{w}", Format.ToHex( op.Value, 2 ) );
                         break;
 
-                    case Disassembler.Operand.TypeEnum.Rel8:
-                        var offset = (int)op.Value;
-                        var sign = '+';
+                    case Disassembler.Operand.TypeEnum.Index:
+                        offset = (int)op.Value;
+                        sign = '+';
 
                         if( ( op.Value & 0x80 ) == 0x80 )
                         {
@@ -367,17 +373,42 @@ namespace Spectrum
                             sign = '-';
                         }
 
-                        text = ReplaceFirst( text, "{+b}", sign + Format.ToHex( (ushort)Math.Abs(offset), 1 ) );
+                        text = ReplaceFirst( text, "{+i}", sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 ) );
+                        break;
+
+                    case Disassembler.Operand.TypeEnum.CodeRel:
+                        offset = (int)op.Value;
+                        sign = '+';
+
+                        if( ( op.Value & 0x80 ) == 0x80 )
+                        {
+                            offset = -(byte)~(byte)( op.Value - 1 );
+                            sign = '-';
+                        }
+
+                        var addr = (ushort)( pLine.Address + offset + pLine.Instruction.Length );
+                        symbol = Symbol( addr );
+
+                        if( symbol != null )
+                        {
+                            text = ReplaceFirst( text, "{+b}", symbol.Labels[0] );
+                            comment = sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 ) + " " + Format.ToHex( addr, 2 ) + " ";
+                        }
+                        else
+                        {
+                            text = ReplaceFirst( text, "{+b}", Format.ToHex( addr, 2 ) );
+                            comment = sign + Format.ToHex( (ushort)Math.Abs( offset ), 1 );
+                        }
 
                         break;
 
                     case Disassembler.Operand.TypeEnum.DataAddr:
 
-                        var dataSymbol = Symbol( op.Value );
+                        symbol = Symbol( op.Value );
 
-                        if( dataSymbol != null )
+                        if( symbol != null )
                         {
-                            text = ReplaceFirst( text, "{data}", dataSymbol.Labels[0] );
+                            text = ReplaceFirst( text, "{data}", symbol.Labels[0] );
                             comment = Format.ToHex( op.Value, 2 );
                         }
                         else
@@ -387,11 +418,11 @@ namespace Spectrum
 
                     case Disassembler.Operand.TypeEnum.CodeAddr:
 
-                        var codeSymbol = Symbol( op.Value );
+                        symbol = Symbol( op.Value );
 
-                        if( codeSymbol != null )
+                        if( symbol != null )
                         {
-                            text = ReplaceFirst( text, "{code}", codeSymbol.Labels[0] );
+                            text = ReplaceFirst( text, "{code}", symbol.Labels[0] );
                             comment = Format.ToHex( op.Value, 2 );
                         }
                         else

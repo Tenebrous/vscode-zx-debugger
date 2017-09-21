@@ -169,7 +169,8 @@ namespace ZXDebug
                 switch( specifier )
                 {
                     case "b":    type = Operand.TypeEnum.Imm8;     length = 1; break;
-                    case "+b":   type = Operand.TypeEnum.Rel8;     length = 1; break;
+                    case "+b":   type = Operand.TypeEnum.CodeRel;  length = 1; break;
+                    case "+i":   type = Operand.TypeEnum.Index;    length = 1; break;
                     case "w":    type = Operand.TypeEnum.Imm16;    length = 2; break;
                     case "code": type = Operand.TypeEnum.CodeAddr; length = 2; break;
                     case "data": type = Operand.TypeEnum.DataAddr; length = 2; break;
@@ -296,7 +297,8 @@ namespace ZXDebug
                 Unknown,
                 Imm8,
                 Imm16,
-                Rel8,
+                CodeRel,
+                Index,
                 DataAddr,
                 CodeAddr
             }
