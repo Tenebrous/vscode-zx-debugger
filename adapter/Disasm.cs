@@ -111,15 +111,17 @@ namespace ZXDebug
 
                 if( nextTableName != null )
                 {
-                    // we've been pointed to another table, read the next
-                    // byte and go to the next table
-
+                    // we've been pointed to another table
                     tableName = nextTableName;
 
                     if( tableName.EndsWith( "{b}" ) )
                     {
-                        // "TABLE*" with asterisk at the end means we need save next 
-                        // byte to be used after we decipher the instruction
+                        // e.g. ">IYBITS {b}"
+                        //
+                        // in this case, we need to grab a data byte first, and /then/
+                        // a byte which tells us which opcode we're using
+                        //
+                        // the data byte we save will be used later
 
                         var saveByte = pStream.ReadByte();
 
