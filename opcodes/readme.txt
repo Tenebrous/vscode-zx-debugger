@@ -28,12 +28,13 @@ each "entry" can be:
 
     ">NEXT {b}" as above, but the next byte is saved for use later
 
-    "text"      the opcode text to be used
-                {b} immediate byte
-                {w} immediate word
-                {data} 16-bit data address
-                {code} 16-bit code address
-                {+b} 8-bit +/- offset
+    "text"      the opcode text to be used  
+                {b} immediate byte            e.g. LD A, {b}
+                {w} immediate word            e.g. LD HL, {w}
+                {data} 16-bit data address    e.g. LD HL, ({data})
+                {code} 16-bit code address    e.g. CALL {code}
+                {+b} 8-bit +/- code offset    e.g. JR {+b}
+                {+i} 8-bit +/- indexer offset e.g. LD (IX+{+i}), A
                
     blank       invalid opcode
 
