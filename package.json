@@ -30,6 +30,24 @@
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
     "contributes": {
+        "configuration": {
+            "title": "ZX Debugger",
+            "properties": {
+                "zxdebug.disassembler.blankLineBeforeLabel": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether to add an extra line before labels"
+                },
+                "zxdebug.hexPrefix": {
+                    "type": "string",
+                    "default": "$"
+                },
+                "zxdebug.hexSuffix": {
+                    "type": "string",
+                    "default": ""
+                }
+            }
+        },
         "debuggers": [
             {
                 "type": "zxdebug",
@@ -49,6 +67,7 @@
                 "linux": {
                     "runtime": "mono"
                 },
+                "startSessionCommand": "extension.zxdebug.startSession",
                 "configurationAttributes": {
                     "attach": {
                         "properties": {
@@ -74,14 +93,6 @@
                             "stopOnEntry": {
                                 "type": "boolean",
                                 "default": false
-                            },
-                            "hexPrefix": {
-                                "type": "string",
-                                "default": "$"
-                            },
-                            "hexSuffix": {
-                                "type": "string",
-                                "default": ""
                             }
                         }
                     }
@@ -93,9 +104,7 @@
                         "request": "attach",
                         "cwd": "${workspaceRoot}",
                         "maps": [],
-                        "stopOnEntry": true,
-                        "hexPrefix": "$",
-                        "hexSuffix": ""
+                        "stopOnEntry": true
                     }
                 ]
             }
@@ -121,7 +130,7 @@
         ],
         "commands": [
             {
-                "command": "zxdebug.testCommand",
+                "command": "extension.zxdebug.testCommand",
                 "title": "Test command",
                 "category": "ZX Debugger"
             }
