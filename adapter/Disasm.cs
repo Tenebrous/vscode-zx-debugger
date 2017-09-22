@@ -1,8 +1,6 @@
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace ZXDebug
@@ -12,6 +10,8 @@ namespace ZXDebug
     /// </summary>
     public class Disassembler
     {
+        public DisassemblerSettings Settings = new DisassemblerSettings();
+
         /// <summary>
         /// Each layer is a definition of z80 opcodes and is checked from first to last.
         /// This allows us to use a base z80 definition file then layer on others, e.g. for the Next
@@ -212,7 +212,7 @@ namespace ZXDebug
             {
                 if( Path.GetExtension( pFilename ).ToLower() == ".json" )
                 { 
-                    JsonConvert.PopulateObject( File.ReadAllText(pFilename), this );
+                    JsonConvert.PopulateObject( File.ReadAllText( pFilename ), this );
                     return;
                 }
 
@@ -327,5 +327,10 @@ namespace ZXDebug
 
             public Operand[] Operands;
         }
+    }
+
+    public class DisassemblerSettings
+    {
+        public bool BlankLineBeforeLabel;
     }
 }

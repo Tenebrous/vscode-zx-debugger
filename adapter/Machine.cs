@@ -284,6 +284,8 @@ namespace Spectrum
 
                 if( symbol != null )
                 {
+
+
                     _tempLabelBuilder.Append( ' ', 4 );
                     _tempLabelBuilder.Append( symbol.Labels[0] );
                     _tempLabelBuilder.Append( ':' );
@@ -318,6 +320,12 @@ namespace Spectrum
 
                 if( _tempLabelBuilder.Length > 0 )
                 {
+                    if( Disassembler.Settings.BlankLineBeforeLabel )
+                    {
+                        pLineNumber++;
+                        pStream.WriteLine();
+                    }
+
                     pLineNumber++;
                     pStream.WriteLine( _tempLabelBuilder.ToString() );
                     _tempLabelBuilder.Clear();

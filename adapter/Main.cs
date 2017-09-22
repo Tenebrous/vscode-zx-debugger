@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 using Spectrum;
 using VSCode;
 
@@ -18,7 +19,7 @@ namespace ZXDebug
 
 	    static Machine _machine;
 
-	    static Settings _settings = new Settings();
+	    static Settings _settings;
 
 
     	static void Main(string[] argv)
@@ -30,6 +31,12 @@ namespace ZXDebug
             Log.OnLog += Log_SendToVSCode;
 	        Log.MaxSeverityConsole = Log.Severity.Message;
             Log.MaxSeverityLog = Log.Severity.Debug;
+
+
+            // settings
+	        _settings = new Settings();
+            _settings.DeserializingEvent += Settings_OnDeserializing;
+            _settings.DeserializedEvent  += Settings_OnDeserialized;
 
 
             // vscode events
@@ -72,8 +79,7 @@ namespace ZXDebug
 			_machine.OnContinue += Machine_OnContinue;
 
 			// tie all the values together
-
-			SetupValues( _rootValues, _machine );
+            SetupValues( _rootValues, _machine );
 
 
 			// event loop
@@ -92,11 +98,25 @@ namespace ZXDebug
 	        }
 	    }
 
+	    static void Settings_OnDeserializing( VSCode.Settings pSettings )
+	    {
+            // make sure all the things that use settings are wired up
+	        _settings.Disassembler = _machine.Disassembler.Settings;
+	    }
+
+	    static void Settings_OnDeserialized( VSCode.Settings pSettings )
+	    {
+	        Log.Write( Log.Severity.Debug, JsonConvert.SerializeObject( pSettings, Formatting.Indented ) );
+
+            Format.HexPrefix = _settings.HexPrefix;
+	        Format.HexSuffix = _settings.HexSuffix;
+        }
+
 
         /////////////////
         // machine events
 
-		static void Machine_OnPause()
+        static void Machine_OnPause()
 		{
 			_vscode.Stopped( 1, "step", "step" );
 		}
@@ -157,13 +177,13 @@ namespace ZXDebug
 	    {
 	        Initialise( pJSONSettings );
 
-            _tempFolder = Path.Combine( _settings.cwd, ".zxdbg" );
+            _tempFolder = Path.Combine( _settings.ProjectFolder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
 
             if( !_debugger.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
 
-	        if( _settings.stopOnEntry )
+	        if( _settings.StopOnEntry )
 	            _machine.Pause();
 	    }
 
@@ -172,11 +192,8 @@ namespace ZXDebug
 	        _settings.FromJSON( pJSONSettings );
 	        _settings.Validate();
 
-	        Format.HexPrefix = _settings.hexPrefix;
-	        Format.HexSuffix = _settings.hexSuffix;
-
             _machine.SourceMaps.Clear();
-	        foreach( var map in _settings.sourceMaps )
+	        foreach( var map in _settings.SourceMaps )
 	        {
 	            var file = FindFile( map, "maps" );
                 _machine.SourceMaps.Add( new SourceMap( file ) );
@@ -184,7 +201,7 @@ namespace ZXDebug
 	        }
 
             _machine.Disassembler.ClearLayers();
-	        foreach( var table in _settings.opcodeTables )
+	        foreach( var table in _settings.OpcodeTables )
 	        {
 	            var file = FindFile( table, "opcodes" );
 	            _machine.Disassembler.AddLayer( file );
@@ -197,7 +214,7 @@ namespace ZXDebug
 	        if( File.Exists( pFilename ) )
 	            return pFilename;
 
-	        var path = Path.Combine( _settings.cwd, pFilename );
+	        var path = Path.Combine( _settings.ProjectFolder, pFilename );
 	        if( File.Exists( path ) )
 	            return path;
 
@@ -424,8 +441,6 @@ namespace ZXDebug
 
 	    static void VSCode_OnSetVariable( Request pRequest, Variable pVariable )
 	    {
-            // Log.Write( Log.Severity.Message, name + " -> " + val );
-
 	        var value = _rootValues.AllByName( pVariable.name );
 			value.Setter?.Invoke( value, pVariable.value );
 	    }
@@ -543,6 +558,6 @@ namespace ZXDebug
 
 	    static string _tempFolder;
         static string DisassemblyFile => Path.Combine( _tempFolder, "disasm.zdis" );
-	}
+    }
 }
 
