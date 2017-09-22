@@ -1,6 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 using Spectrum;
 using VSCode;
@@ -87,6 +90,13 @@ namespace ZXDebug
 	        _running = true;
 
 
+
+            // testing thing
+            var f = new FileSystemWatcher(@"D:\Dev\ZX\test1", "*.png");
+            f.EnableRaisingEvents = true;
+            f.Changed += Files_Changed;
+
+
 	        // event loop
 	        while( _running )
 	        {
@@ -95,8 +105,90 @@ namespace ZXDebug
 
                 if( !vsactive )
                     System.Threading.Thread.Sleep( 10 );
+
+                if( _files.Count > 0 )
+                    DoFiles();
+            }
+        }
+
+        static ConcurrentBag<string> _files = new ConcurrentBag<string>();
+
+        static void Files_Changed( object pSender, FileSystemEventArgs pFileSystemEventArgs )
+        {
+            _files.Add( pFileSystemEventArgs.FullPath );
+        }
+
+        static void DoFiles()
+        {
+            var pal = _debugger.CustomCommand( "tbblue-get-palette 0 256" );
+            var palStr = pal.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+            var cols = new Color[palStr.Length];
+
+            for( int i = 0; i < cols.Length; i++ )
+            {
+                var rgb = (byte)Format.Parse( palStr[i], pKnownHex:true );
+                cols[i] = Color.FromArgb( 
+                    (rgb & 0xE0 ),
+                    (rgb & 0x1C) << 3, 
+                    (rgb & 0x03) << 6
+                );
+            }
+            
+            var s = new StringBuilder();
+
+            while( _files.TryTake( out var file ) )
+            {
+                s.Clear();
+
+                using( var img = new Bitmap( file ) )
+                {
+                    for( int y = 0; y < 16; y++ )
+                    {
+                        for( int x = 0; x < 16; x++ )
+                        {
+                            s.Append( ' ' );
+
+                            var pix = img.GetPixel( x, y );
+
+                            if( pix.A == 0 )
+                            {
+                                s.Append( "E3h" );
+                                continue;
+                            }
+
+                            var closest = 0;
+                            var closestDist = double.MaxValue;
+                            
+                            for( int i = 0; i < cols.Length; i++ )
+                            {
+                                //var dhue = cols[i].GetHue() - pix.GetHue();
+                                //var dsat = cols[i].GetSaturation() - pix.GetSaturation();
+                                //var dbri = cols[i].GetBrightness() - pix.GetBrightness();
+                                //var dist = Math.Sqrt( dhue * dhue + dsat * dsat + dbri * dbri );
+
+                                var dr = cols[i].R - pix.R;
+                                var dg = cols[i].G - pix.G;
+                                var db = cols[i].B - pix.B;
+                                var dist = Math.Sqrt( dr * dr + dg * dg + db * db );
+
+                                if( dist < closestDist )
+                                {
+                                    closest = i;
+                                    closestDist = dist;
 	        }
 	    }
+
+                            s.Append( string.Format( "{0:X2}h", closest ) );
+                        }
+                    }
+                }
+
+                for( int i = 0; i < 64; i++ )
+                {
+                    var result = _debugger.CustomCommand( "tbblue-set-pattern " + i + s.ToString() );
+                }
+            }
+        }
 
 	    static void Settings_OnDeserializing( VSCode.Settings pSettings )
 	    {
