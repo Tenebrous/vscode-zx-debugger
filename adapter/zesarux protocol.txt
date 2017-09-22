@@ -82,3 +82,45 @@ Bit 3: Show bytes when debugging opcodes.
 Bit 4: Repeat last command only by pressing enter.
 Bit 5: Step over interrupt when running cpu-step, cpu-step-over and run verbose. It's the same setting as Step Over Interrupt on menu
 
+
+command> help tbblue-get-palette
+Syntax: tbblue-get-palette index
+
+Description
+Get palette colour at index. Returned values are in hexadecimal format. Only allowed on machine TBBlue
+
+command> tbblue-get-palette 1 10
+01
+
+command> tbblue-get-palette 1
+01
+
+
+command> help tbblue-get-pattern
+Syntax: tbblue-get-pattern index [items]
+
+Description
+Get patterns at index, if not specified items parameters, returns only one. Returned values are in hexadecimal format. Only allowed on machine TBBlue
+
+command> tbblue-get-pattern 1
+E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 24 24 24 24 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 24 FB FB FB 69 24 E3 E3 E3 E3 E3 E3 E3 E3 E3 24 FB 92 24 69 FB 6E 24 E3 E3 E3 E3 E3 E3 E3 24 FB 6E 24 E3 24 D6 92 24 E3 E3 E3 E3 E3 E3 E3 24 FB 6E 24 24 69 D6 6E 24 E3 24 24 24 E3 E3 E3 E3 24 FB 92 24 D6 69 69 24 24 92 FB FB 24 E3 E3 E3 E3 24 FB FB 92 24 24 92 FB FB 92 92 FB 24 E3 E3 E3 E3 24 92 FB FB FB FB 92 24 24 69 92 FB 24 E3 E3 24 24 24 24 24 24 24 24 E3 E3 24 6E FB 24 E3 24 6E D6 FB FB FB 92 24 24 E3 E3 24 92 FB 24 E3 24 D6 6E 24 24 92 FB FB 92 24 24 92 FB 24 E3 E3 24 92 69 69 6E 24 24 92 FB FB FB FB 24 E3 E3 E3 E3 24 92 6E 69 24 E3 24 24 24 24 24 E3 E3 E3 E3 E3 E3 24 24 24 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3 E3
+
+
+
+command> help tbblue-get-sprite
+Syntax: tbblue-get-sprite index [items]
+
+Description
+Get sprites at index, if not specified items parameters, returns only one. Returned values are in hexadecimal format. Only allowed on machine TBBlue
+
+command> tbblue-get-sprite 1 10
+9E 7E 00 81
+F4 28 00 82
+92 28 00 83
+E4 0A 00 84
+82 9F 00 85
+90 91 00 86
+84 19 00 87
+E4 0A 00 88
+02 17 01 89
+78 12 00 8A
