@@ -38,5 +38,11 @@ public static class Log
             Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location ) ?? "",
             "debug.log"
         );
+
+        if( File.Exists( Filename + ".prev" ) ) 
+            File.Delete( Filename + ".prev" );
+
+        if( File.Exists( Filename ) )
+            File.Move( Filename, Filename + ".prev" );
     }
 }
