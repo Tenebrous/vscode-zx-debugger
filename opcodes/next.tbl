@@ -8,11 +8,11 @@
 5 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
 6 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
 7 |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
-8 |              |                  |                |           |             |             |             |          |          |             | push {w}     | popx          |             |              |   |
+8 | mmu0 {b}     | mmu1 {b}         | mmu2 {b}       | mmu3 {b}  | mmu4 {b}    | mmu5 {b}    | mmu6 {b}    | mmu7 {b} |          |             | push {w}     | popx          |             |              |   |
 9 | outinb       | nextreg {b}, {b} | nextreg {b}, a | pixeldn   | pixelad     | setae       |             |          |          |             |              |               |             |              |   |
-A |              |                  |                |           | ldix        |             |             |          |          |             |              |               |             |              |   |
+A |              |                  |                |           | ldix        |             |             |          |          |             |              |               | lddx        |              |   |
 B |              |                  |                |           | ldirx       | fillde      | ldirscale   | ldpirx   |          |             |              |               | lddrx       |              |   |
-C |              |                  |                |           | lddx        |             |             |          |          |             |              |               |             |              |   |
+C |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
 D |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
 E |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
 F |              |                  |                |           |             |             |             |          |          |             |              |               |             |              |   |
