@@ -4,3 +4,4 @@ bin/
 packages/
 *.DotSettings.user
 .vscode/settings.json
+opcodes/*.json
