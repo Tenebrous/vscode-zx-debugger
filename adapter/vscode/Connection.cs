@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -25,7 +25,7 @@ namespace VSCode
         public event EventHandler DisconnectEvent;
         public event EventHandler PauseEvent;
         public event EventHandler ContinueEvent;
-        public event EventHandler NextEvent;
+        public event EventHandler StepOverEvent;
         public event EventHandler StepInEvent;
         public event EventHandler StepOutEvent;
         public event EventHandler GetStackTraceEvent;
@@ -225,7 +225,7 @@ namespace VSCode
                         break;
 
                     case "next":
-                        NextEvent?.Invoke( pRequest );
+                        StepOverEvent?.Invoke( pRequest );
                         break;
 
                     case "continue":

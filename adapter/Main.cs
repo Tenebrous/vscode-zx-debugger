@@ -53,7 +53,7 @@ namespace ZXDebug
 
 	        _vscode.PauseEvent += VSCode_OnPause;
 	        _vscode.ContinueEvent += VSCode_OnContinue;
-	        _vscode.NextEvent += VSCode_OnNext;
+	        _vscode.StepOverEvent += VSCode_OnStepOver;
 	        _vscode.StepInEvent += VSCode_OnStepIn;
 	        _vscode.StepOutEvent += VSCode_OnStepOut;
 
@@ -240,9 +240,28 @@ namespace ZXDebug
 	        _machine.Pause();
 	    }
 
-        static void VSCode_OnNext( Request pRequest )
+        static byte[] _tempMemStepOver = new byte[1];
+        static void VSCode_OnStepOver( Request pRequest )
 	    {
             _vscode.Send( pRequest );
+
+	        // small work-around for a ZEsarUX issue where "cpu-step-over" waits until
+	        // we hit the PC after the current instruction - this will never happen
+	        // for things like RET, of course.
+
+	        var b = _machine.Memory.Get( _machine.Registers.PC, 1, _tempMemStepOver );
+
+            switch( _tempMemStepOver[0] )
+            {
+                case 0xC9:
+                    Log.Write( Log.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
+                    _machine.Step();
+                    return;
+
+                default:
+                    break;
+            }
+
             _machine.StepOver();
 	    }
 
@@ -254,6 +273,12 @@ namespace ZXDebug
 
         static void VSCode_OnStepOut( Request pRequest )
 	    {
+            if( _debugger.Meta.CanStepOut )
+            {
+                _vscode.Send( pRequest );
+                _machine.StepOut();
+            }
+            else
 	        _vscode.Send( pRequest, pErrorMessage: "Step Out is not supported" );
 	    }
 

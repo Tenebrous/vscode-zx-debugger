@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -73,6 +73,12 @@ namespace Spectrum
         {
             OnContinue?.Invoke();
             return Connection.Step();
+        }
+
+        public bool StepOut()
+        {
+            OnContinue?.Invoke();
+            return Connection.StepOut();
         }
 
         public bool Stop()

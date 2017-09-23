@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -18,7 +18,9 @@ namespace ZEsarUX
 
         public override Meta Meta => new Meta()
         {
-            CanSetRegisters = true
+            CanSetRegisters = true,
+            CanEvaluate = true,
+            CanStepOut = false
         };
 
         public override bool Connect()

@@ -101,6 +101,11 @@ namespace ZXDebug
             return false;
         }
 
+        public virtual bool StepOut()
+        {
+            return false;
+        }
+
         public virtual List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pOutput = null )
         {
             return pOutput;
@@ -133,6 +138,7 @@ namespace ZXDebug
     {
         public bool CanSetRegisters;
         public bool CanEvaluate;
+        public bool CanStepOut;
     }
 }
  
