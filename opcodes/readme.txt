@@ -38,6 +38,9 @@ each "entry" can be:
                
     blank       invalid opcode
 
+    *           treat previous bytes as 'NOP' and restart from this one
+                (for sequences of prefixes)
+
 
 
 This layout is easy to read and follows the layout from http://clrhome.org/table/

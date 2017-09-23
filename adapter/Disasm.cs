@@ -134,9 +134,20 @@ namespace ZXDebug
                 }
                 else if( result != null )
                 {
-                    // we've got a final opcode
-                    instruction = new Instruction { Text = result };
-                    break;
+                    if( result == "*" )
+                    {
+                        // prefix change results in restarting decoding and treating 
+                        // anything prior as nops
+                        instruction = new Instruction { Text = "nop" };
+                        pStream.Position = pStream.Position - 1;
+                        break;
+                    }
+                    else
+                    {
+                        // we've got a final opcode
+                        instruction = new Instruction { Text = result };
+                        break;
+                    }
                 }
                 else
                 {
