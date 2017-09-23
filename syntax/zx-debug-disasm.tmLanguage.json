@@ -20,7 +20,7 @@
         "comment": "Memory bank"
     },
     {
-        "match": "(?i)^\\s*(.*):",
+        "match": "(?i)^\\s*([^;]*?):",
         "captures": {
             "1": { "comment": "Label", "name": "entity.name.function.asm" }
         },
