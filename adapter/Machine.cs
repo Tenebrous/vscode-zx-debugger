@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -221,13 +221,16 @@ namespace Spectrum
                     if( !_disasmBanks.TryGetValue( slot.Bank.ID, out var bank ) )
                         continue;
 
+                    bank.LastAddress = slot.Min;
+                    bank.IsPagedIn = true;
+
                     if( bank.Lines.Count == 0 )
                         continue;
 
                     if( slot.ID >= 0 )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Slot_{0} ({1:X4}-{2:X4}):", slot.ID, slot.Min, slot.Max );
+                        stream.WriteLine( "Slot_{0} ({1}-{2}):", slot.ID, slot.Min.ToHex(), slot.Max.ToHex() );
                     }
 
                     _tempBankDone.Add( slot.Bank.ID );
@@ -247,22 +250,30 @@ namespace Spectrum
                     if( _tempBankDone.Contains( bank.ID ) )
                         continue;
 
+                    bank.IsPagedIn = false;
+
                     if( bank.Lines.Count == 0 )
                         continue;
 
                     if( !doneHeader )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Not currently paged in (was {0}):", bank.LastAddress.ToHex() );
+                        stream.WriteLine( "Not currently paged in:" );
                         doneHeader = true;
                     }
 
                     bank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Address.CompareTo( pRight.Address ) );
-                    WriteDisasmLines( stream, bank, 0, ref lineNumber );
+                    WriteDisasmLines( stream, bank, bank.LastAddress, ref lineNumber );
                 }
             }
 
             File.SetAttributes( pFilename, FileAttributes.ReadOnly );
+
+            Log.Write( Log.Severity.Message, "" );
+            foreach( var kvpBank in _disasmBanks )
+            {
+                Log.Write( Log.Severity.Message, kvpBank.Key + " = " + kvpBank.Value.LastAddress + " " + kvpBank.Value.Name );
+            }
         }
 
         StringBuilder _tempLabelBuilder = new StringBuilder();
@@ -271,7 +282,11 @@ namespace Spectrum
             if( !string.IsNullOrWhiteSpace( pBank.Name ) && pBank.Name != "ALL" )
             {
                 pLineNumber++;
-                pStream.WriteLine( "  {0}", pBank.Name );
+
+                if( pBank.IsPagedIn )
+                    pStream.WriteLine( "  {0}", pBank.Name );
+                else
+                    pStream.WriteLine( "  {0} ({1})", pBank.Name, pBank.LastAddress.ToHex() );
             }
 
             _tempLabelBuilder.Clear();
@@ -288,10 +303,8 @@ namespace Spectrum
 
                 var symbol = SourceMaps.Find( pBank.ID, (ushort)(line.Address + pOffset) );
 
-                if( symbol != null )
+                if( symbol?.Labels != null && symbol.Labels.Count > 0 )
                 {
-
-
                     _tempLabelBuilder.Append( ' ', 4 );
                     _tempLabelBuilder.Append( symbol.Labels[0] );
                     _tempLabelBuilder.Append( ':' );
@@ -313,7 +326,7 @@ namespace Spectrum
                             _tempLabelBuilder.Append( ' ' );
                             _tempLabelBuilder.Append( symbol.File.Filename );
                         }
-    
+
                         if( symbol.Map != null )
                         {
                             _tempLabelBuilder.Append( ' ' );
@@ -342,111 +355,122 @@ namespace Spectrum
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
                     line.Address + pOffset,
                     Format.ToHex( line.Instruction.Bytes ),
-                    FormatInstruction(line)
+                    FormatInstruction( line, pBank.ID, pOffset )
                 );
 
                 line.FileLine = pLineNumber;
             }
         }
 
-        string FormatInstruction( InstructionLine pLine )
+        string FormatInstruction( InstructionLine pLine, BankID pBankID, ushort pOffset )
         {
             var instruction = pLine.Instruction;
 
             string comment = null;
             var text = instruction.Text;
 
-            if( instruction.Operands == null || instruction.Operands.Length == 0 )
-                return text;
-
-            foreach( var op in instruction.Operands )
+            if( instruction.Operands != null && instruction.Operands.Length > 0 )
             {
-                int offset;
-                int absOffset;
-                char sign;
-                SourceMap.SourceAddress symbol;
-
-                switch( op.Type )
+                foreach( var op in instruction.Operands )
                 {
-                    case Disassembler.Operand.TypeEnum.Imm8:
-                        text = text.ReplaceFirst( "{b}", ((byte)op.Value).ToHex() );
-                        break;
+                    int offset;
+                    int absOffset;
+                    char sign;
+                    SourceMap.SourceAddress symbol;
 
-                    case Disassembler.Operand.TypeEnum.Imm16:
-                        text = text.ReplaceFirst( "{w}", op.Value.ToHex() );
-                        break;
+                    switch( op.Type )
+                    {
+                        case Disassembler.Operand.TypeEnum.Imm8:
+                            text = text.ReplaceFirst( "{b}", ( (byte) op.Value ).ToHex() );
+                            break;
 
-                    case Disassembler.Operand.TypeEnum.Index:
-                        offset = (int)op.Value;
-                        sign = '+';
+                        case Disassembler.Operand.TypeEnum.Imm16:
+                            text = text.ReplaceFirst( "{w}", op.Value.ToHex() );
+                            break;
 
-                        if( ( op.Value & 0x80 ) == 0x80 )
-                        {
-                            offset = -(byte)~(byte)( op.Value - 1 );
-                            sign = '-';
-                        }
+                        case Disassembler.Operand.TypeEnum.Index:
+                            offset = (int) op.Value;
+                            sign = '+';
 
-                        absOffset = Math.Abs(offset);
-                        text = text.ReplaceFirst( "{+i}", sign + ((byte)absOffset).ToHex() );
+                            if( ( op.Value & 0x80 ) == 0x80 )
+                            {
+                                offset = -(byte) ~(byte) ( op.Value - 1 );
+                                sign = '-';
+                            }
 
-                        break;
+                            absOffset = Math.Abs( offset );
+                            text = text.ReplaceFirst( "{+i}", sign + ( (byte) absOffset ).ToHex() );
 
-                    case Disassembler.Operand.TypeEnum.CodeRel:
-                        offset = op.Value;
-                        sign = '+';
+                            break;
 
-                        if( ( op.Value & 0x80 ) == 0x80 )
-                        {
-                            offset = -(byte)~(byte)( op.Value - 1 );
-                            sign = '-';
-                        }
+                        case Disassembler.Operand.TypeEnum.CodeRel:
+                            offset = op.Value;
+                            sign = '+';
 
-                        var addr = (ushort)( pLine.Address + offset + pLine.Instruction.Length );
-                        symbol = Symbol( addr );
-                        absOffset = Math.Abs( offset );
+                            if( ( op.Value & 0x80 ) == 0x80 )
+                            {
+                                offset = -(byte) ~(byte) ( op.Value - 1 );
+                                sign = '-';
+                            }
 
-                        if( symbol != null )
-                        {
-                            text = text.ReplaceFirst( "{+b}", symbol.Labels[0] );
-                            comment = sign + ( (byte)absOffset ).ToHex() + " " + addr.ToHex() + " ";
-                        }
-                        else
-                        {
-                            text = text.ReplaceFirst( "{+b}", addr.ToHex() );
-                            comment = sign + ( (byte)absOffset ).ToHex();
-                        }
+                            var addr = (ushort) ( pLine.Address + offset + pLine.Instruction.Length );
+                            symbol = Symbol( pBankID, addr );
+                            absOffset = Math.Abs( offset );
 
-                        break;
+                            if( symbol != null )
+                            {
+                                text = text.ReplaceFirst( "{+b}", symbol.Labels[0] );
+                                comment = sign + ( (byte) absOffset ).ToHex() + " " + addr.ToHex() + " ";
+                            }
+                            else
+                            {
+                                text = text.ReplaceFirst( "{+b}", addr.ToHex() );
+                                comment = sign + ( (byte) absOffset ).ToHex();
+                            }
 
-                    case Disassembler.Operand.TypeEnum.DataAddr:
+                            break;
 
-                        symbol = Symbol( op.Value );
+                        case Disassembler.Operand.TypeEnum.DataAddr:
 
-                        if( symbol != null )
-                        {
-                            text = text.ReplaceFirst( "{data}", symbol.Labels[0] );
-                            comment = op.Value.ToHex();
-                        }
-                        else
-                            text = text.ReplaceFirst( "{data}", op.Value.ToHex() );
+                            symbol = Symbol( pBankID, op.Value );
 
-                        break;
+                            if( symbol != null )
+                            {
+                                text = text.ReplaceFirst( "{data}", symbol.Labels[0] );
+                                comment = op.Value.ToHex();
+                            }
+                            else
+                                text = text.ReplaceFirst( "{data}", op.Value.ToHex() );
 
-                    case Disassembler.Operand.TypeEnum.CodeAddr:
+                            break;
 
-                        symbol = Symbol( op.Value );
+                        case Disassembler.Operand.TypeEnum.CodeAddr:
 
-                        if( symbol != null )
-                        {
-                            text = text.ReplaceFirst( "{code}", symbol.Labels[0] );
-                            comment = op.Value.ToHex();
-                        }
-                        else
-                            text = text.ReplaceFirst( "{code}", op.Value.ToHex() );
+                            symbol = Symbol( pBankID, op.Value );
 
-                        break;
+                            if( symbol != null )
+                            {
+                                text = text.ReplaceFirst( "{code}", symbol.Labels[0] );
+                                comment = op.Value.ToHex();
+                            }
+                            else
+                                text = text.ReplaceFirst( "{code}", op.Value.ToHex() );
+
+                            break;
+                    }
                 }
             }
+
+            //// temporary test
+            //
+            var sym = Symbol( pBankID, (ushort)(pLine.Address + pOffset) );
+            if( sym?.File != null )
+            {
+                comment = comment?.PadRight( 20 ) ?? "".PadRight(20);
+                comment += sym.File.Filename + ":" + sym.Line;
+            }
+            //
+            ////
 
             if( comment != null )
                 text = text.PadRight( 30 ) + "; " + comment;
@@ -455,10 +479,14 @@ namespace Spectrum
         }
 
 
-        SourceMap.SourceAddress Symbol( ushort pAddress )
+        SourceMap.SourceAddress Symbol( BankID pBankID, ushort pAddress )
         {
             var slot = Memory.GetSlot( pAddress );
-            return SourceMaps.Find( slot.Bank.ID, pAddress );
+
+            if( pAddress < slot.Min || pAddress > slot.Max )
+                pBankID = slot.Bank.ID;
+
+            return SourceMaps.Find( pBankID, pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
@@ -789,7 +817,6 @@ namespace Spectrum
         public void SetAddressBank( ushort pMin, ushort pMax, Bank pBank )
         {
             GetSlot( pMin ).Bank = pBank;
-            pBank.LastAddress = pMin;
             _banks[pBank.ID] = pBank;
         }
 
@@ -946,6 +973,7 @@ namespace Spectrum
     public class Bank
     {
         public BankID ID;
+        public bool   IsPagedIn;
         public ushort LastAddress;
         public string Name => ID.ToString();
     }
