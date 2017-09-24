@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
-
 using Spectrum;
 using ZXDebug;
 
@@ -16,13 +15,26 @@ namespace ZEsarUX
         NetworkStream _stream;
         bool _connected;
 
+        Log.Severity _protocolLogLevel = Log.Severity.Verbose;
+
+        [Flags] enum DebugSettings // from https://sourceforge.net/p/zesarux/code/ci/master/tree/remote.c#l766
+        {
+            ShowAllRegistersAfterStep = 1,
+            ShowNext8AfterStep = 2,
+            DoNotAddLPrefixToLabels = 4,
+            ShowOpcodeBytes = 8,
+            RepeatLastCommandWithEnter = 16,
+            StepOverInterrupt = 32
+        }
+
         public override Meta Meta => new Meta()
         {
             CanSetRegisters = true,
             CanEvaluate = true,
-            CanStepOut = false
+            CanStepOut = false,
+            //CanStepOverSensibly = true // wait for updated ZEsarUX
         };
-
+        
         public override bool Connect()
         {
             if( _connected )
@@ -78,6 +90,19 @@ namespace ZEsarUX
             return true;
         }
 
+
+        public void Setup()
+        {
+            var debugSettings = DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt;
+            SendAndReceiveSingle( "set-debug-settings " + (int)debugSettings );
+            SendAndReceiveSingle( "set-memory-zone -1" );
+            SendAndReceiveSingle( "enable-breakpoints", pRaiseErrors: false );
+
+            InitBreakpoints();
+            ReadBreakpoints();
+        }
+
+
         public override bool Pause()
         {
             Send( "enter-cpu-step" );
@@ -87,7 +112,9 @@ namespace ZEsarUX
 
         public override bool Continue()
         {
-            Send( "exit-cpu-step" );
+            _isRunning = true;
+            //Send( "exit-cpu-step" );
+            Send( "run" );
             return true;
         }
 
@@ -105,6 +132,86 @@ namespace ZEsarUX
             _isRunning = true;
             Send( "cpu-step" );
             return true;
+        }
+
+        void SetSingleBreakpoint( Breakpoint pBreakpoint )
+        {
+            var result = SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.ID+1} PC={pBreakpoint.Line.Address:X4}h") );
+            result = SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.ID+1), pRaiseErrors: false );
+        }
+
+        HashSet<int> _enabledBreakpoints = new HashSet<int>();
+
+        public override bool SetBreakpoints( Breakpoints pBreakpoints )
+        {
+            // remove those no longer set
+            foreach( var current in _enabledBreakpoints )
+            {
+                var remove = true;
+                foreach( var wanted in pBreakpoints )
+                {
+                    if( wanted.ID == current )
+                    {
+                        remove = false;
+                        break;
+                    }
+                }
+
+                if( remove )
+                    SendAndReceiveSingle( "disable-breakpoint " + (current+1) );
+            }
+
+            foreach( var b in pBreakpoints )
+            {
+                _enabledBreakpoints.Add( b.ID );
+                SetSingleBreakpoint( b );
+            }
+
+            return true;
+        }
+
+        public override bool SetBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        {
+            return true;
+        }
+
+        public override bool RemoveBreakpoints( Breakpoints pBreakpoints )
+        {
+            return true;
+        }
+        
+        public override bool RemoveBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        {
+            return true;
+        }
+
+        public bool InitBreakpoints()
+        {
+            _enabledBreakpoints.Clear();
+
+            try
+            {
+                for( int i = 1; ; i++ )
+                {
+                    // error will be thrown if ZEsarUX doesn't like it
+                    SendAndReceiveSingle( "disable-breakpoint " + i );
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+
+            return true;
+        }
+
+
+        void ReadBreakpoints()
+        {
+            _protocolLogLevel = Log.Severity.Message;
+            SendAndReceive( "get-breakpoints" );
+            Log.Write( _protocolLogLevel, "" );
+            _protocolLogLevel = Log.Severity.Debug;
         }
 
 
@@ -135,23 +242,6 @@ namespace ZEsarUX
             return result;
         }
 
-        public void Setup()
-        {
-            // from https://sourceforge.net/p/zesarux/code/ci/master/tree/remote.c#l766
-            //
-            // "Set debug settings on remote command protocol.It's a numeric value with bitmask with different meaning:
-            //   Bit 0: show all cpu registers on cpu stepping or only pc+opcode.
-            //   Bit 1: show 8 next opcodes on cpu stepping.
-            //   Bit 2: Do not add a L preffix when searching source code labels.
-            // * Bit 3: Show bytes when debugging opcodes"
-            //   Bit 4: Repeat last command only by pressing enter.
-            // * Bit 5: Step over interrupt when running cpu-step, cpu - step - over and run verbose.It's the same setting as Step Over Interrupt on menu"
-            var debugSettings = ( 1 << 3 ) | ( 1 << 5 );
-
-            SendAndReceiveSingle( "set-debug-settings " + debugSettings );
-
-            SendAndReceiveSingle( "set-memory-zone -1" );
-        }
 
         public override void RefreshMemoryPages( Memory pMemory )
         {
@@ -162,7 +252,7 @@ namespace ZEsarUX
             {
                 // no mapping info, so probably 16k/48k etc
                 pMemory.PagingEnabled = false;
-                var bank = pMemory.UnpagedBank();
+                var bank = pMemory.Bank( BankID.Unpaged() );
                 pMemory.SetAddressBank( 0x0000, 0xFFFF, bank );
                 return;
             }
@@ -182,13 +272,13 @@ namespace ZEsarUX
                     pMemory.PagingEnabled = false;
                 else if( part.StartsWith( "RO" ) )
                 {
-                    var bank = pMemory.ROMBank( int.Parse( part.Substring( 2 ) ) );
+                    var bank = pMemory.Bank( BankID.ROM( int.Parse( part.Substring( 2 ) ) ) );
                     pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
-                    var bank = pMemory.RAMBank( int.Parse( part.Substring( 2 ) ) );
+                    var bank = pMemory.Bank( BankID.Bank( int.Parse( part.Substring( 2 ) ) ) );
                     pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
@@ -318,7 +408,7 @@ namespace ZEsarUX
             return string.Join( "\n", SendAndReceive(pCommand) );
         }
 
-        public List<string> SendAndReceive( string pCommand )
+        public List<string> SendAndReceive( string pCommand, bool pRaiseErrors = true )
         {
             if( !IsConnected )
                 return null;
@@ -340,25 +430,31 @@ namespace ZEsarUX
             if( !_stream.DataAvailable )
             {
                 Log.Write( Log.Severity.Message, "zesarux: timed out waiting for data" );
+
+                if( pRaiseErrors )
+                    throw new Exception( "ZEsarUX did not respond within 2 seconds" );
+
                 return null;
             }
 
             var lines = ReadAll();
 
-            // log the received data
-            lines.ForEach(
-                pLine =>
-                {
-                    if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
-                }
-            );
+            // check for errors
+
+            if( pRaiseErrors )
+                lines.ForEach(
+                    pLine =>
+                    {
+                        if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
+                    }
+                );
 
             return _tempReceiveLines;
         }
 
-        string SendAndReceiveSingle( string pCommand )
+        string SendAndReceiveSingle( string pCommand, bool pRaiseErrors = true )
         {
-            var result = SendAndReceive( pCommand );
+            var result = SendAndReceive( pCommand, pRaiseErrors );
 
             if( result == null || result.Count == 0 )
                 return "";
@@ -371,7 +467,7 @@ namespace ZEsarUX
             // clear buffer
             ReadAll();
 
-            Log.Write( Log.Severity.Debug, "zesarux: (out) [" + pCommand + "]" );
+            Log.Write( _protocolLogLevel, "zesarux: (out) [" + pCommand + "]" );
 
             var bytes = Encoding.ASCII.GetBytes(pCommand + "\n");
             _stream.Write( bytes, 0, bytes.Length );
@@ -409,13 +505,10 @@ namespace ZEsarUX
 
             _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
 
-            if( _tempReadProcessLines.Count > 0 )
-                Log.Write( Log.Severity.Debug, "zesarux: (in)  " + _tempReadProcessLines.Count + " line(s) [" + _tempReadProcessLines[0] + "]" );
-
             // look for magic words
             foreach( var line in _tempReadProcessLines )
             {
-                Log.Write( Log.Severity.Verbose, "zesarux: (in)  [" + line + "]" );
+                Log.Write( _protocolLogLevel, "zesarux: (in)  [" + line + "]" );
 
                 if( line.StartsWith( "command> " ) )
                     _isRunning = true;

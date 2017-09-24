@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
-using Newtonsoft.Json;
 using Spectrum;
 using VSCode;
+using Breakpoint = VSCode.Breakpoint;
 
 namespace ZXDebug
 {
@@ -63,10 +63,9 @@ namespace ZXDebug
 
 	        _vscode.GetVariablesEvent += VSCode_OnGetVariables;
 	        _vscode.SetVariableEvent += VSCode_OnSetVariable;
-	        // _vscode.OnGetSource += VSCode_OnGetSource;
-	        // _vscode.OnGetLoadedSources += VSCode_OnGetLoadedSources;
 			_vscode.GetCompletionsEvent += VSCode_OnGetCompletions;
 	        _vscode.EvaluateEvent += VSCode_OnEvaluate;
+            _vscode.SetBreakpointsEvent += VSCode_OnSetBreakpoints;
 
 
             // zesarux events
@@ -81,14 +80,16 @@ namespace ZXDebug
 			_machine.OnPause += Machine_OnPause;
 			_machine.OnContinue += Machine_OnContinue;
 
-			// tie all the values together
+
+            // tie all the values together
             SetupValues( _rootValues, _machine );
 
+
+            _machine.SourceMaps.Add( new SourceMap( @"D:\Dev\ZX\test1\tmp\game.map" ) );
 
 			// event loop
 
 	        _running = true;
-
 
 
             // testing thing
@@ -111,7 +112,7 @@ namespace ZXDebug
             }
         }
 
-        static ConcurrentBag<string> _files = new ConcurrentBag<string>();
+	    static ConcurrentBag<string> _files = new ConcurrentBag<string>();
 
         static void Files_Changed( object pSender, FileSystemEventArgs pFileSystemEventArgs )
         {
@@ -175,8 +176,8 @@ namespace ZXDebug
                                 {
                                     closest = i;
                                     closestDist = dist;
-	        }
-	    }
+	                            }
+	                        }
 
                             s.Append( string.Format( "{0:X2}h", closest ) );
                         }
@@ -198,8 +199,6 @@ namespace ZXDebug
 
 	    static void Settings_OnDeserialized( VSCode.Settings pSettings )
 	    {
-	        Log.Write( Log.Severity.Debug, JsonConvert.SerializeObject( pSettings, Formatting.Indented ) );
-
             Format.HexPrefix = _settings.HexPrefix;
 	        Format.HexSuffix = _settings.HexSuffix;
         }
@@ -245,15 +244,46 @@ namespace ZXDebug
 	    {
             _vscode.Send( pRequest );
 
-	        // small work-around for a ZEsarUX issue where "cpu-step-over" waits until
-	        // we hit the PC after the current instruction - this will never happen
-	        // for things like RET, of course.
+	        if( _debugger.Meta.CanStepOverSensibly )
+	        {
+                // debugger is well-behaved when it comes to stepping over jr,jp and ret
+	            _machine.StepOver();
+	            return;
+	        }
+
+	        // deal with debuggers that don't deal with jr,jp and ret propertly when stepping over
 
 	        var b = _machine.Memory.Get( _machine.Registers.PC, 1, _tempMemStepOver );
 
             switch( _tempMemStepOver[0] )
             {
-                case 0xC9:
+                case 0x18: // JR
+                //case 0x20: // JR NZ
+                //case 0x28: // JR Z
+                //case 0x30: // JR NC
+                //case 0x38: // JR C
+
+                //case 0xC2: // JP NZ
+                case 0xC3: // JP
+                //case 0xCA: // JP Z
+                //case 0xD2: // JP NC
+                //case 0xDA: // JP C
+                //case 0xE2: // JP PO
+                //case 0xE9: // JP (HL)
+                //case 0xEA: // JP PE
+                //case 0xF2: // JP P
+                //case 0xFA: // JP M
+
+                case 0xC0: // RET NZ
+                case 0xC8: // RET Z
+                case 0xC9: // RET
+                case 0xD0: // RET NC
+                case 0xD8: // RET C
+                case 0xE0: // RET PO
+                case 0xE8: // RET PE
+                case 0xF0: // RET P
+                case 0xF8: // RET M
+
                     Log.Write( Log.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
                     _machine.Step();
                     return;
@@ -571,6 +601,79 @@ namespace ZXDebug
 	    }
 
 
+        static HashSet<Spectrum.Breakpoint> _tempBreakpoints = new HashSet<Spectrum.Breakpoint>();
+	    static List<Breakpoint> _tempBreakpointsResponse = new List<Breakpoint>();
+	    static void VSCode_OnSetBreakpoints( Request pRequest )
+	    {
+	        string sourceName = pRequest.arguments.source.name;
+
+	        if( sourceName != DisassemblySource().name )
+	            return;
+
+            _tempBreakpointsResponse.Clear();
+
+            // record old ones
+	        _tempBreakpoints.Clear();
+            foreach( var b in _machine.Breakpoints )
+                _tempBreakpoints.Add( b );
+
+            // set new ones
+	        foreach( var breakpoint in pRequest.arguments.breakpoints )
+	        {
+	            int lineNumber = breakpoint.line;;
+	            var line = _machine.GetLineFromDisassemblyFile( lineNumber );
+	            if( line != null )
+	            {
+	                var b = _machine.Breakpoints.Add( line );
+	                _tempBreakpoints.Remove( b );
+
+	                _tempBreakpointsResponse.Add(
+	                    new Breakpoint(
+	                        b.ID,
+	                        true,
+	                        b.Line.Bank.ToString() + " " + b.Line.Address.ToHex(),
+	                        DisassemblySource(),
+	                        b.Line.FileLine,
+	                        0,
+	                        b.Line.FileLine,
+	                        0
+	                    )
+	                );
+                }
+	            else
+	            {
+	                _tempBreakpointsResponse.Add(
+	                    new Breakpoint(
+	                        -1,
+	                        false,
+	                        "Invalid location",
+	                        DisassemblySource(),
+	                        lineNumber,
+	                        0,
+	                        lineNumber,
+	                        0
+	                    )
+	                );
+	            }
+            }
+
+            // remove those no longer set
+            foreach( var b in _tempBreakpoints )
+                _machine.Breakpoints.Remove( b );
+
+
+            // respond to vscode
+
+            _machine.Breakpoints.Commit();
+
+            _vscode.Send( 
+                pRequest,
+                new SetBreakpointsResponseBody( _tempBreakpointsResponse )
+            );
+	    }
+
+
+
         // events from values/variables
 
         static void SetupValues( Value pValues, Machine pMachine )
@@ -677,4 +780,3 @@ namespace ZXDebug
         static string DisassemblyFile => Path.Combine( _tempFolder, "disasm.zdis" );
     }
 }
-

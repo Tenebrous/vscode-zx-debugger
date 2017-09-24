@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -19,6 +20,7 @@ namespace Spectrum
         public Stack Stack { get; }
         public SourceMaps SourceMaps { get; } = new SourceMaps();
         public Disassembler Disassembler { get; } = new Disassembler();
+        public Breakpoints Breakpoints { get; }
 
         public Machine( Debugger pConnection )
         {
@@ -26,6 +28,7 @@ namespace Spectrum
             Registers = new Registers(this);
             Memory    = new Memory(this);
             Stack     = new Stack(this);
+            Breakpoints = new Breakpoints(this);
 
             Connection.PausedEvent += Connection_OnPause;
             Connection.ContinuedEvent += Connection_OnContinue;
@@ -97,9 +100,8 @@ namespace Spectrum
             public List<InstructionLine> SortedLines = new List<InstructionLine>();
         }
 
-        Dictionary<int, DisasmBank> _disasmBanks = new Dictionary<int, DisasmBank>();
+        Dictionary<BankID, DisasmBank> _disasmBanks = new Dictionary<BankID, DisasmBank>();
         List<InstructionLine> _tempDisasm = new List<InstructionLine>();
-        HashSet<int> _tempBankDone = new HashSet<int>();
         string _disassemblyMemoryMap = "";
 
         public bool UpdateDisassembly( ushort pAddress, string pFilename )
@@ -137,7 +139,7 @@ namespace Spectrum
                     break;
                 }
 
-                if( FinishDisassembling( line.Instruction.Bytes ) )
+                if( ShouldFinishDisassembling( line.Instruction.Bytes ) )
                     break;
 
                 address += (ushort)line.Instruction.Length;
@@ -162,6 +164,7 @@ namespace Spectrum
                 {
                     _tempDisasm.Add( new InstructionLine()
                         {
+                            Bank = minBank.ID,
                             Address = (ushort)(pAddress + index),
                             Instruction = instruction
                         } 
@@ -196,7 +199,7 @@ namespace Spectrum
                     bank.SortedLines.Add( line );
                 }
 
-                if( FinishDisassembling( line.Instruction.Bytes ) )
+                if( ShouldFinishDisassembling( line.Instruction.Bytes ) )
                     break;
             }
 
@@ -205,8 +208,11 @@ namespace Spectrum
             return true;
         }
 
+        Dictionary<int, InstructionLine> _linesToDisasm = new Dictionary<int, InstructionLine>();
+        HashSet<BankID> _tempBankDone = new HashSet<BankID>();
         void WriteDisassemblyFile( string pFilename )
         {
+            _linesToDisasm.Clear();
             _disassemblyMemoryMap = Memory.ToString();
 
             if( File.Exists( pFilename ) )
@@ -268,12 +274,6 @@ namespace Spectrum
             }
 
             File.SetAttributes( pFilename, FileAttributes.ReadOnly );
-
-            Log.Write( Log.Severity.Message, "" );
-            foreach( var kvpBank in _disasmBanks )
-            {
-                Log.Write( Log.Severity.Message, kvpBank.Key + " = " + kvpBank.Value.LastAddress + " " + kvpBank.Value.Name );
-            }
         }
 
         StringBuilder _tempLabelBuilder = new StringBuilder();
@@ -325,6 +325,8 @@ namespace Spectrum
                         {
                             _tempLabelBuilder.Append( ' ' );
                             _tempLabelBuilder.Append( symbol.File.Filename );
+                            _tempLabelBuilder.Append( ':' );
+                            _tempLabelBuilder.Append( symbol.Line );
                         }
 
                         if( symbol.Map != null )
@@ -351,7 +353,6 @@ namespace Spectrum
                 }
 
                 pLineNumber++;
-
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
                     line.Address + pOffset,
                     Format.ToHex( line.Instruction.Bytes ),
@@ -359,6 +360,8 @@ namespace Spectrum
                 );
 
                 line.FileLine = pLineNumber;
+
+                _linesToDisasm[pLineNumber] = line;
             }
         }
 
@@ -454,7 +457,7 @@ namespace Spectrum
                                 comment = op.Value.ToHex();
                             }
                             else
-                                text = text.ReplaceFirst( "{code}", op.Value.ToHex() );
+                                text = text.ReplaceFirst( "{code}", op.Value.ToHex() + " (" + pBankID + "/" + op.Value.ToHex() + "/" + op.Value + ")");
 
                             break;
                     }
@@ -481,12 +484,21 @@ namespace Spectrum
 
         SourceMap.SourceAddress Symbol( BankID pBankID, ushort pAddress )
         {
-            var slot = Memory.GetSlot( pAddress );
+            var found = SourceMaps.Find( pBankID, pAddress );
 
-            if( pAddress < slot.Min || pAddress > slot.Max )
+            if( found == null )
+                found = SourceMaps.Find( BankID.Unpaged(), pAddress );
+
+            if( found == null )
+            {
+                var slot = Memory.GetSlot( pAddress );
                 pBankID = slot.Bank.ID;
+                found = SourceMaps.Find( pBankID, pAddress );
+            }
 
-            return SourceMaps.Find( pBankID, pAddress );
+            //Log.Write( Log.Severity.Message, pBankID + ":" + pAddress.ToHex() + " " +  );
+
+            return found;
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
@@ -494,7 +506,7 @@ namespace Spectrum
         //    // add later
         //}
 
-        DisasmBank GetDisasmBank( int pBankID )
+        DisasmBank GetDisasmBank( BankID pBankID )
         {
             if( _disasmBanks.TryGetValue( pBankID, out var d ) )
                 return d;
@@ -537,7 +549,7 @@ namespace Spectrum
             return false;
         }
 
-        bool FinishDisassembling( byte[] pOpcodes )
+        bool ShouldFinishDisassembling( byte[] pOpcodes )
         {
             // temporarily end disasm on a RET to see if it simplifies things
 
@@ -546,6 +558,14 @@ namespace Spectrum
                     return true;
 
             return false;
+        }
+
+        public InstructionLine GetLineFromDisassemblyFile( int pLineNumber )
+        {
+            if( _linesToDisasm.TryGetValue( pLineNumber, out var result ) )
+                return result;
+
+            return null;
         }
     }
 
@@ -767,7 +787,7 @@ namespace Spectrum
         public ushort SlotSize = 0x4000;
 
         Dictionary<int, Slot> _slots = new Dictionary<int, Slot>();
-        Dictionary<int, Bank> _banks = new Dictionary<int, Bank>();
+        Dictionary<BankID, Bank> _banks = new Dictionary<BankID, Bank>();
 
         public List<Slot> Slots { get; } = new List<Slot>();
 
@@ -820,30 +840,12 @@ namespace Spectrum
             _banks[pBank.ID] = pBank;
         }
 
-        Bank Bank( int pID, bool pIsROM )
+        public Bank Bank( BankID pID )
         {
-            if( pIsROM )
-                pID = -2 - pID;
-
             if( !_banks.TryGetValue( pID, out var result ) )
                 result = new Bank() { ID = pID };
 
             return result;
-        }
-
-        public Bank ROMBank( int pID )
-        {
-            return Bank( pID, true );
-        }
-
-        public Bank RAMBank( int pID )
-        {
-            return Bank( pID, false );
-        }
-
-        public Bank UnpagedBank()
-        {
-            return Bank( -1, false );
         }
 
         public int Get( ushort pAddress, int pLength, byte[] pBuffer )
@@ -874,7 +876,7 @@ namespace Spectrum
 
     public struct BankID
     {
-        public enum BankType
+        public enum TypeEnum
         {
             All  = 0,
             ROM  = 1,
@@ -882,10 +884,10 @@ namespace Spectrum
             Div  = 3
         }
 
-        public BankType Type;
-        public int Number;
+        public readonly TypeEnum Type;
+        public readonly int Number;
 
-        public BankID( BankType pType, int pNumber = 0 )
+        public BankID( TypeEnum pType, int pNumber = 0 )
         {
             Type = pType;
             Number = pNumber;
@@ -894,7 +896,7 @@ namespace Spectrum
         static Regex _parseBank = new Regex( @"(?'type'BANK|DIV)_(?'number'\d*)(_(?'part'L|H))?" );
         public BankID( string pBank )
         {
-            Type = BankType.All;
+            Type = TypeEnum.All;
             Number = 0;
 
             var match = _parseBank.Match( pBank );
@@ -906,67 +908,88 @@ namespace Spectrum
                 var part = match.Groups["part"].Value;
 
                 if( type == "ROM" )
-                    Type = BankType.ROM;
+                    Type = TypeEnum.ROM;
                 else if( type == "BANK" )
-                    Type = BankType.Bank;
+                    Type = TypeEnum.Bank;
                 else if( type == "DIV" )
-                    Type = BankType.Div;
+                    Type = TypeEnum.Div;
             }
         }
 
         public BankID( string pType, int pNumber )
         {
-            Type = BankType.All;
+            Type = TypeEnum.All;
 
             if( string.Compare( pType, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
-                Type = BankType.ROM;
+                Type = TypeEnum.ROM;
             else if( string.Compare( pType, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
-                Type = BankType.Bank;
+                Type = TypeEnum.Bank;
             else if( string.Compare( pType, "DIV", StringComparison.OrdinalIgnoreCase ) == 0 )
-                Type = BankType.Div;
+                Type = TypeEnum.Div;
 
             Number = pNumber;
         }
 
-        public static implicit operator int(BankID pValue)
-        {
-            if( pValue.Type == BankType.ROM )
-                return -2 - pValue.Number;
+        //public static implicit operator int(BankID pValue)
+        //{
+        //    if( pValue.Type == BankType.ROM )
+        //        return -2 - pValue.Number;
 
-            if( pValue.Type == BankType.All )
-                return -1;
+        //    if( pValue.Type == BankType.All )
+        //        return -1;
 
-            return pValue.Number;
-        }
+        //    return pValue.Number;
+        //}
 
-        public static implicit operator BankID( int pValue )
-        {
-            if( pValue < -1 )
-                return new BankID() { Type = BankType.ROM, Number = -2 - pValue };
+        //public static implicit operator BankID( int pValue )
+        //{
+        //    if( pValue < -1 )
+        //        return new BankID() { Type = BankType.ROM, Number = -2 - pValue };
 
-            if( pValue == -1 )
-                return new BankID() { Type = BankType.All };
+        //    if( pValue == -1 )
+        //        return new BankID() { Type = BankType.All };
 
-            return new BankID() { Type = BankType.Bank, Number = pValue };
-        }
+        //    return new BankID() { Type = BankType.Bank, Number = pValue };
+        //}
 
         public override int GetHashCode()
         {
-            return ((int)this).GetHashCode();
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Type.GetHashCode();
+                hash = hash * 23 + Number.GetHashCode();
+                return hash;
+            }
         }
 
         public override string ToString()
         {
-            if( Type == BankType.ROM )
+            if( Type == TypeEnum.ROM )
                 return "ROM_" + Number;
 
-            if( Type == BankType.Bank )
+            if( Type == TypeEnum.Bank )
                 return "BANK_" + Number;
 
-            if( Type == BankType.Div )
+            if( Type == TypeEnum.Div )
                 return "DIV_" + Number;
 
             return "ALL";
+        }
+
+        public static BankID ROM( int pID )
+        {
+            return new BankID( BankID.TypeEnum.ROM, pID );
+        }
+
+        public static BankID Bank( int pID )
+        {
+            return new BankID( BankID.TypeEnum.Bank, pID );
+        }
+
+        public static BankID Unpaged()
+        {
+            return new BankID( BankID.TypeEnum.All );
         }
     }
 
@@ -999,5 +1022,97 @@ namespace Spectrum
         {
             _machine.Connection.RefreshStack( this );
         }
+    }
+
+    public class Breakpoints : IEnumerable<Breakpoint>
+    {
+        Machine _machine;
+
+        Dictionary<int, Breakpoint> _breakpoints = new Dictionary<int, Breakpoint>();
+
+        public Breakpoints( Machine pMachine )
+        {
+            _machine = pMachine;
+        }
+
+        int GetFreeID()
+        {
+            int id = 0;
+
+            while( _breakpoints.ContainsKey( id ) )
+                id++;
+
+            return id;
+        }
+
+        public Breakpoint Add( InstructionLine pLine )
+        {
+            if( pLine.Breakpoint != null )
+                return pLine.Breakpoint;
+
+            var bp = new Breakpoint() { ID = GetFreeID(), Line = pLine };
+
+            if( _machine.Connection.SetBreakpoint( this, bp ) )
+            {
+                _breakpoints.Add( bp.ID, bp );
+                pLine.Breakpoint = bp;
+            }
+
+            return bp;
+        }
+
+        public void Remove( InstructionLine pLine )
+        {
+            if( pLine.Breakpoint == null )
+                return;
+
+            _machine.Connection.RemoveBreakpoint( this, pLine.Breakpoint );
+
+            _breakpoints.Remove( pLine.Breakpoint.ID );
+        }
+
+        public void Remove( Breakpoint pBreakpoint )
+        {
+            _machine.Connection.RemoveBreakpoint( this, pBreakpoint );
+
+            _breakpoints.Remove( pBreakpoint.ID );
+            
+            pBreakpoint.Line.Breakpoint = null;
+            pBreakpoint.Line = null;
+        }
+
+        public void Clear()
+        {
+            _machine.Connection.RemoveBreakpoints( this );
+
+            foreach( var b in _breakpoints )
+            {
+                if( b.Value.Line != null )
+                    b.Value.Line.Breakpoint = null;
+            }
+
+            _breakpoints.Clear();
+        }
+
+        public void Commit()
+        {
+            _machine.Connection.SetBreakpoints( this );
+        }
+
+        public IEnumerator<Breakpoint> GetEnumerator()
+        {
+            return _breakpoints.Values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
+    public class Breakpoint
+    {
+        public int ID;
+        public InstructionLine Line;
     }
 }

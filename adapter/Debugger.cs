@@ -106,6 +106,26 @@ namespace ZXDebug
             return false;
         }
 
+        public virtual bool SetBreakpoints( Breakpoints pBreakpoints )
+        {
+            return false;
+        }
+
+        public virtual bool SetBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        {
+            return false;
+        }
+
+        public virtual bool RemoveBreakpoints( Breakpoints pBreakpoints )
+        {
+            return false;
+        }
+
+        public virtual bool RemoveBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        {
+            return false;
+        }
+
         public virtual List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pOutput = null )
         {
             return pOutput;
@@ -129,16 +149,34 @@ namespace ZXDebug
 
     public class InstructionLine
     {
+        public BankID Bank;
         public ushort Address;
-        public int    FileLine;
+        public int FileLine;
         public Disassembler.Instruction Instruction;
+        public Breakpoint Breakpoint;
     }
 
     public class Meta
     {
+        /// <summary>
+        /// The debugger can change the value of registers
+        /// </summary>
         public bool CanSetRegisters;
+
+        /// <summary>
+        /// The debugger can evaluate an arbitrary string and return a result
+        /// </summary>
         public bool CanEvaluate;
+
+        /// <summary>
+        /// The debugger supports stepping out
+        /// </summary>
         public bool CanStepOut;
+
+        /// <summary>
+        /// The debugger will ignore step over for 'ret' and 'jp' and will instead do a normal step
+        /// </summary>
+        public bool CanStepOverSensibly;
     }
 }
  

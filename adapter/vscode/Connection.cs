@@ -47,11 +47,12 @@ namespace VSCode
         public event EventHandler GetSourceEvent;
         public event EventHandler GetLoadedSourcesEvent;
         public event EventHandler ConfigurationDoneEvent;
-
+        public event EventHandler SetBreakpointsEvent;
+        
         public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool pHex, ref string pResult );
         public event EvaluateHandler EvaluateEvent;
 
-        
+
         Stream _output;
         StringBuilder _inputBuffer = new StringBuilder();
 
@@ -308,13 +309,16 @@ namespace VSCode
                         );
                         break;
 
+
+                    case "setBreakpoints":
+                        SetBreakpointsEvent?.Invoke( pRequest );
+                        break;
+
+
 //                    case "runInTerminal":
 //                        OnRunInTerminal?.Invoke( pRequest );
 //                        break;
 
-//                    case "setBreakpoints":
-//                        SetBreakpoints( pResponse, pArgs );
-//                        break;
 
 //                    case "setFunctionBreakpoints":
 //                        SetFunctionBreakpoints( pResponse, pArgs );

@@ -222,13 +222,25 @@ namespace VSCode
 
     public class Breakpoint
     {
+        public int id { get; }
         public bool verified { get; }
+        public string message { get; }
+        public Source source { get; }
         public int line { get; }
+        public int column { get; }
+        public int endLine { get; }
+        public int endColumn { get; }
 
-        public Breakpoint( bool verified, int line )
+        public Breakpoint( int id, bool verified, string message, Source source, int line, int column, int endLine, int endColumn )
         {
+            this.id = id;
             this.verified = verified;
+            this.message = message;
+            this.source = source;
             this.line = line;
+            this.column = column;
+            this.endLine = endLine;
+            this.endColumn = endColumn;
         }
     }
 
