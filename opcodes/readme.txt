@@ -36,11 +36,9 @@ each "entry" can be:
                 {+b} 8-bit +/- code offset    e.g. JR {+b}
                 {+i} 8-bit +/- indexer offset e.g. LD (IX+{+i}), A
                
-    blank       invalid opcode
+    blank       do not override this entry in previous layers
 
-    *           treat previous bytes as 'NOP' and restart from this one
-                (for sequences of prefixes)
-
-
+    *           invalid opcode
+                treat previous bytes as 'db {b}' and restart from this one
 
 This layout is easy to read and follows the layout from http://clrhome.org/table/
