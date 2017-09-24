@@ -68,6 +68,7 @@ namespace ZXDebug
             return instruction;
         }
 
+        Stack<byte> _tempOpcodeList = new Stack<byte>();
         Instruction GetInstruction( MemoryStream pStream )
         {
             _tempByteQueue.Clear();
@@ -75,9 +76,13 @@ namespace ZXDebug
             Instruction instruction = null;
             int current;
 
+            _tempOpcodeList.Clear();
+
             while( ( current = pStream.ReadByte() ) > -1 )
             {
                 var currentByte = (byte) current;
+                _tempOpcodeList.Push(currentByte);
+
                 string nextTableName = null;
                 string result = null;
 
@@ -141,8 +146,14 @@ namespace ZXDebug
                     {
                         // prefix change results in restarting decoding and treating 
                         // anything prior as db
-                        instruction = new Instruction { Text = "db " + currentByte.ToHex() };
+
+                        byte db = 0;
+                        if( _tempOpcodeList.Count > 0 ) db = _tempOpcodeList.Pop();
+                        if( _tempOpcodeList.Count > 0 ) db = _tempOpcodeList.Pop();
+
+                        instruction = new Instruction { Text = "db " + db.ToHex() };
                         pStream.Position = pStream.Position - 1;
+
                         break;
                     }
                     else
