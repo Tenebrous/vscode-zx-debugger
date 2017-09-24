@@ -140,8 +140,8 @@ namespace ZXDebug
                     if( result == "*" )
                     {
                         // prefix change results in restarting decoding and treating 
-                        // anything prior as nops
-                        instruction = new Instruction { Text = "nop" };
+                        // anything prior as db
+                        instruction = new Instruction { Text = "db " + currentByte.ToHex() };
                         pStream.Position = pStream.Position - 1;
                         break;
                     }
