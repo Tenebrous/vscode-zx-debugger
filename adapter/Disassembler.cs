@@ -126,7 +126,10 @@ namespace ZXDebug
                         var saveByte = pStream.ReadByte();
 
                         if( saveByte == -1 )
-                            throw new Exception( "Ran out of bytes" );
+                        {
+                            Log.Write( Log.Severity.Error, "Ran out of bytes decoding {b} in table '" + tableName + "'" );
+                            return null;
+                        }
 
                         tableName = tableName.Remove( tableName.Length - 3 ).Trim();
                         _tempByteQueue.Enqueue( (byte) saveByte );
@@ -194,7 +197,10 @@ namespace ZXDebug
                     hi = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : pStream.ReadByte();
 
                 if( lo == -1 || hi == -1 )
-                    throw new Exception( "Ran out of bytes processing {" + specifier + "} in '" + pInstruction.Text + "'" );
+                {
+                    Log.Write( Log.Severity.Error, "Ran out of bytes decoding {" + specifier + "} in instruction '" + pInstruction.Text + "'" );
+                    return;
+                }
 
                 _tempOperands[operands++] = new Operand( type, hi << 8 | lo );
 
@@ -335,7 +341,6 @@ namespace ZXDebug
             public int    Length;
             public byte[] Bytes;
             public string Text;
-
             public Operand[] Operands;
         }
     }
