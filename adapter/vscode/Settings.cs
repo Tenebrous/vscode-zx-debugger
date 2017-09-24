@@ -21,8 +21,6 @@ namespace VSCode
             JsonConvert.PopulateObject( pJSON, wrapper );
 
             DeserializedEvent?.Invoke( this );
-
-            Log.Write( Log.Severity.Message, JsonConvert.SerializeObject( this, Formatting.Indented ) );
         }
 
         public virtual void Validate()
