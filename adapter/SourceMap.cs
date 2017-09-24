@@ -103,8 +103,13 @@ namespace ZXDebug
             // DEFINED_REGISTER_SP             = $0001 ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:18
             // REGISTER_SP                     = $7FFF ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:19
 
-            var fileLine = new Regex(
+            var lineRegex = new Regex(
                 @"(?i)^(?'label'.*?)\s*=\s*(\$(?'addr'[0-9a-fA-F]*))\s?;\s(?'type'addr)\s*,\s*(?'scope'.*?)\s*,\s*(?'def'.*?)\s*,\s*(?'module'.*?)\s*,\s*(?'section'.*?)\s*,\s*(?'file'.*):(?'line'\d*).*?$",
+                RegexOptions.Compiled
+            );
+
+            var symbolRegex = new Regex(
+                @"^(?'name'.*):(?'line'\d*)(:(?'section'.*))?$",
                 RegexOptions.Compiled
             );
 
@@ -114,61 +119,84 @@ namespace ZXDebug
 
                 while( ( text = reader.ReadLine() ) != null )
                 {
-                    var matches = fileLine.Matches( text );
-                    foreach( Match match in matches )
+                    try
                     {
-                        var label      = match.Groups["label"].Value;
-                        var addressStr = match.Groups["addr"].Value;
-                        var type       = match.Groups["type"].Value;
-                        var scope      = match.Groups["scope"].Value;
-                        var def        = match.Groups["def"].Value;
-                        var module     = match.Groups["module"].Value;
-                        var section    = match.Groups["section"].Value;
-                        var fileStr    = match.Groups["file"].Value;
-                        var lineStr    = match.Groups["line"].Value;
-
-                        if( label.StartsWith( "__ASMLINE__" ) || label.StartsWith( "__CLINE__" ) )
+                        var matches = lineRegex.Matches( text );
+                        foreach( Match match in matches )
                         {
-                            // decode symbol
-                            //  _22src_5Cmain_2Easm_22_3A0_3Adefault
-                            //  "src\main.asm":0:default
+                            var label      = match.Groups["label"].Value;
+                            var addressStr = match.Groups["addr"].Value;
+                            var type       = match.Groups["type"].Value;
+                            var scope      = match.Groups["scope"].Value;
+                            var def        = match.Groups["def"].Value;
+                            var module     = match.Groups["module"].Value;
+                            var section    = match.Groups["section"].Value;
+                            var fileStr    = match.Groups["file"].Value;
+                            var lineStr    = match.Groups["line"].Value;
 
-                            if( label.StartsWith( "__ASMLINE__" ) )
-                                label = Decode( label.Substring( 11 ) ).Trim();
-                            else if( label.StartsWith( "__CLINE__" ) )
-                                label = Decode( label.Substring( 9 ) ).Trim();
+                            if( label.StartsWith( "__ASMLINE__" ) || label.StartsWith( "__CLINE__" ) )
+                            {
+                                // decode symbol
+                                //  _22src_5Cmain_2Easm_22_3A0_3Adefault
+                                //  "src\main.asm":0:default
 
-                            var labelSplit = label.Split( ':' );
-                            fileStr = Dequote( labelSplit[0] );
-                            lineStr = labelSplit.Length > 1 ? labelSplit[1] : "0";
-                            section = labelSplit.Length > 2 ? labelSplit[2] : "";
-                            label = null;
+                                if( label.StartsWith( "__ASMLINE__" ) )
+                                    label = Decode( label.Substring( 11 ) ).Trim();
+                                else if( label.StartsWith( "__CLINE__" ) )
+                                    label = Decode( label.Substring( 9 ) ).Trim();
+
+                                var labelMatch = symbolRegex.Match( label );
+                                fileStr = labelMatch.Groups["name"].Value;
+                                lineStr = labelMatch.Groups["line"].Value;
+                                section = labelMatch.Groups["section"].Value;
+                                label = null;
+
+                                if( string.IsNullOrWhiteSpace( lineStr ) )
+                                    lineStr = "0";
+                            }
+                            else if( label.StartsWith( "__ASM_LINE_" ) || label.StartsWith( "__C_LINE_" ) )
+                                label = null;
+
+                            var address = Format.Parse( addressStr, pKnownHex: true );
+                            var bank = new BankID( section );
+                            var symBank = Banks[bank];
+                            var sym = symBank.Symbols[address];
+
+                            if( label != null )
+                            {
+                                sym.Labels = sym.Labels ?? new List<string>();
+                                sym.Labels.Add( label );
+                            }
+
+                            if( !string.IsNullOrWhiteSpace( fileStr ) )
+                            {
+                                var file = Files[fileStr];
+                                sym.File = file;
+                                sym.Line = int.Parse( lineStr );
+                            }
+
+                            sym.Map = this;
                         }
-
-                        var address = Format.Parse( addressStr, pKnownHex: true );
-                        var bank = new BankID( section );
-                        var symBank = Banks[bank];
-                        var sym = symBank.Symbols[address];
-
-                        if( label != null )
-                        {
-                            if( sym.Labels == null )
-                                sym.Labels = new List<string>();
-
-                            sym.Labels.Add( label );
-                        }
-
-                        if( !string.IsNullOrWhiteSpace( fileStr ) )
-                        {
-                            var file = Files[fileStr];
-                            sym.File = file;
-                            sym.Line = int.Parse( lineStr );
-                        }
-
-                        sym.Map = this;
+                    }
+                    catch( Exception e )
+                    {
+                        throw new Exception( "Error with line [" + text + "]", e );
                     }
                 }
             }
+
+            // record our interpretation of the .map file for posterity... and also for testing
+            File.WriteAllText( 
+                pFilename + ".json", 
+                JsonConvert.SerializeObject( 
+                    this, 
+                    new JsonSerializerSettings()
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        Formatting = Formatting.Indented
+                    } 
+                )
+            );
         }
 
         static string Dequote( string pValue )
