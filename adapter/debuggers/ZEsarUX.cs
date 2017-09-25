@@ -425,17 +425,19 @@ namespace ZEsarUX
             return result.Count > 0;
         }
 
-        public override string CustomCommand( string pCommand )
+        public override List<string> CustomCommand( string pCommand, List<string> pResults = null )
         {
-            return string.Join( "\n", SendAndReceive(pCommand) );
+            SendAndReceive( pCommand, pResults );
+            return pResults;
         }
 
-        public List<string> SendAndReceive( string pCommand, bool pRaiseErrors = true )
+        List<string> SendAndReceive( string pCommand, List<string> pResults = null, bool pRaiseErrors = true )
         {
             if( !IsConnected )
                 return null;
 
-            _tempReceiveLines.Clear();
+            pResults = pResults ?? new List<string>();
+            pResults.Clear();
 
             Send( pCommand );
 
@@ -459,24 +461,24 @@ namespace ZEsarUX
                 return null;
             }
 
-            var lines = ReadAll();
+            ReadAll( pResults );
 
             // check for errors
 
             if( pRaiseErrors )
-                lines.ForEach(
+                pResults.ForEach(
                     pLine =>
                     {
                         if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
                     }
                 );
 
-            return _tempReceiveLines;
+            return pResults;
         }
 
         string SendAndReceiveSingle( string pCommand, bool pRaiseErrors = true )
         {
-            var result = SendAndReceive( pCommand, pRaiseErrors );
+            var result = SendAndReceive( pCommand, null, pRaiseErrors );
 
             if( result == null || result.Count == 0 )
                 return "";
@@ -499,17 +501,21 @@ namespace ZEsarUX
         byte[] _tempReadBytes = new byte[4096];
         StringBuilder _tempReadString = new StringBuilder();
         List<string> _tempReadProcessLines = new List<string>();
-        List<string> _tempReceiveLines = new List<string>();
 
-        List<string> ReadAll()
+        List<string> _tempReceiveLines = new List<string>();
+        public List<string> ReadAll( List<string> pDestination = null )
         {
+            pDestination = pDestination ?? _tempReceiveLines;
+
             var wasRunning = _isRunning;
 
             _tempReadString.Clear();
             _tempReadProcessLines.Clear();
-            _tempReceiveLines.Clear();
 
-            if( !_stream.DataAvailable ) return _tempReceiveLines;
+            pDestination.Clear();
+
+            if( !_stream.DataAvailable )
+                return pDestination;
 
             var wait = new Stopwatch();
 
@@ -525,7 +531,11 @@ namespace ZEsarUX
             }
             while( wait.ElapsedMilliseconds < 10 );
 
-            _tempReadProcessLines.AddRange(_tempReadString.ToString().Split(new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries));
+            _tempReadProcessLines.AddRange(
+                _tempReadString.ToString().Split(
+                    new [] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries
+                )
+            );
 
             // look for magic words
             foreach( var line in _tempReadProcessLines )
@@ -537,10 +547,10 @@ namespace ZEsarUX
                 else if( line.StartsWith( "command@cpu-step> " ) )
                     _isRunning = false;
                 else
-                    _tempReceiveLines.Add( line );
+                    pDestination.Add( line );
             }
 
-            return _tempReceiveLines;
+            return pDestination;
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using Spectrum;
@@ -131,9 +131,9 @@ namespace ZXDebug
             return pOutput;
         }
 
-        public virtual string CustomCommand( string pCommand )
+        public virtual List<string> CustomCommand( string pCommand, List<string> pResults = null )
         {
-            return null;
+            return pResults;
         }
 
         public void OnPaused()

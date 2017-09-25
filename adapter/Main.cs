@@ -112,6 +112,7 @@ namespace ZXDebug
             }
         }
 
+
 	    static ConcurrentBag<string> _files = new ConcurrentBag<string>();
 
         static void Files_Changed( object pSender, FileSystemEventArgs pFileSystemEventArgs )
@@ -121,7 +122,12 @@ namespace ZXDebug
 
         static void DoFiles()
         {
-            var pal = _debugger.CustomCommand( "tbblue-get-palette 0 256" );
+            var list = _debugger.CustomCommand( "tbblue-get-palette 0 256" );
+            if( list == null || list.Count == 0 )
+                return;
+
+            var pal = list[0];
+
             var palStr = pal.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
             var cols = new Color[palStr.Length];
 
@@ -473,7 +479,7 @@ namespace ZXDebug
 
 		static string VSCode_OnEvaluate_REPL( Request pRequest, string pExpression )
 		{
-			return _debugger.CustomCommand( pExpression );
+			return string.Join( "\n", _debugger.CustomCommand( pExpression ) );
 		}
 
 	    static char[] _varSplitChar = new[] { ' ', ',' };
