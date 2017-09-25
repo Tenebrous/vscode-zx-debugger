@@ -102,7 +102,10 @@ namespace ZEsarUX
             Log.Write( Log.Severity.Message, "zesarux: disconnecting..." );
 
             if( _stream != null )
+            {
+                SendAndReceiveSingle( "disable-breakpoints" );
                 SendAndReceiveSingle( "exit" );
+            }
 
             if( _stream != null )
             {
@@ -116,7 +119,7 @@ namespace ZEsarUX
                 _client = null;
             }
 
-            Log.Write( Log.Severity.Message, "zesarux: disconnected." );
+            Log.Write( Log.Severity.Message, "zesarux: disconnected" );
 
             return true;
         }
