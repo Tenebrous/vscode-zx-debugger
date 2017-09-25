@@ -19,7 +19,7 @@ namespace ZXDebug
 	    static bool _running;
 
 	    static Value _rootValues = new Value();
-	    static Value _registersValues;
+        static Value _registersValues;
         static Value _pagingValues;
 	    static Value _settingsValues;
 
@@ -400,47 +400,90 @@ namespace ZXDebug
             );
         }
 
-	    static Source DisassemblySource()
-	    {
-	        return new Source( "-", DisassemblyFile, 0, Source.SourcePresentationHintEnum.deemphasize );
-	    }
+        static HashSet<byte> _calls = new HashSet<byte>()
+        { 0xC4, 0xCC, 0xCD, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC };
 
+        static List<ushort> _stackValues = new List<ushort>();
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
             _machine.Registers.Get();
 	        _machine.Memory.GetMapping();
-	        _machine.Stack.Get();
+	        //_machine.Stack.Get();
 
 	        PrepopulateDisassemblyFile();
 
             // disassemble from current PC
-	        var updated = _machine.UpdateDisassembly( _machine.Registers.PC, DisassemblyFile );
+	        var updated = _machine.UpdateDisassembly( _machine.Registers.PC );
 
             // if current PC instruction is a jp/call etc, pre-disassemble the destination
-	        updated |= _machine.PreloadDisassembly( _machine.Stack[0], DisassemblyFile );
+	        updated |= _machine.PreloadDisassembly( _machine.Registers.PC );
 
-            // if( updated )
-            //   _vscode.Send( new Event( "refreshDisasm", new { file = DisassemblyFile } ) );
+	        var stackBytes = new byte[20];
+	        var caller = new byte[4];
 
-            _stackFrames.Clear();
+	        _stackValues.Clear();
+	        _stackFrames.Clear();
 
-	        var stack = _machine.Stack;
-	        for( var i = 0; i < stack.Count; i++ )
-	        {   
+            _stackValues.Add( _machine.Registers.PC );
+	        _machine.Memory.Get( _machine.Registers.SP, 20, stackBytes );
+
+	        for( var i = 0; i < stackBytes.Length; i += 2 )
+	            _stackValues.Add( (ushort)( (stackBytes[i+1] << 8) | stackBytes[i] ) );
+
+	        for( var i = 0; i < _stackValues.Count; i++ )
+	        {
+                var addr = _stackValues[i];
+
+                if( i > 0 )
+                    _machine.Memory.Get( (ushort)(addr-3), 3, caller );
+
+	            string symbol = null;
+
+	            if( i == 0 || _calls.Contains( caller[0] ) )
+	            {
+                    if( i > 0 )
+	                    addr -= 3;
+
+	                var slot = _machine.Memory.GetSlot( addr );
+	                var label = _machine.SourceMaps.FindPreviousLabel( slot.Bank.ID, addr );
+
+	                if( label != null )
+	                {
+	                    if( label.Location == addr )
+	                        symbol = $"{label.Labels[0]} ({addr.ToHex()})";
+	                    else
+	                    {
+	                        symbol = $"{label.Labels[0]} +{addr - label.Location} ({addr.ToHex()})";
+
+                            if( addr - label.Location < 50 )
+	                            updated |= _machine.UpdateDisassembly( label.Location );
+	                    }
+                    }
+	            }
+
 	            _stackFrames.Add(
 	                new StackFrame(
-	                    i + 1,
-	                    $"${stack[i]:X4} / {stack[i]}",
-	                    DisassemblySource(),
-	                    _machine.FindLine( stack[i] ),
+	                    addr,
+	                    symbol,
+	                    symbol == null ? StackSource : DisassemblySource,
+	                    0,
 	                    0,
 	                    "normal"
                     )
 	            );
 	        }
 
-	        _vscode.Send(
+            if( updated )
+                _machine.WriteDisassemblyFile( DisassemblyFile );
+
+	        foreach( var frame in _stackFrames )
+	            if( frame.name == null )
+	                frame.name = ( (ushort) frame.id ).ToHex();
+	            else
+	                frame.line = _machine.FindLine( (ushort) frame.id );
+
+            _vscode.Send(
                 pRequest,
                 new StackTraceResponseBody(
                     _stackFrames
@@ -450,7 +493,7 @@ namespace ZXDebug
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
         {
-            _machine.UpdateDisassembly( _machine.Stack[pFrameID-1], DisassemblyFile );
+            _machine.UpdateDisassembly( (ushort)pFrameID, DisassemblyFile );
 
             var scopes = new List<Scope>();
 
@@ -577,11 +620,11 @@ namespace ZXDebug
             if( value == null )
                 return;
 
-                value.Refresh();
+            value.Refresh();
 
-                foreach( var child in value.Children )
-                    pResult.Add( CreateVariableForValue( child ) );
-            }
+            foreach( var child in value.Children )
+                pResult.Add( CreateVariableForValue( child ) );
+        }
 
 	    static Variable CreateVariableForValue( Value pValue )
 	    {
@@ -618,7 +661,7 @@ namespace ZXDebug
 	    {
 	        string sourceName = pRequest.arguments.source.name;
 
-	        if( sourceName != DisassemblySource().name )
+	        if( sourceName != DisassemblySource.name )
 	            return;
 
 	        var max = _debugger.Meta.MaxBreakpoints;
@@ -656,7 +699,7 @@ namespace ZXDebug
                             bp.Index,
                             true,
                             bp.Line.Bank.ToString() + " " + bp.Line.Address.ToHex(),
-                            DisassemblySource(),
+                            DisassemblySource,
                             bp.Line.FileLine,
                             0,
                             bp.Line.FileLine,
@@ -669,7 +712,7 @@ namespace ZXDebug
                             -1,
                             false,
                             error,
-                            DisassemblySource(),
+                            DisassemblySource,
                             lineNumber,
                             0,
                             lineNumber,
@@ -683,7 +726,7 @@ namespace ZXDebug
                 _machine.Breakpoints.Remove( b );
 
 
-            // respond to vscode
+            // respond to vscode 
 
             _machine.Breakpoints.Commit();
 
@@ -700,16 +743,16 @@ namespace ZXDebug
         static void SetupValues( Value pValues, Machine pMachine )
         {
             _registersValues = pValues.Create( "Registers" );
-			SetupValues_Registers( _registersValues );
+            SetupValues_Registers( _registersValues );
 
             _pagingValues = pValues.Create( "Paging", pRefresher: SetupValues_Paging );
             SetupValues_Paging( _pagingValues );
 
-			_settingsValues = pValues.Create("Settings");
+            _settingsValues = pValues.Create("Settings");
 			SetupValues_Settings( _settingsValues );
 		}
 
-		static void SetupValues_Registers( Value pVal )
+        static void SetupValues_Registers( Value pVal )
 		{
             Value reg16;
 
@@ -769,9 +812,9 @@ namespace ZXDebug
             }
         }
 
-		static void SetupValues_Settings( Value pVal )
-		{
-		}
+        static void SetupValues_Settings( Value pVal )
+        {
+        }
 
         static void SetReg( Value pReg, string pValue )
 		{
@@ -826,23 +869,25 @@ namespace ZXDebug
 	        _prepopulatedDisassemblyFile = true;
 	    }
 
-        static string DynString( dynamic pArgs, string pName, string pDefault = null )
-	    {
-	        var result = (string)pArgs[pName];
-
-	        if( result == null )
-	            return pDefault;
-
-	        result = result.Trim();
-
-	        if( result.Length == 0 )
-	            return pDefault;
-
-	        return result;
-	    }
-
 	    static string _tempFolder;
-        static string DisassemblyFile => Path.Combine( _tempFolder, "disasm.zdis" );
+
+        static string _disassemblyFile;
+        static string DisassemblyFile
+        {
+            get { return _disassemblyFile = _disassemblyFile ?? Path.Combine( _tempFolder, "disasm.zdis" ); }
+        }
+
+        static Source _stackSource;
+        static Source StackSource
+        {
+            get { return _stackSource = _stackSource ?? new Source( "", "", 0, Source.SourcePresentationHintEnum.deemphasize ); }
+        }
+
+        static Source _disassemblySource;
+        static Source DisassemblySource
+        {
+            get { return _disassemblySource = _disassemblySource ?? new Source( "disasm", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
+        }
     }
 }
 

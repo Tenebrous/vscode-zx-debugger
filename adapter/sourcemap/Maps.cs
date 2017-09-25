@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.Remoting.Contexts;
 using Spectrum;
 
 namespace ZXDebug.SourceMap
@@ -10,18 +11,40 @@ namespace ZXDebug.SourceMap
     {
         public Address Find( BankID pBank, ushort pAddress )
         {
-            Address value = null;
+            foreach( var map in this )
+                if( map.Banks.TryGetValue( pBank, out var bank ) )
+                    if( bank.Symbols.TryGetValue( pAddress, out var value ) )
+                        return value;
+
+            return null;
+        }
+
+        public Address FindPreviousLabel( BankID pBank, ushort pAddress )
+        {
+            Address result = null;
+            ushort highest = 0;
 
             foreach( var map in this )
             {
                 if( !map.Banks.TryGetValue( pBank, out var bank ) )
                     continue;
 
-                if( !bank.Symbols.TryGetValue( pAddress, out value ) )
-                    continue;
+                foreach( var s in bank.Symbols )
+                {
+                    var sym = s.Value;
+
+                    if( sym.Location <= highest || sym.Location > pAddress )
+                        continue;
+
+                    if( sym.Labels == null || sym.Labels.Count <= 0 )
+                        continue;
+
+                    highest = sym.Location;
+                    result = sym;
+                }
             }
 
-            return value;
+            return result;
         }
     }
 }

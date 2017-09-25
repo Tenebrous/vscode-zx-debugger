@@ -314,7 +314,7 @@ namespace Spectrum
                     if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
                     {
                         // line up comment with start of mnemonic at col 21
-                        _tempLabelBuilder.Append( ' ', 20 - _tempLabelBuilder.Length );
+                        _tempLabelBuilder.Append( ' ', Math.Max( 20 - _tempLabelBuilder.Length, 0 ) );
                         _tempLabelBuilder.Append( ';' );
 
                         if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
@@ -535,7 +535,7 @@ namespace Spectrum
             return 0;
         }
 
-        public bool PreloadDisassembly( ushort pAddress, string pFilename )
+        public bool PreloadDisassembly( ushort pAddress, string pFilename = null )
         {
             var slot = Memory.GetSlot( pAddress );
             var bank = GetDisasmBank( slot.Bank.ID );

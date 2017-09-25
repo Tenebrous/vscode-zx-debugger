@@ -74,9 +74,9 @@ namespace Spectrum
         }
 
         HashSet<string> _wordRegs = new HashSet<string>()
-                                    {
-                                        "PC", "SP", "AF", "BC", "DE", "HL",  "AF'", "BC'", "DE'", "HL'", "IX", "IY"
-                                    };
+        {
+            "PC", "SP", "AF", "BC", "DE", "HL",  "AF'", "BC'", "DE'", "HL'", "IX", "IY"
+        };
 
         public int Size( string pRegister )
         {

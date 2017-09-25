@@ -112,12 +112,12 @@ namespace VSCode
 
     public class StackFrame
     {
-        public int id { get; }
-        public string name { get; }
-        public Source source { get; }
-        public int line { get; }
-        public int column { get; }
-        public string presentationHint { get; }
+        public int id;
+        public string name;
+        public Source source;
+        public int line;
+        public int column;
+        public string presentationHint;
 
         public StackFrame( int id, string name, Source source, int line, int column, string presentationHint = null )
         {
