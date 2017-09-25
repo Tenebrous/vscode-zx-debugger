@@ -6,7 +6,9 @@ using System.IO;
 using System.Text;
 using Spectrum;
 using VSCode;
-using Breakpoint = VSCode.Breakpoint;
+using VSCodeBreakpoint = VSCode.Breakpoint;
+using File = System.IO.File;
+using ZXDebug.SourceMap;
 
 namespace ZXDebug
 {
@@ -84,8 +86,6 @@ namespace ZXDebug
             // tie all the values together
             SetupValues( _rootValues, _machine );
 
-
-            _machine.SourceMaps.Add( new SourceMap( @"D:\Dev\ZX\test1\tmp\game.map" ) );
 
 			// event loop
 
@@ -349,7 +349,7 @@ namespace ZXDebug
 	        foreach( var map in _settings.SourceMaps )
 	        {
 	            var file = FindFile( map, "maps" );
-                _machine.SourceMaps.Add( new SourceMap( file ) );
+                _machine.SourceMaps.Add( new Map( file ) );
 	            Log.Write( Log.Severity.Message, "Loaded map: " + file );
 	        }
 
@@ -610,7 +610,7 @@ namespace ZXDebug
 
 
         static HashSet<Spectrum.Breakpoint> _tempBreakpoints = new HashSet<Spectrum.Breakpoint>();
-	    static List<Breakpoint> _tempBreakpointsResponse = new List<Breakpoint>();
+	    static List<VSCodeBreakpoint> _tempBreakpointsResponse = new List<VSCodeBreakpoint>();
 	    static void VSCode_OnSetBreakpoints( Request pRequest )
 	    {
 	        string sourceName = pRequest.arguments.source.name;
@@ -649,7 +649,7 @@ namespace ZXDebug
 
                 if( error == null )
                     _tempBreakpointsResponse.Add(
-                        new Breakpoint(
+                        new VSCodeBreakpoint(
                             bp.Index,
                             true,
                             bp.Line.Bank.ToString() + " " + bp.Line.Address.ToHex(),
@@ -662,7 +662,7 @@ namespace ZXDebug
                     );
                 else
                     _tempBreakpointsResponse.Add(
-                        new Breakpoint(
+                        new VSCodeBreakpoint(
                             -1,
                             false,
                             error,

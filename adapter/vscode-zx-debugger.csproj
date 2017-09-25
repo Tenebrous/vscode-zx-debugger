@@ -53,16 +53,30 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cache.cs" />
+    <Compile Include="sourcemap\Address.cs" />
+    <Compile Include="sourcemap\Bank.cs" />
+    <Compile Include="sourcemap\Banks.cs" />
+    <Compile Include="sourcemap\File.cs" />
+    <Compile Include="sourcemap\Files.cs" />
+    <Compile Include="utils\Cache.cs" />
+    <Compile Include="machine\Bank.cs" />
+    <Compile Include="machine\BankID.cs" />
+    <Compile Include="machine\Breakpoint.cs" />
+    <Compile Include="machine\Breakpoints.cs" />
+    <Compile Include="machine\Memory.cs" />
+    <Compile Include="machine\Registers.cs" />
+    <Compile Include="machine\Slot.cs" />
+    <Compile Include="machine\Stack.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="sourcemap\Maps.cs" />
     <Compile Include="utils\Format.cs" />
     <Compile Include="utils\Log.cs" />
-    <Compile Include="Machine.cs" />
-    <Compile Include="SourceMap.cs" />
+    <Compile Include="machine\Machine.cs" />
+    <Compile Include="sourcemap\Map.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="utils\Value.cs" />
     <Compile Include="Debugger.cs" />
-    <Compile Include="Disassembler.cs" />
+    <Compile Include="machine\Disassembler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="vscode\Connection.cs" />
     <Compile Include="vscode\Protocol.cs" />

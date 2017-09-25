@@ -5,19 +5,19 @@ using System.Text.RegularExpressions;
 using Spectrum;
 using Newtonsoft.Json;
 
-namespace ZXDebug
+namespace ZXDebug.SourceMap
 {
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg)
     /// </summary>
-    public class SourceMap
+    public class Map
     {
         public string Filename;
 
-        public SourceBanks Banks = new SourceBanks();
-        public Sources Files = new Sources();
+        public Banks Banks = new Banks();
+        public Files Files = new Files();
 
-        public SourceMap( string pFilename )
+        public Map( string pFilename )
         {
             Filename = pFilename;
 
@@ -186,7 +186,7 @@ namespace ZXDebug
             }
 
             // record our interpretation of the .map file for posterity... and also for testing
-            File.WriteAllText( 
+            System.IO.File.WriteAllText( 
                 pFilename + ".json", 
                 JsonConvert.SerializeObject( 
                     this, 
@@ -226,81 +226,6 @@ namespace ZXDebug
             }
 
             return result.Trim();
-        }
-
-
-        public class SourceBanks : Cache<BankID, SourceBank>
-        {
-            public SourceBanks() : base( NewBank ) { }
-
-            static SourceBank NewBank( BankID pBank )
-            {
-                return new SourceBank() { Bank = pBank };
-            }
-        }
-
-        public class SourceBank
-        {
-            public BankID Bank;
-
-            public Cache<ushort, SourceAddress> Symbols;
-
-            public SourceBank()
-            {
-                Symbols = new Cache<ushort, SourceAddress>( NewSymbol );
-            }
-
-            SourceAddress NewSymbol( ushort pAddress )
-            {
-                return new SourceAddress() { Address = pAddress };
-            }
-        }
-
-        public class SourceAddress
-        {
-            public SourceMap    Map;
-            public ushort       Address;
-            public Source       File;
-            public int          Line;
-            public List<string> Labels;
-            public string       Comment;
-        }
-
-        public class Sources : Cache<string, Source>
-        {
-            public Sources() : base( NewSource ) { }
-
-            static Source NewSource( string pFile )
-            {
-                return new Source() { Filename = pFile };
-            }
-        }
-
-        public class Source
-        {
-            public string Filename;
-        }
-    }
-
-    /// <summary>
-    /// A collection of Map files
-    /// </summary>
-    public class SourceMaps : List<SourceMap>
-    {
-        public SourceMap.SourceAddress Find( BankID pBank, ushort pAddress )
-        {
-            SourceMap.SourceAddress value = null;
-
-            foreach( var map in this )
-            {
-                if( !map.Banks.TryGetValue( pBank, out var bank ) )
-                    continue;
-
-                if( !bank.Symbols.TryGetValue( pAddress, out value ) )
-                    continue;
-            }
-
-            return value;
         }
     }
 }
