@@ -229,10 +229,8 @@ namespace ZEsarUX
 
         void ReadBreakpoints()
         {
-            _protocolLogLevel = Log.Severity.Message;
             SendAndReceive( "get-breakpoints" );
             Log.Write( _protocolLogLevel, "" );
-            _protocolLogLevel = Log.Severity.Debug;
         }
 
 

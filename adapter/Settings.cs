@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Newtonsoft.Json;
 
@@ -81,8 +81,6 @@ namespace ZXDebug
                 path = path.Parent;
 
             ExtensionPath = path.FullName;
-
-            Log.Write( Log.Severity.Message, "Extension path: " + ExtensionPath );
         }
     }
 }

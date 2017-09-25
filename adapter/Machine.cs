@@ -457,7 +457,7 @@ namespace Spectrum
                                 comment = op.Value.ToHex();
                             }
                             else
-                                text = text.ReplaceFirst( "{code}", op.Value.ToHex() + " (" + pBankID + "/" + op.Value.ToHex() + "/" + op.Value + ")");
+                                text = text.ReplaceFirst( "{code}", op.Value.ToHex() );
 
                             break;
                     }

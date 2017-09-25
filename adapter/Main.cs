@@ -344,7 +344,7 @@ namespace ZXDebug
 	        {
 	            var file = FindFile( map, "maps" );
                 _machine.SourceMaps.Add( new SourceMap( file ) );
-	            Log.Write( Log.Severity.Message, "Loaded " + file );
+	            Log.Write( Log.Severity.Message, "Loaded map: " + file );
 	        }
 
             _machine.Disassembler.ClearLayers();
@@ -352,7 +352,7 @@ namespace ZXDebug
 	        {
 	            var file = FindFile( table, "opcodes" );
 	            _machine.Disassembler.AddLayer( file );
-	            Log.Write( Log.Severity.Message, "Loaded " + file );
+	            Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file );
 	        }
 	    }
 
