@@ -25,7 +25,7 @@ namespace ZXDebug
             _childrenByName = new Dictionary<string, Value>( StringComparer.InvariantCultureIgnoreCase );
         }
 
-        Value( Value pParent, Action<Value> pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormatter = null )
+        Value( Value pParent, ValueRefresher pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormatter = null )
         {
             Parent = pParent;
             _all = pParent._all;
@@ -36,9 +36,10 @@ namespace ZXDebug
             Getter = pGet;
             Setter = pSet;
             Formatter = pFormatter;
+            Refresher = pRefresher;
         }
 
-        public Value Create( string pName, Action<Value> pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormat = null )
+        public Value Create( string pName, ValueRefresher pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormat = null )
         {
             var value = new Value( this, pRefresher, pGet, pSet, pFormat )
             {
@@ -136,12 +137,13 @@ namespace ZXDebug
                 OnChange?.Invoke( this, old, _content );
                 _doingOnChange = false;
             }
+
             get 
             {
                 if( Getter != null )
                     _content = Getter(this);
 
-                 return _content; 
+                return _content; 
             }
         }
 
@@ -159,6 +161,18 @@ namespace ZXDebug
         public override string ToString()
         {
             return $"{Name} = {Content}";
+        }
+
+        public void ClearChildren()
+        {
+            foreach( var c in _children )
+            {
+                _all.Remove( c.Key );
+                _allByName.Remove( c.Value.Name );
+            }
+
+            _children.Clear();
+            _childrenByName.Clear();
         }
     }
 }

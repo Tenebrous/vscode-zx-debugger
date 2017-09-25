@@ -20,6 +20,7 @@ namespace ZXDebug
 
 	    static Value _rootValues = new Value();
 	    static Value _registersValues;
+        static Value _pagingValues;
 	    static Value _settingsValues;
 
 	    static Machine _machine;
@@ -573,17 +574,19 @@ namespace ZXDebug
         {
             var value = _rootValues.All( pReference );
 
-            if( value != null )
-            {
+            if( value == null )
+                return;
+
                 value.Refresh();
 
                 foreach( var child in value.Children )
                     pResult.Add( CreateVariableForValue( child ) );
             }
-        }
 
 	    static Variable CreateVariableForValue( Value pValue )
 	    {
+	        pValue.Refresh();
+
 	        return new Variable(
 	            pValue.Name,
 	            pValue.Formatted,
@@ -696,8 +699,11 @@ namespace ZXDebug
 
         static void SetupValues( Value pValues, Machine pMachine )
         {
-            _registersValues = pValues.Create("Registers");
+            _registersValues = pValues.Create( "Registers" );
 			SetupValues_Registers( _registersValues );
+
+            _pagingValues = pValues.Create( "Paging", pRefresher: SetupValues_Paging );
+            SetupValues_Paging( _pagingValues );
 
 			_settingsValues = pValues.Create("Settings");
 			SetupValues_Settings( _settingsValues );
@@ -752,6 +758,15 @@ namespace ZXDebug
             pVal.Create(         "I",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
 
             pVal.Create(         "R",   pGet: GetReg, pSet: SetReg, pFormat: Format.ToHex8  );
+        }
+
+        static void SetupValues_Paging( Value pVal )
+        {
+            pVal.ClearChildren();
+            foreach( var p in _machine.Memory.Slots )
+            {
+                var slot = pVal.Create( p.Min.ToHex(), delegate( Value pValue ) { pValue.Content = p.Bank.ID.ToString(); } );
+            }
         }
 
 		static void SetupValues_Settings( Value pVal )

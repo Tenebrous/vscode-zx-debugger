@@ -81,17 +81,6 @@ namespace Spectrum
         //    return new BankID() { Type = BankType.Bank, Number = pValue };
         //}
 
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hash = 17;
-                hash = hash * 23 + Type.GetHashCode();
-                hash = hash * 23 + Number.GetHashCode();
-                return hash;
-            }
-        }
-
         public override string ToString()
         {
             if( Type == TypeEnum.ROM )
@@ -119,6 +108,32 @@ namespace Spectrum
         public static BankID Unpaged()
         {
             return new BankID( BankID.TypeEnum.All );
+        }
+
+        public override bool Equals( Object obj )
+        {
+            return obj is BankID && this == (BankID)obj;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + Type.GetHashCode();
+                hash = hash * 23 + Number.GetHashCode();
+                return hash;
+            }
+        }
+
+        public static bool operator ==( BankID x, BankID y )
+        {
+            return x.Type == y.Type && x.Number == y.Number;
+        }
+
+        public static bool operator !=( BankID x, BankID y )
+        {
+            return !( x == y );
         }
     }
 }
