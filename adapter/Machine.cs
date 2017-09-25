@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -104,11 +104,13 @@ namespace Spectrum
         List<InstructionLine> _tempDisasm = new List<InstructionLine>();
         string _disassemblyMemoryMap = "";
 
-        public bool UpdateDisassembly( ushort pAddress, string pFilename )
+        public bool UpdateDisassembly( ushort pAddress, string pFilename = null )
         {
             if( UpdateDisassemblyInternal( pAddress, pFilename ) || _disassemblyMemoryMap != Memory.ToString() )
             {
-                WriteDisassemblyFile( pFilename );
+                if( pFilename != null )
+                    WriteDisassemblyFile( pFilename );
+
                 return true;
             }
 
@@ -210,7 +212,7 @@ namespace Spectrum
 
         Dictionary<int, InstructionLine> _linesToDisasm = new Dictionary<int, InstructionLine>();
         HashSet<BankID> _tempBankDone = new HashSet<BankID>();
-        void WriteDisassemblyFile( string pFilename )
+        public void WriteDisassemblyFile( string pFilename )
         {
             _linesToDisasm.Clear();
             _disassemblyMemoryMap = Memory.ToString();

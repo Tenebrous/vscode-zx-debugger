@@ -11,8 +11,8 @@ using Breakpoint = VSCode.Breakpoint;
 namespace ZXDebug
 {
     public static class Adapter
-	{
-	    static Connection _vscode;
+    {
+        static Connection _vscode;
 	    static Debugger _debugger;
 	    static bool _running;
 
@@ -109,7 +109,7 @@ namespace ZXDebug
 
                 if( _files.Count > 0 )
                     DoFiles();
-            }
+	        }
         }
 
 
@@ -407,9 +407,11 @@ namespace ZXDebug
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
-	        _machine.Registers.Get();
+            _machine.Registers.Get();
 	        _machine.Memory.GetMapping();
 	        _machine.Stack.Get();
+
+	        PrepopulateDisassemblyFile();
 
             // disassemble from current PC
 	        var updated = _machine.UpdateDisassembly( _machine.Registers.PC, DisassemblyFile );
@@ -646,32 +648,32 @@ namespace ZXDebug
 	                error = "A maximum of " + max + " breakpoints are supported";
 
                 if( error == null )
-	                _tempBreakpointsResponse.Add(
-	                    new Breakpoint(
+                    _tempBreakpointsResponse.Add(
+                        new Breakpoint(
                             bp.Index,
-	                        true,
+                            true,
                             bp.Line.Bank.ToString() + " " + bp.Line.Address.ToHex(),
-	                        DisassemblySource(),
+                            DisassemblySource(),
                             bp.Line.FileLine,
-	                        0,
+                            0,
                             bp.Line.FileLine,
-	                        0
-	                    )
-	                );
-	            else
-	                _tempBreakpointsResponse.Add(
-	                    new Breakpoint(
-	                        -1,
-	                        false,
+                            0
+                        )
+                    );
+                else
+                    _tempBreakpointsResponse.Add(
+                        new Breakpoint(
+                            -1,
+                            false,
                             error,
-	                        DisassemblySource(),
-	                        lineNumber,
-	                        0,
-	                        lineNumber,
-	                        0
-	                    )
-	                );
-	            }
+                            DisassemblySource(),
+                            lineNumber,
+                            0,
+                            lineNumber,
+                            0
+                        )
+                    );
+            }
 
             // remove those no longer set
             foreach( var b in _tempBreakpoints )
@@ -777,6 +779,38 @@ namespace ZXDebug
 	    }
 
 
+	    static bool _prepopulatedDisassemblyFile = false;
+	    static void PrepopulateDisassemblyFile()
+	    {
+	        if( _prepopulatedDisassemblyFile )
+	            return;
+
+	        foreach( var f in _machine.SourceMaps )
+	        {
+	            foreach( var bankkvp in f.Banks )
+	            {
+	                var bank = bankkvp.Value;
+
+                    // todo: check bank is paged in
+
+	                foreach( var symbolkvp in bank.Symbols )
+	                {
+	                    var symbol = symbolkvp.Value;
+
+	                    if( symbol.File != null && symbol.Labels != null && symbol.Labels.Count > 0 )
+	                    {
+	                        //Log.Write( Log.Severity.Message, bankkvp.Key + " " + symbol.Address.ToHex() + " " + string.Join( " ", symbol.Labels ) + " " + symbol.File.Filename + ":" + symbol.Line );
+	                        //_machine.UpdateDisassembly( s.Value.Address );
+	                    }
+	                }
+	            }
+	        }
+
+	        //_machine.WriteDisassemblyFile( DisassemblyFile );
+
+	        _prepopulatedDisassemblyFile = true;
+	    }
+
         static string DynString( dynamic pArgs, string pName, string pDefault = null )
 	    {
 	        var result = (string)pArgs[pName];
@@ -796,3 +830,4 @@ namespace ZXDebug
         static string DisassemblyFile => Path.Combine( _tempFolder, "disasm.zdis" );
     }
 }
+
