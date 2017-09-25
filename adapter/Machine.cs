@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -1050,11 +1050,11 @@ namespace Spectrum
             if( pLine.Breakpoint != null )
                 return pLine.Breakpoint;
 
-            var bp = new Breakpoint() { ID = GetFreeID(), Line = pLine };
+            var bp = new Breakpoint() { Index = GetFreeID(), Line = pLine };
 
             if( _machine.Connection.SetBreakpoint( this, bp ) )
             {
-                _breakpoints.Add( bp.ID, bp );
+                _breakpoints.Add( bp.Index, bp );
                 pLine.Breakpoint = bp;
             }
 
@@ -1068,14 +1068,14 @@ namespace Spectrum
 
             _machine.Connection.RemoveBreakpoint( this, pLine.Breakpoint );
 
-            _breakpoints.Remove( pLine.Breakpoint.ID );
+            _breakpoints.Remove( pLine.Breakpoint.Index );
         }
 
         public void Remove( Breakpoint pBreakpoint )
         {
             _machine.Connection.RemoveBreakpoint( this, pBreakpoint );
 
-            _breakpoints.Remove( pBreakpoint.ID );
+            _breakpoints.Remove( pBreakpoint.Index );
             
             pBreakpoint.Line.Breakpoint = null;
             pBreakpoint.Line = null;
@@ -1112,7 +1112,7 @@ namespace Spectrum
 
     public class Breakpoint
     {
-        public int ID;
+        public int Index;
         public InstructionLine Line;
     }
 }

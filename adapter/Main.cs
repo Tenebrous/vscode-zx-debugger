@@ -610,6 +610,8 @@ namespace ZXDebug
 	        if( sourceName != DisassemblySource().name )
 	            return;
 
+	        var max = _debugger.Meta.MaxBreakpoints;
+
             _tempBreakpointsResponse.Clear();
 
             // record old ones
@@ -620,33 +622,42 @@ namespace ZXDebug
             // set new ones
 	        foreach( var breakpoint in pRequest.arguments.breakpoints )
 	        {
-	            int lineNumber = breakpoint.line;;
+	            string error = null;
+	            int lineNumber = breakpoint.line;
+	            Spectrum.Breakpoint bp = null;
+
 	            var line = _machine.GetLineFromDisassemblyFile( lineNumber );
+
 	            if( line != null )
 	            {
-	                var b = _machine.Breakpoints.Add( line );
-	                _tempBreakpoints.Remove( b );
+	                bp = _machine.Breakpoints.Add( line );
+	                _tempBreakpoints.Remove( bp );
+	            }
 
+	            if( bp == null )
+	                error = "Invalid location";
+                else if( bp.Index < 0 || bp.Index >= max )
+	                error = "A maximum of " + max + " breakpoints are supported";
+
+                if( error == null )
 	                _tempBreakpointsResponse.Add(
 	                    new Breakpoint(
-	                        b.ID,
+                            bp.Index,
 	                        true,
-	                        b.Line.Bank.ToString() + " " + b.Line.Address.ToHex(),
+                            bp.Line.Bank.ToString() + " " + bp.Line.Address.ToHex(),
 	                        DisassemblySource(),
-	                        b.Line.FileLine,
+                            bp.Line.FileLine,
 	                        0,
-	                        b.Line.FileLine,
+                            bp.Line.FileLine,
 	                        0
 	                    )
 	                );
-                }
 	            else
-	            {
 	                _tempBreakpointsResponse.Add(
 	                    new Breakpoint(
 	                        -1,
 	                        false,
-	                        "Invalid location",
+                            error,
 	                        DisassemblySource(),
 	                        lineNumber,
 	                        0,
@@ -655,7 +666,6 @@ namespace ZXDebug
 	                    )
 	                );
 	            }
-            }
 
             // remove those no longer set
             foreach( var b in _tempBreakpoints )

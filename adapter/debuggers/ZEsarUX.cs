@@ -33,6 +33,7 @@ namespace ZEsarUX
             CanEvaluate = true,
             CanStepOut = false,
             //CanStepOverSensibly = true // wait for updated ZEsarUX
+            MaxBreakpoints = 10
         };
         
         public override bool Connect()
@@ -49,12 +50,11 @@ namespace ZEsarUX
                 _stream = _client.GetStream();
                 _connected = true;
 
+                // clear initial buffer ready for setup
                 ReadAll();
 
-                var version = SendAndReceiveSingle("get-version");
-                Log.Write( Log.Severity.Message, "zesarux: connected (" + version + ")." );
-
-                ReadAll();
+                GetVersion();
+                GetBreakpointCount();
                 Setup();
             }
             catch( Exception e )
@@ -64,6 +64,37 @@ namespace ZEsarUX
             }
 
             return _connected;
+        }
+
+        void GetVersion()
+        {
+            var version = SendAndReceiveSingle("get-version");
+            Log.Write( Log.Severity.Message, "zesarux: connected (" + version + ")" );
+        }
+
+        Regex _breakpointCounter = new Regex(
+            @"(?'number'\d+):",
+            RegexOptions.Compiled
+        );
+
+        void GetBreakpointCount()
+        {
+            var count = 0;
+            var breakpoints = SendAndReceive( "get-breakpoints" );
+
+            foreach( var breakpoint in breakpoints )
+            {
+                var match = _breakpointCounter.Match( breakpoint );
+                if( match.Success )
+                {
+                    var num = int.Parse( match.Groups["number"].Value );
+                    if( num > count ) count = num;
+                }
+            }
+
+            Log.Write( Log.Severity.Message, "zesarux: max breakpoints " + count );
+
+            Meta.MaxBreakpoints = count;
         }
 
         public override bool Disconnect()
@@ -136,8 +167,8 @@ namespace ZEsarUX
 
         void SetSingleBreakpoint( Breakpoint pBreakpoint )
         {
-            var result = SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.ID+1} PC={pBreakpoint.Line.Address:X4}h") );
-            result = SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.ID+1), pRaiseErrors: false );
+            var result = SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.Index+1} PC={pBreakpoint.Line.Address:X4}h") );
+            result = SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.Index+1), pRaiseErrors: false );
         }
 
         HashSet<int> _enabledBreakpoints = new HashSet<int>();
@@ -150,7 +181,7 @@ namespace ZEsarUX
                 var remove = true;
                 foreach( var wanted in pBreakpoints )
                 {
-                    if( wanted.ID == current )
+                    if( wanted.Index == current )
                     {
                         remove = false;
                         break;
@@ -163,7 +194,7 @@ namespace ZEsarUX
 
             foreach( var b in pBreakpoints )
             {
-                _enabledBreakpoints.Add( b.ID );
+                _enabledBreakpoints.Add( b.Index );
                 SetSingleBreakpoint( b );
             }
 
@@ -189,18 +220,8 @@ namespace ZEsarUX
         {
             _enabledBreakpoints.Clear();
 
-            try
-            {
-                for( int i = 1; ; i++ )
-                {
-                    // error will be thrown if ZEsarUX doesn't like it
+            for( int i = 1; i < Meta.MaxBreakpoints; i++ )
                     SendAndReceiveSingle( "disable-breakpoint " + i );
-                }
-            }
-            catch
-            {
-                // ignore
-            }
 
             return true;
         }

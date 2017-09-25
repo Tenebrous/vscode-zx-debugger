@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using Spectrum;
@@ -177,6 +177,11 @@ namespace ZXDebug
         /// The debugger will ignore step over for 'ret' and 'jp' and will instead do a normal step
         /// </summary>
         public bool CanStepOverSensibly;
+
+        /// <summary>
+        /// Maximum number of breakpoints enabled at any one time
+        /// </summary>
+        public int MaxBreakpoints;
     }
 }
  
