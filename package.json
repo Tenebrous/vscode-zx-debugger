@@ -1,7 +1,7 @@
 {
     "name": "vscode-zx-debugger",
     "displayName": "ZX Debugger",
-    "version": "0.0.8",
+    "version": "0.0.11",
     "preview": true,
     "publisher": "Tenebrous",
     "description": "ZX debugger extension",
@@ -58,9 +58,6 @@
                     ]
                 },
                 "program": "./bin/vscode-zx-debugger.exe",
-                "args": [
-                    "${cwd}"
-                ],
                 "osx": {
                     "runtime": "mono"
                 },
@@ -78,14 +75,18 @@
                             },
                             "sourceMaps": {
                                 "type": "array",
-                                "default": ["48k_rom.dbg"],
+                                "default": [
+                                    "48k_rom.dbg"
+                                ],
                                 "items": {
                                     "type": "string"
                                 }
                             },
                             "opcodeTables": {
                                 "type": "array",
-                                "default": ["z80.json"],
+                                "default": [
+                                    "z80.json"
+                                ],
                                 "items": {
                                     "type": "string"
                                 }
