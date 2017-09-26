@@ -104,7 +104,7 @@
                             "opcodeTables": {
                                 "type": "array",
                                 "default": [
-                                    "z80.json"
+                                    "z80.tbl"
                                 ],
                                 "items": {
                                     "type": "string"
@@ -127,7 +127,7 @@
                             "48k_rom.dbg"
                         ],
                         "opcodeTables": [
-                            "z80.json"
+                            "z80.tbl"
                         ],
                         "stopOnEntry": true
                     }
