@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Spectrum;
 using VSCode;
@@ -71,7 +72,7 @@ namespace ZXDebug
             _vscode.SetBreakpointsEvent += VSCode_OnSetBreakpoints;
 
 
-            // zesarux events
+            // debugger events
 
             _debugger = new ZEsarUX.Connection();	  
 			// _debugger.OnData += Z_OnData; 
@@ -400,69 +401,84 @@ namespace ZXDebug
             );
         }
 
-        static HashSet<byte> _calls = new HashSet<byte>()
+        static HashSet<byte> _callerOpcode3 = new HashSet<byte>()
         { 0xC4, 0xCC, 0xCD, 0xD4, 0xDC, 0xE4, 0xEC, 0xF4, 0xFC };
 
-        static List<ushort> _stackValues = new List<ushort>();
+        static HashSet<byte> _callerOpcode2 = new HashSet<byte>()
+        {  };
+
+        static HashSet<byte> _callerOpcode1 = new HashSet<byte>()
+        { 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF };
+
+        static List<ushort> _stackBytes = new List<ushort>();
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
             _machine.Registers.Get();
 	        _machine.Memory.GetMapping();
-	        //_machine.Stack.Get();
 
 	        PrepopulateDisassemblyFile();
 
             // disassemble from current PC
-	        var updated = _machine.UpdateDisassembly( _machine.Registers.PC );
+	        var disassemblyUpdated = _machine.UpdateDisassembly( _machine.Registers.PC );
 
             // if current PC instruction is a jp/call etc, pre-disassemble the destination
-	        updated |= _machine.PreloadDisassembly( _machine.Registers.PC );
+	        disassemblyUpdated |= _machine.PreloadDisassembly( _machine.Registers.PC );
 
 	        var stackBytes = new byte[20];
 	        var caller = new byte[4];
 
-	        _stackValues.Clear();
+	        _stackBytes.Clear();
 	        _stackFrames.Clear();
 
-            _stackValues.Add( _machine.Registers.PC );
+            // add current PC as an entry to the stack frame
+            _stackBytes.Add( _machine.Registers.PC );
+
+            // get 20 bytes from SP onwards for analysis of the 10 addresses
 	        _machine.Memory.Get( _machine.Registers.SP, 20, stackBytes );
 
+            // turn the 20 bytes into 10 ushorts
 	        for( var i = 0; i < stackBytes.Length; i += 2 )
-	            _stackValues.Add( (ushort)( (stackBytes[i+1] << 8) | stackBytes[i] ) );
+	            _stackBytes.Add( (ushort)( (stackBytes[i+1] << 8) | stackBytes[i] ) );
 
-	        for( var i = 0; i < _stackValues.Count; i++ )
+            // now check out each address
+	        for( var i = 0; i < _stackBytes.Count; i++ )
 	        {
-                var addr = _stackValues[i];
+                // note: entry at i=0 is PC, so we don't need to get mem and we always show it
 
-                if( i > 0 )
-                    _machine.Memory.Get( (ushort)(addr-3), 3, caller );
+                var addr = _stackBytes[i];
 
 	            string symbol = null;
 
-	            if( i == 0 || _calls.Contains( caller[0] ) )
+	            if( i == 0 )
 	            {
-                    if( i > 0 )
-	                    addr -= 3;
+                    // always try to get symbol for PC
+	                symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
+	            }
+	            else
+	            {
+	                _machine.Memory.Get( (ushort)( addr - 3 ), 3, caller );
 
-	                var slot = _machine.Memory.GetSlot( addr );
-	                var label = _machine.SourceMaps.FindPreviousLabel( slot.Bank.ID, addr );
-
-	                if( label != null )
+	                if( _callerOpcode3.Contains( caller[0] ) )
 	                {
-	                    if( label.Location == addr )
-	                        symbol = $"{label.Labels[0]} ({addr.ToHex()})";
-	                    else
-	                    {
-	                        symbol = $"{label.Labels[0]} +{addr - label.Location} ({addr.ToHex()})";
-
-                            if( addr - label.Location < 50 )
-	                            updated |= _machine.UpdateDisassembly( label.Location );
-	                    }
+	                    addr -= 3;
+	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
+	                    if( symbol != null ) symbol += " ↑";
                     }
+	                else if( _callerOpcode3.Contains( caller[1] ) )
+	                {
+	                    addr -= 2;
+	                    symbol = GetPreviousSymbol( addr , ref disassemblyUpdated );
+	                }
+	                else if( _callerOpcode1.Contains( caller[2] ) )
+	                {
+	                    addr -= 1;
+	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
+	                    if( symbol != null ) symbol += " ↖";
+	                }
 	            }
 
-	            _stackFrames.Add(
+                _stackFrames.Add(
 	                new StackFrame(
 	                    addr,
 	                    symbol,
@@ -474,7 +490,7 @@ namespace ZXDebug
 	            );
 	        }
 
-            if( updated )
+            if( disassemblyUpdated )
                 _machine.WriteDisassemblyFile( DisassemblyFile );
 
 	        foreach( var frame in _stackFrames )
@@ -489,6 +505,23 @@ namespace ZXDebug
                     _stackFrames
                 )
             );
+        }
+
+        static string GetPreviousSymbol( ushort pAddress, ref bool pDisassemblyUpdated )
+        {
+            var slot = _machine.Memory.GetSlot( pAddress );
+            var label = _machine.SourceMaps.FindPreviousLabel( slot.Bank.ID, pAddress, 0x2000 );
+
+            if( label == null )
+                return null;
+
+            if( label.Location == pAddress )
+                return $"{label.Labels[0]} {pAddress.ToHex()}";
+
+            if( pAddress - label.Location < 50 )
+                pDisassemblyUpdated |= _machine.UpdateDisassembly( label.Location );
+
+            return $"{label.Labels[0]}+{pAddress - label.Location} {pAddress.ToHex()}";
         }
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
@@ -886,7 +919,7 @@ namespace ZXDebug
         static Source _disassemblySource;
         static Source DisassemblySource
         {
-            get { return _disassemblySource = _disassemblySource ?? new Source( "disasm", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
+            get { return _disassemblySource = _disassemblySource ?? new Source( "🔧", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
         }
     }
 }

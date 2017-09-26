@@ -19,7 +19,7 @@ namespace ZXDebug.SourceMap
             return null;
         }
 
-        public Address FindPreviousLabel( BankID pBank, ushort pAddress )
+        public Address FindPreviousLabel( BankID pBank, ushort pAddress, ushort pMaxDistance = 0xFFFF )
         {
             Address result = null;
             ushort highest = 0;
@@ -33,7 +33,7 @@ namespace ZXDebug.SourceMap
                 {
                     var sym = s.Value;
 
-                    if( sym.Location <= highest || sym.Location > pAddress )
+                    if( sym.Location <= highest || sym.Location > pAddress || ( pAddress - sym.Location ) > pMaxDistance )
                         continue;
 
                     if( sym.Labels == null || sym.Labels.Count <= 0 )
