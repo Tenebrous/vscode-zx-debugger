@@ -410,7 +410,7 @@ namespace ZXDebug
         static HashSet<byte> _callerOpcode1 = new HashSet<byte>()
         { 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF };
 
-        static List<ushort> _stackBytes = new List<ushort>();
+        static List<ushort> _stackAddresses = new List<ushort>();
         static List<StackFrame> _stackFrames = new List<StackFrame>();
 	    static void VSCode_OnGetStackTrace( Request pRequest )
 	    {
@@ -428,25 +428,29 @@ namespace ZXDebug
 	        var stackBytes = new byte[20];
 	        var caller = new byte[4];
 
-	        _stackBytes.Clear();
+	        _stackAddresses.Clear();
 	        _stackFrames.Clear();
 
             // add current PC as an entry to the stack frame
-            _stackBytes.Add( _machine.Registers.PC );
+            _stackAddresses.Add( _machine.Registers.PC );
 
-            // get 20 bytes from SP onwards for analysis of the 10 addresses
-	        _machine.Memory.Get( _machine.Registers.SP, 20, stackBytes );
+            // get stack pos and limit how many bytes we read if we would go higher than 0xFFFF
+	        ushort stackPos = _machine.Registers.SP;
+            int maxBytes = Math.Min( 20, 0xFFFF - stackPos );
 
-            // turn the 20 bytes into 10 ushorts
-	        for( var i = 0; i < stackBytes.Length; i += 2 )
-	            _stackBytes.Add( (ushort)( (stackBytes[i+1] << 8) | stackBytes[i] ) );
+            // read bytes from SP onwards for analysis of the addresses
+	        var bytes = _machine.Memory.Get( _machine.Registers.SP, maxBytes, stackBytes );
+
+            // turn the bytes into ushorts
+	        for( var i = 0; i < bytes; i += 2 )
+	            _stackAddresses.Add( (ushort)( (stackBytes[i+1] << 8) | stackBytes[i] ) );
 
             // now check out each address
-	        for( var i = 0; i < _stackBytes.Count; i++ )
+	        for( var i = 0; i < _stackAddresses.Count; i++ )
 	        {
                 // note: entry at i=0 is PC, so we don't need to get mem and we always show it
 
-                var addr = _stackBytes[i];
+                var addr = _stackAddresses[i];
 
 	            string symbol = null;
 
@@ -459,11 +463,20 @@ namespace ZXDebug
 	            {
 	                _machine.Memory.Get( (ushort)( addr - 3 ), 3, caller );
 
-	                if( _callerOpcode3.Contains( caller[0] ) )
+                    if( _callerOpcode3.Contains( caller[0] ) )
 	                {
 	                    addr -= 3;
 	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
 	                    if( symbol != null ) symbol += " ↑";
+
+                        // // we can get the original destination for the call here:
+	                    // var callDest = (ushort) ( caller[2] << 8 | caller[1] );
+                        // var callDestSymbol = GetPreviousSymbol( callDest, ref disassemblyUpdated );
+	                    // if( callDestSymbol != null )
+	                    // {
+	                    //     if( _stackFrames.Count > 0 )
+	                    //         _stackFrames[_stackFrames.Count - 1].name = callDestSymbol + " -> " + _stackFrames[_stackFrames.Count - 1].name;
+                        // }
                     }
 	                else if( _callerOpcode3.Contains( caller[1] ) )
 	                {
@@ -476,16 +489,18 @@ namespace ZXDebug
 	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
 	                    if( symbol != null ) symbol += " ↖";
 	                }
+
+	                _stackAddresses[i] = addr;
 	            }
 
                 _stackFrames.Add(
 	                new StackFrame(
-	                    addr,
+	                    i,
 	                    symbol,
 	                    symbol == null ? StackSource : DisassemblySource,
 	                    0,
 	                    0,
-	                    "normal"
+	                    i == 0 ? "subtle" : "normal"
                     )
 	            );
 	        }
@@ -495,9 +510,9 @@ namespace ZXDebug
 
 	        foreach( var frame in _stackFrames )
 	            if( frame.name == null )
-	                frame.name = ( (ushort) frame.id ).ToHex();
+	                frame.name = _stackAddresses[frame.id].ToHex();
 	            else
-	                frame.line = _machine.FindLine( (ushort) frame.id );
+	                frame.line = _machine.FindLine( _stackAddresses[frame.id] );
 
             _vscode.Send(
                 pRequest,
@@ -515,28 +530,28 @@ namespace ZXDebug
             if( label == null )
                 return null;
 
+            //if( pAddress - label.Location <  )
+            pDisassemblyUpdated |= _machine.UpdateDisassembly( label.Location );
+
             if( label.Location == pAddress )
                 return $"{label.Labels[0]} {pAddress.ToHex()}";
-
-            if( pAddress - label.Location < 50 )
-                pDisassemblyUpdated |= _machine.UpdateDisassembly( label.Location );
 
             return $"{label.Labels[0]}+{pAddress - label.Location} {pAddress.ToHex()}";
         }
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
         {
-            _machine.UpdateDisassembly( (ushort)pFrameID, DisassemblyFile );
+            _machine.UpdateDisassembly( _stackAddresses[pFrameID], DisassemblyFile );
 
             var scopes = new List<Scope>();
 
             foreach( var value in _rootValues.Children )
             {
-                scopes.Add( 
-                    new Scope( 
+                scopes.Add(
+                    new Scope(
                         value.Name,
                         value.ID
-                    ) 
+                    )
                 );
             }
 
@@ -919,7 +934,7 @@ namespace ZXDebug
         static Source _disassemblySource;
         static Source DisassemblySource
         {
-            get { return _disassemblySource = _disassemblySource ?? new Source( "🔧", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
+            get { return _disassemblySource = _disassemblySource ?? new Source( "asm", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
         }
     }
 }
