@@ -533,10 +533,12 @@ namespace ZXDebug
             //if( pAddress - label.Location <  )
             pDisassemblyUpdated |= _machine.UpdateDisassembly( label.Location );
 
-            if( label.Location == pAddress )
-                return $"{label.Labels[0]} {pAddress.ToHex()}";
+            string offset = label.Location == pAddress ? "" : $"+{ pAddress - label.Location}";
 
-            return $"{label.Labels[0]}+{pAddress - label.Location} {pAddress.ToHex()}";
+            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
+                return $"{label.Labels[0]}{offset} {pAddress.ToHex()}";
+
+            return $"{pAddress.ToHex()} {label.Labels[0]}{offset}";
         }
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )

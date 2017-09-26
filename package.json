@@ -42,17 +42,28 @@
             "title": "ZX Debugger",
             "properties": {
                 "zxdebug.disassembler.blankLineBeforeLabel": {
+                    "description": "Whether to add an extra line before labels",
                     "type": "boolean",
-                    "default": false,
-                    "description": "Whether to add an extra line before labels"
+                    "default": false
                 },
                 "zxdebug.hexPrefix": {
+                    "description": "String to add before any hex number",
                     "type": "string",
                     "default": "$"
                 },
                 "zxdebug.hexSuffix": {
+                    "description": "String to add after any hex number",
                     "type": "string",
                     "default": ""
+                },
+                "zxdebug.stack.labelPosition": {
+                    "description": "Where the label is shown in relation to the address in the stack",
+                    "type": "string",
+                    "default": "right",
+                    "enum": [
+                        "left",
+                        "right"
+                    ]
                 }
             }
         },
@@ -76,7 +87,7 @@
                 "configurationAttributes": {
                     "attach": {
                         "properties": {
-                            "cwd": {
+                            "projectFolder": {
                                 "type": "string",
                                 "description": "Project folder",
                                 "default": "${workspaceRoot}"
@@ -111,8 +122,13 @@
                         "type": "zxdebug",
                         "name": "ZX Debugger",
                         "request": "attach",
-                        "cwd": "${workspaceRoot}",
-                        "maps": [],
+                        "projectFolder": "${workspaceRoot}",
+                        "sourceMaps": [
+                            "48k_rom.dbg"
+                        ],
+                        "opcodeTables": [
+                            "z80.json"
+                        ],
                         "stopOnEntry": true
                     }
                 ]

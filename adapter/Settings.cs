@@ -1,6 +1,11 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+
+// ReSharper disable ClassNeverInstantiated.Global
+// ReSharper disable UnassignedField.Global
 
 namespace ZXDebug
 {
@@ -37,24 +42,30 @@ namespace ZXDebug
 
     public class Settings : VSCode.Settings
     {
-        // ReSharper disable InconsistentNaming
-        // ReSharper disable UnassignedField.Global
-
-        [JsonProperty(propertyName:"cwd")]
         public string   ProjectFolder;
-
         public string[] SourceMaps;
         public string[] OpcodeTables;
         public bool     StopOnEntry;
         public string   HexPrefix;
         public string   HexSuffix;
 
-        public DisassemblerSettings Disassembler;
-        
-        // ReSharper restore InconsistentNaming
-        // ReSharper restore UnassignedField.Global
-
         public string ExtensionPath;
+
+        public DisassemblerSettings Disassembler = new DisassemblerSettings();
+
+        public StackSettings Stack = new StackSettings();
+        public class StackSettings
+        {
+            [JsonConverter( typeof( StringEnumConverter ) )]
+            public enum LabelPositionEnum
+            {
+                Left,
+                Right
+            }
+
+            public LabelPositionEnum LabelPosition = LabelPositionEnum.Left;
+        }
+
 
         public Settings()
         {
@@ -66,10 +77,10 @@ namespace ZXDebug
             // check cwd
 
             if( string.IsNullOrWhiteSpace( ProjectFolder ) )
-                throw new Exception( "Property 'cwd' is missing or empty." );
+                throw new Exception( "Property 'projectFolder' is missing or empty." );
 
             if( !Directory.Exists( ProjectFolder ) )
-                throw new Exception( "Property 'cwd' refers to a folder that could not be found." );
+                throw new Exception( "Property 'projectFolder' refers to a folder that could not be found." );
 
 
             // get extension path for additional files
