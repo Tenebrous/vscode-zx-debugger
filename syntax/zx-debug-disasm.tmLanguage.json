@@ -13,7 +13,7 @@
         "comment": "Slot"    
     },
     {
-        "match": "(?i)^\\s*((ROM|RAM)_.*)$",
+        "match": "(?i)^\\s*((ROM|RAM|BANK)_.*)$",
         "captures": {
             "1": { "comment": "Bank", "name": "punctuation.definition.tag" }
         },
