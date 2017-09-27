@@ -73,7 +73,7 @@ namespace ZXDebug.SourceMap
                         var sym = symBank.Symbols[address];
 
                         var labelCaptures = labels.Captures;
-                        sym.Labels = new List<string>();
+                        sym.Labels = sym.Labels ?? new List<string>();
                         for( var i = 0; i < labelCaptures.Count; i++ )
                             sym.Labels.Add( labelCaptures[i].Value.Trim() );
 
@@ -84,8 +84,15 @@ namespace ZXDebug.SourceMap
                         if( !string.IsNullOrWhiteSpace( fileStr ) )
                         {
                             var file = Files[fileStr];
-                            sym.File = file;
-                            sym.Line = int.Parse( lineStr );
+                            var line = int.Parse( lineStr );
+
+                            if( sym.File == null || sym.File.Filename != fileStr )
+                            {
+                                sym.File = file;
+                                sym.Line = line;
+                            }
+                            else if( line > sym.Line )
+                                sym.Line = line;
                         }
 
                         sym.Map = this;
@@ -226,6 +233,11 @@ namespace ZXDebug.SourceMap
             }
 
             return result.Trim();
+        }
+
+        public override string ToString()
+        {
+            return Filename;
         }
     }
 }

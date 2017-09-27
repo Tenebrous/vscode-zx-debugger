@@ -18,7 +18,7 @@ namespace ZXDebug.SourceMap
             return null;
         }
 
-        public Address FindPreviousLabel( BankID pBank, ushort pAddress, ushort pMaxDistance = 0xFFFF )
+        public Address FindRecentWithLabel( BankID pBank, ushort pAddress, ushort pMaxDistance = 0xFFFF )
         {
             Address result = null;
             ushort highest = 0;

@@ -278,7 +278,7 @@ namespace Spectrum
             File.SetAttributes( pFilename, FileAttributes.ReadOnly );
         }
 
-        StringBuilder _tempLabelBuilder = new StringBuilder();
+        StringBuilder _tempLabel = new StringBuilder();
         void WriteDisasmLines( TextWriter pStream, DisasmBank pBank, ushort pOffset, ref int pLineNumber )
         {
             if( !string.IsNullOrWhiteSpace( pBank.Name ) && pBank.Name != "ALL" )
@@ -286,72 +286,86 @@ namespace Spectrum
                 pLineNumber++;
 
                 if( pBank.IsPagedIn )
-                    pStream.WriteLine( "  {0}", pBank.Name );
+                    pStream.WriteLine( "  {0}:", pBank.Name );
                 else
-                    pStream.WriteLine( "  {0} ({1})", pBank.Name, pBank.LastAddress.ToHex() );
+                    pStream.WriteLine( "  {0} ({1}):", pBank.Name, pBank.LastAddress.ToHex() );
             }
 
-            _tempLabelBuilder.Clear();
             var prev = pBank.SortedLines[0].Address;
             foreach( var line in pBank.SortedLines )
             {
+                var doneBlank = false;
+
                 if( line.Address - prev > 1 )
                 {
                     pLineNumber++;
                     pStream.WriteLine();
+                    doneBlank = true;
                 }
                 
                 prev = (ushort) ( line.Address + line.Instruction.Length );
 
-                var symbol = SourceMaps.Find( pBank.ID, (ushort)(line.Address + pOffset) );
+                var symbol = Symbol( pBank.ID, (ushort)(line.Address + pOffset) );
 
-                if( symbol?.Labels != null && symbol.Labels.Count > 0 )
+                if( symbol?.Labels != null )
                 {
-                    _tempLabelBuilder.Append( ' ', 4 );
-                    _tempLabelBuilder.Append( symbol.Labels[0] );
-                    _tempLabelBuilder.Append( ':' );
+                    var doneComment = false;
 
-                    if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
+                    foreach( var label in symbol.Labels )
                     {
-                        // line up comment with start of mnemonic at col 21
-                        _tempLabelBuilder.Append( ' ', Math.Max( 20 - _tempLabelBuilder.Length, 0 ) );
-                        _tempLabelBuilder.Append( ';' );
+                        _tempLabel.Append( ' ', 4 );
+                        _tempLabel.Append( label );
+                        _tempLabel.Append( ':' );
 
-                        if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
+                        if( !doneComment )
                         {
-                            _tempLabelBuilder.Append( ' ' );
-                            _tempLabelBuilder.Append( symbol.Comment );
+                            if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
+                            {
+                                // line up comment with start of mnemonics at col 21
+                                _tempLabel.Append( ' ', Math.Max( 20 - _tempLabel.Length, 0 ) );
+                                _tempLabel.Append( ';' );
+                            }
+
+                            if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
+                            {
+                                _tempLabel.Append( ' ' );
+                                _tempLabel.Append( symbol.Comment );
+                            }
+
+                            if( symbol.File != null )
+                            {
+                                _tempLabel.Append( ' ' );
+                                _tempLabel.Append( symbol.File.Filename );
+                                _tempLabel.Append( ':' );
+                                _tempLabel.Append( symbol.Line );
+                            }
+
+                            if( symbol.Map != null )
+                            {
+                                _tempLabel.Append( ' ' );
+                                _tempLabel.Append( '(' );
+                                _tempLabel.Append( Path.GetFileName( symbol.Map.Filename ) );
+                                _tempLabel.Append( ')' );
+                            }
+
+                            doneComment = true;
                         }
 
-                        if( symbol.File != null )
+                        if( _tempLabel.Length > 0 )
                         {
-                            _tempLabelBuilder.Append( ' ' );
-                            _tempLabelBuilder.Append( symbol.File.Filename );
-                            _tempLabelBuilder.Append( ':' );
-                            _tempLabelBuilder.Append( symbol.Line );
-                        }
+                            if( !doneBlank && Disassembler.Settings.BlankLineBeforeLabel )
+                            {
+                                pLineNumber++;
+                                pStream.WriteLine();
+                                doneBlank = true;
+                            }
 
-                        if( symbol.Map != null )
-                        {
-                            _tempLabelBuilder.Append( ' ' );
-                            _tempLabelBuilder.Append( '(' );
-                            _tempLabelBuilder.Append( Path.GetFileName( symbol.Map.Filename ) );
-                            _tempLabelBuilder.Append( ')' );
+                            pLineNumber++;
+                            pStream.WriteLine( _tempLabel.ToString() );
+
+                            _tempLabel.Clear();
                         }
                     }
-                }
-
-                if( _tempLabelBuilder.Length > 0 )
-                {
-                    if( Disassembler.Settings.BlankLineBeforeLabel )
-                    {
-                        pLineNumber++;
-                        pStream.WriteLine();
-                    }
-
-                    pLineNumber++;
-                    pStream.WriteLine( _tempLabelBuilder.ToString() );
-                    _tempLabelBuilder.Clear();
                 }
 
                 pLineNumber++;
@@ -418,7 +432,7 @@ namespace Spectrum
                                 sign = '-';
                             }
 
-                            var addr = (ushort) ( pLine.Address + offset + pLine.Instruction.Length );
+                            var addr = (ushort) ( pOffset + pLine.Address + offset + pLine.Instruction.Length );
                             symbol = Symbol( pBankID, addr );
                             absOffset = Math.Abs( offset );
 
@@ -486,21 +500,9 @@ namespace Spectrum
 
         Address Symbol( BankID pBankID, ushort pAddress )
         {
-            var found = SourceMaps.Find( pBankID, pAddress );
-
-            if( found == null )
-                found = SourceMaps.Find( BankID.Unpaged(), pAddress );
-
-            if( found == null )
-            {
-                var slot = Memory.GetSlot( pAddress );
-                pBankID = slot.Bank.ID;
-                found = SourceMaps.Find( pBankID, pAddress );
-            }
-
-            //Log.Write( Log.Severity.Message, pBankID + ":" + pAddress.ToHex() + " " +  );
-
-            return found;
+            return SourceMaps.Find( pBankID, pAddress )
+                ?? SourceMaps.Find( BankID.Unpaged(), pAddress )
+                ?? SourceMaps.Find( Memory.GetCurrentBank( pAddress ), pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )

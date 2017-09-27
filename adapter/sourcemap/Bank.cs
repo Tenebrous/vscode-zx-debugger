@@ -17,5 +17,10 @@ namespace ZXDebug.SourceMap
         {
             return new Address() { Location = pAddress };
         }
+
+        public override string ToString()
+        {
+            return ID.ToString();
+        }
     }
 }

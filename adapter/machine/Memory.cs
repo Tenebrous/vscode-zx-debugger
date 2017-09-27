@@ -50,6 +50,11 @@ namespace Spectrum
             return slot;
         }
 
+        public BankID GetCurrentBank( ushort pAddress )
+        {
+            return GetSlot( pAddress )?.Bank.ID ?? BankID.Unpaged();
+        }
+
         public void ClearMemoryMap()
         {
             //_slots.Clear();

@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Runtime.Serialization.Formatters;
 using System.Text;
 using Spectrum;
 using VSCode;
@@ -437,8 +436,8 @@ namespace ZXDebug
             _stackAddresses.Add( _machine.Registers.PC );
 
             // get stack pos and limit how many bytes we read if we would go higher than 0xFFFF
-	        ushort stackPos = _machine.Registers.SP;
-            int maxBytes = Math.Min( 20, 0xFFFF - stackPos );
+	        var stackPos = _machine.Registers.SP;
+            var maxBytes = Math.Min( 20, 0xFFFF - stackPos );
 
             // read bytes from SP onwards for analysis of the addresses
 	        var bytes = _machine.Memory.Get( _machine.Registers.SP, maxBytes, stackBytes );
@@ -454,12 +453,15 @@ namespace ZXDebug
 
                 var addr = _stackAddresses[i];
 
-	            string symbol = null;
+	            Address symbolWithLabel = null;
+	            Address symbol = null;
+
+	            var symbolIcon = "";
 
 	            if( i == 0 )
 	            {
                     // always try to get symbol for PC
-	                symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
+	                GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
 	            }
 	            else
 	            {
@@ -468,8 +470,8 @@ namespace ZXDebug
                     if( _callerOpcode3.Contains( caller[0] ) )
 	                {
 	                    addr -= 3;
-	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
-	                    if( symbol != null ) symbol += " ↑";
+	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+                        symbolIcon = " ↑";
 
                         // // we can get the original destination for the call here:
 	                    // var callDest = (ushort) ( caller[2] << 8 | caller[1] );
@@ -483,28 +485,79 @@ namespace ZXDebug
 	                else if( _callerOpcode3.Contains( caller[1] ) )
 	                {
 	                    addr -= 2;
-	                    symbol = GetPreviousSymbol( addr , ref disassemblyUpdated );
-	                }
+	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+                    }
 	                else if( _callerOpcode1.Contains( caller[2] ) )
 	                {
 	                    addr -= 1;
-	                    symbol = GetPreviousSymbol( addr, ref disassemblyUpdated );
-	                    if( symbol != null ) symbol += " ↖";
+	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+                        symbolIcon += " ↖";
 	                }
 
 	                _stackAddresses[i] = addr;
 	            }
 
-                _stackFrames.Add(
-	                new StackFrame(
-	                    i+1,
-	                    symbol,
-	                    symbol == null ? StackSource : DisassemblySource,
-	                    0,
-	                    0,
-	                    i == 0 ? "subtle" : "normal"
-                    )
-	            );
+	            var style = i == 0 ? "subtle" : "normal";
+
+	            var text = symbolWithLabel?.Labels[0] ?? addr.ToHex();
+
+	            if( symbol?.File != null )
+	            {
+                    _stackFrames.Add(
+                        new StackFrame(
+                            i + 1,
+                            text,
+                            new Source( 
+                                null,
+	                            Path.GetFullPath( Path.Combine( _settings.ProjectFolder, symbol.File.Filename ) )
+                            ), 
+                            symbol.Line,
+                            0,
+                            style
+                        )
+                    );
+                }
+
+	            //{
+	            //    _stackFrames.Add(
+	            //        new StackFrame(
+	            //            i + 1,
+	            //            addr.ToHex(),
+	            //            StackSource,
+	            //            0,
+	            //            0,
+	            //            style
+	            //        )
+	            //    );
+	            //}
+
+	            //else if( symbolWithLabel.File == null )
+	            //    {
+	            //        _stackFrames.Add(
+	            //            new StackFrame(
+	            //                i + 1,
+	            //                GetRelativeSymbolText( addr, symbolWithLabel ),
+	            //                DisassemblySource,
+	            //                0,
+	            //                0,
+	            //                style
+	            //            )
+	            //        );
+	            //    }
+	            //    else
+	            //    {
+	            //        _stackFrames.Add(
+	            //            new StackFrame(
+	            //                i + 1,
+	            //                GetRelativeSymbolText( addr, symbolWithLabel ),
+	            //                new Source( null, Path.Combine( _settings.ProjectFolder, symbolWithLabel.File.Filename ) ),
+	            //                symbolWithLabel.Line,
+	            //                0,
+	            //                style
+	            //            )
+	            //        );
+	            //    }
+	            //}
 	        }
 
             if( disassemblyUpdated )
@@ -512,15 +565,8 @@ namespace ZXDebug
 
 	        foreach( var frame in _stackFrames )
 	        {
-	            if( frame.name == null )
-	            {
-	                frame.name = _stackAddresses[frame.id - 1].ToHex();
-	            }
-
-	            frame.line = _machine.FindLine( _stackAddresses[frame.id-1] );
-
-                if( frame.line > 0 )
-	                frame.source = DisassemblySource;
+                if( frame.line == 0 )
+	                frame.line = _machine.FindLine( _stackAddresses[frame.id-1] );
 	        }
 
 	        _vscode.Send(
@@ -531,23 +577,44 @@ namespace ZXDebug
             );
         }
 
-        static string GetPreviousSymbol( ushort pAddress, ref bool pDisassemblyUpdated )
+        static bool GetSymbols( ushort pAddress, ref Address pLabelledSymbol, ref Address pExactSymbol, ref bool pDisassemblyUpdated )
         {
+            var sm = _machine.SourceMaps;
             var slot = _machine.Memory.GetSlot( pAddress );
-            var label = _machine.SourceMaps.FindPreviousLabel( slot.Bank.ID, pAddress, 0x2000 );
 
-            if( label == null )
-                return null;
+            pExactSymbol = sm.Find( slot.Bank.ID, pAddress )
+                        ?? sm.Find( BankID.Unpaged(), pAddress )
+                        ?? sm.Find( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
+
+            pLabelledSymbol = sm.FindRecentWithLabel( slot.Bank.ID, pAddress, 0x2000 )
+                           ?? sm.FindRecentWithLabel( BankID.Unpaged(), pAddress, 0x2000 )
+                           ?? sm.FindRecentWithLabel( _machine.Memory.GetCurrentBank( pAddress ), pAddress, 0x2000 );
 
             //if( pAddress - label.Location <  )
-            pDisassemblyUpdated |= _machine.UpdateDisassembly( label.Location );
+            if( pLabelledSymbol != null )
+                pDisassemblyUpdated |= _machine.UpdateDisassembly( pLabelledSymbol.Location );
 
-            string offset = label.Location == pAddress ? "" : $"+{ pAddress - label.Location}";
+            return pExactSymbol != null | pLabelledSymbol != null;
+        }
 
-            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
-                return $"{label.Labels[0]}{offset} {pAddress.ToHex()}";
+        static string GetRelativeSymbolText( ushort pAddress, Address pSymbol )
+        {
+            if( pAddress == pSymbol.Location )
+            {
+                if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
+                    return $"{pSymbol.Labels[0]} {pAddress.ToHex()}";
+                else
+                    return $"{pAddress.ToHex()} {pSymbol.Labels[0]}";
+            }
+            else
+            {
+                var offset = pAddress - pSymbol.Location;
 
-            return $"{pAddress.ToHex()} {label.Labels[0]}{offset}";
+                if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
+                    return $"{pSymbol.Labels[0]}+{offset} {pAddress.ToHex()}";
+                else
+                    return $"{pAddress.ToHex()} {pSymbol.Labels[0]}+{offset}";
+            }
         }
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
@@ -576,10 +643,16 @@ namespace ZXDebug
 
         static void VSCode_OnEvaluate( Request pRequest, int pFrameID, string pContext, string pExpression, bool bHex, ref string pResult )
 	    {
-			if( pContext == "repl" )
-				pResult = VSCode_OnEvaluate_REPL( pRequest, pExpression );
-			else
-				pResult = VSCode_OnEvaluate_Variable( pRequest, pExpression );
+	        switch( pContext )
+	        {
+                case "repl":
+			    	pResult = VSCode_OnEvaluate_REPL( pRequest, pExpression );
+                    break;
+
+                default:
+                    pResult = VSCode_OnEvaluate_Variable( pRequest, pExpression );
+                    break;
+            }
 		}
 
 		static string VSCode_OnEvaluate_REPL( Request pRequest, string pExpression )
@@ -595,14 +668,14 @@ namespace ZXDebug
 
 	        var parts = pExpression.Split( _varSplitChar, StringSplitOptions.RemoveEmptyEntries );
 
-	        bool gotAddress = false;
-	        bool gotLength = false;
-	        bool gotData = false;
+	        var gotAddress = false;
+	        var gotLength = false;
+	        var gotData = false;
 	        var isPointer = false;
 	        var isRegister = false;
 	        ushort address = 0;
-	        int parsedLength = 0;
-	        int length = 0;
+	        var parsedLength = 0;
+	        var length = 0;
 
 	        foreach( string part in parts )
             {

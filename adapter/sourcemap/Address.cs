@@ -10,5 +10,13 @@ namespace ZXDebug.SourceMap
         public int          Line;
         public List<string> Labels;
         public string       Comment;
+
+        public override string ToString()
+        {
+            if( Labels == null )
+                return $"{Location:X4} {Comment}";
+
+            return $"{Location:X4} {string.Join( ",", Labels )} {Comment}";
+        }
     }
 }
