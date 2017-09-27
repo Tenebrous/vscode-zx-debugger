@@ -89,7 +89,10 @@ namespace Spectrum
                 if( _tempToString.Length > 0 )
                     _tempToString.Append( ' ' );
 
-                _tempToString.Append( kvp.Key + ":" + kvp.Value.Bank.ID );
+                if( kvp.Value.Bank != null )
+                    _tempToString.Append( kvp.Key + ":" + kvp.Value.Bank?.ID );
+                else
+                    _tempToString.Append( kvp.Key + ":?" );
             }
 
             return _tempToString.ToString();

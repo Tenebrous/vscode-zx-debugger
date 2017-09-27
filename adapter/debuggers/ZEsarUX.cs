@@ -427,8 +427,8 @@ namespace ZEsarUX
 
         public override List<string> CustomCommand( string pCommand, List<string> pResults = null )
         {
-            SendAndReceive( pCommand, pResults );
-            return pResults;
+            var result = SendAndReceive( pCommand, pResults );
+            return result;
         }
 
         List<string> SendAndReceive( string pCommand, List<string> pResults = null, bool pRaiseErrors = true )
@@ -469,7 +469,8 @@ namespace ZEsarUX
                 pResults.ForEach(
                     pLine =>
                     {
-                        if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) ) throw new Exception( "ZEsarUX reports: " + pLine );
+                        if( pLine.StartsWith( "error", StringComparison.InvariantCultureIgnoreCase ) )
+                            throw new Exception( "ZEsarUX reports: " + pLine );
                     }
                 );
 
@@ -506,8 +507,6 @@ namespace ZEsarUX
         public List<string> ReadAll( List<string> pDestination = null )
         {
             pDestination = pDestination ?? _tempReceiveLines;
-
-            var wasRunning = _isRunning;
 
             _tempReadString.Clear();
             _tempReadProcessLines.Clear();

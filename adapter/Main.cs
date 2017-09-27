@@ -218,6 +218,8 @@ namespace ZXDebug
         static void Machine_OnPause()
 		{
 			_vscode.Stopped( 1, "step", "step" );
+
+		    //TestHeatMap();
 		}
 
 		static void Machine_OnContinue()
@@ -937,6 +939,49 @@ namespace ZXDebug
         static Source DisassemblySource
         {
             get { return _disassemblySource = _disassemblySource ?? new Source( "asm", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
+        }
+
+        static Dictionary<ushort, int> _cumulativeHeatMap = new Dictionary<ushort, int>();
+        static void TestHeatMap()
+        {
+            var data = new Dictionary<int, int>();
+            var splitChar = new char[] { ' ' };
+
+            var results = _debugger.CustomCommand( "get-visualpc-dump" );
+
+            foreach( var result in results )
+            {
+                var split = result.Split( splitChar, StringSplitOptions.RemoveEmptyEntries );
+
+                ushort baseAddress = Format.Parse( split[0] );
+
+                for( int i = 1; i < split.Length; i++ )
+                {
+                    var address = (ushort)( baseAddress + i - 1 );
+
+                    int oldCount;
+                    int additional = Format.Parse( split[i], pKnownHex : true );
+
+                    _cumulativeHeatMap.TryGetValue( address, out oldCount );
+                    _cumulativeHeatMap[address] = oldCount + additional;
+                }
+            }
+
+            foreach( var heat in _cumulativeHeatMap )
+            {
+                try
+                {
+                    var line = _machine.FindLine( heat.Key );
+                    if( line > 0 )
+                        data[line] = heat.Value;
+                }
+                catch
+                {
+                    // ignore
+                }
+            }
+
+            _vscode.Send( new Event( "showHeatMap", data ) );
         }
     }
 }
