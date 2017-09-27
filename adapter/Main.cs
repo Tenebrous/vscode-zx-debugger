@@ -497,7 +497,7 @@ namespace ZXDebug
 
                 _stackFrames.Add(
 	                new StackFrame(
-	                    i,
+	                    i+1,
 	                    symbol,
 	                    symbol == null ? StackSource : DisassemblySource,
 	                    0,
@@ -511,12 +511,19 @@ namespace ZXDebug
                 _machine.WriteDisassemblyFile( DisassemblyFile );
 
 	        foreach( var frame in _stackFrames )
+	        {
 	            if( frame.name == null )
-	                frame.name = _stackAddresses[frame.id].ToHex();
-	            else
-	                frame.line = _machine.FindLine( _stackAddresses[frame.id] );
+	            {
+	                frame.name = _stackAddresses[frame.id - 1].ToHex();
+	            }
 
-            _vscode.Send(
+	            frame.line = _machine.FindLine( _stackAddresses[frame.id-1] );
+
+                if( frame.line > 0 )
+	                frame.source = DisassemblySource;
+	        }
+
+	        _vscode.Send(
                 pRequest,
                 new StackTraceResponseBody(
                     _stackFrames
@@ -545,7 +552,7 @@ namespace ZXDebug
 
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
         {
-            _machine.UpdateDisassembly( _stackAddresses[pFrameID], DisassemblyFile );
+            _machine.UpdateDisassembly( _stackAddresses[pFrameID-1], DisassemblyFile );
 
             var scopes = new List<Scope>();
 
