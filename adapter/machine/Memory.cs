@@ -3,6 +3,9 @@ using System.Text;
 
 namespace Spectrum
 {
+    /// <summary>
+    /// Represents the current state of the device's memory 
+    /// </summary>
     public class Memory
     {
         public bool   PagingEnabled;

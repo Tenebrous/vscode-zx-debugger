@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace ZXDebug.SourceMap
 {
     /// <summary>
-    /// Stores parsed information from a single memory map (e.g. .dbg)
+    /// Stores parsed information from a single memory map (e.g. .dbg or .map)
     /// </summary>
     public class Map
     {
@@ -17,6 +17,10 @@ namespace ZXDebug.SourceMap
         public Banks Banks = new Banks();
         public Files Files = new Files();
 
+        /// <summary>
+        /// Create a new map from the referenced file
+        /// </summary>
+        /// <param name="pFilename">File to read</param>
         public Map( string pFilename )
         {
             Filename = pFilename;
@@ -31,7 +35,7 @@ namespace ZXDebug.SourceMap
             //File.WriteAllText( pFilename + ".json", JsonConvert.SerializeObject( this, new JsonSerializerSettings() {Formatting = Formatting.Indented,ReferenceLoopHandling = ReferenceLoopHandling.Ignore} ) );
         }
 
-        public void ReadDbg( string pFilename )
+        void ReadDbg( string pFilename )
         {
             // banktype_bankid addr(h) ("filename":line) (label1 (label2...)) (; comment)
             //
@@ -101,7 +105,7 @@ namespace ZXDebug.SourceMap
             }
         }
 
-        public void ReadMap( string pFilename )
+        void ReadMap( string pFilename )
         {
             // symbol = $address ; type, scope, def, module, section, file:line
             //

@@ -42,10 +42,22 @@ namespace ZXDebug
         {
         }
         
+        /// <summary>
+        /// Ask the device for information regarding the current memory mapping
+        /// e.g. which pages are in which slots
+        /// </summary>
+        /// <param name="pMemory">Memory class to be updated with the new configuration</param>
         public virtual void RefreshMemoryPages( Memory pMemory )
         {
         }
 
+        /// <summary>
+        /// Read the device's memory at the address specified into the provided buffer
+        /// </summary>
+        /// <param name="pAddress">Memory address</param>
+        /// <param name="pBuffer">Byte array to be filled from the device</param>
+        /// <param name="pLength">Number of bytes to retrieve</param>
+        /// <returns>Number of bytes which were successfully read</returns>
         public virtual int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
         {
             return 0;
@@ -53,7 +65,7 @@ namespace ZXDebug
 
 
         /// <summary>
-        /// Connect to the debugger
+        /// Connect to the device
         /// </summary>
         /// <returns>true if connection was successful</returns>
         public virtual bool Connect()
@@ -61,6 +73,11 @@ namespace ZXDebug
             return false;
         }
 
+
+        /// <summary>
+        /// Disconnect from the device
+        /// </summary>
+        /// <returns>true if disconnection was successful</returns>
         public virtual bool Disconnect()
         {
             return false;
@@ -77,51 +94,100 @@ namespace ZXDebug
 
         public virtual bool IsConnected { get; } = false;
                
+        /// <summary>
+        /// Tell the device to pause execution
+        /// </summary>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool Pause()
         {
             return false;
         }
 
+        /// <summary>
+        /// Tell the device to continue execution
+        /// </summary>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool Continue()
         {
             return false;
         }
-               
+
+        /// <summary>
+        /// Tell the device to execute the next instruction, and return control when it has finished.
+        /// For example, in the case of a CALL, the subroutine will be executed and control will be returned when the subroutine has completed.
+        /// </summary>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool StepOver()
         {
             return false;
         }
 
+        /// <summary>
+        /// Tell the device to execute the next instruction.
+        /// </summary>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool Step()
         {
             return false;
         }
 
+        /// <summary>
+        /// Tell the device to return from the current subroutine.
+        /// </summary>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool StepOut()
         {
             return false;
         }
 
+        /// <summary>
+        /// Update the device with the specified breakpoints.  The list contains the entire list of required breakpoints.
+        /// </summary>
+        /// <param name="pBreakpoints">List of breakpoints</param>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool SetBreakpoints( Breakpoints pBreakpoints )
         {
             return false;
         }
 
+        /// <summary>
+        /// Add a single breakpoint.
+        /// </summary>
+        /// <param name="pBreakpoints">List of all breakpoints, excluding the one to be added.</param>
+        /// <param name="pBreakpoint">New breakpoint to be added</param>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool SetBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
         {
             return false;
         }
 
+        /// <summary>
+        /// Remove all breakpoints.
+        /// </summary>
+        /// <param name="pBreakpoints">List of previous breakpoints</param>
+        /// <returns>true if the request succeeded</returns>
         public virtual bool RemoveBreakpoints( Breakpoints pBreakpoints )
         {
             return false;
         }
 
+        /// <summary>
+        /// Remove the specified breakpoint.
+        /// </summary>
+        /// <param name="pBreakpoints">List of all breakpoints, including the one to be removed</param>
+        /// <param name="pBreakpoint">Breakpoint to be removed</param>
+        /// <returns></returns>
         public virtual bool RemoveBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
         {
             return false;
         }
 
+        /// <summary>
+        /// Send a custom command as a string to the device
+        /// </summary>
+        /// <param name="pCommand">Command to be executed</param>
+        /// <param name="pResults">List of strings to be populated with the return values from the device - can be null, in which case a new list will be created</param>
+        /// <returns>The list of string results - this will be a copy of pResults if it was provided</returns>
         public virtual List<string> CustomCommand( string pCommand, List<string> pResults = null )
         {
             return pResults;
@@ -138,6 +204,9 @@ namespace ZXDebug
         }
     }
 
+    /// <summary>
+    /// A disassembled instruction
+    /// </summary>
     public class InstructionLine
     {
         public BankID Bank;
@@ -147,6 +216,9 @@ namespace ZXDebug
         public Breakpoint Breakpoint;
     }
 
+    /// <summary>
+    /// Describes capabilities, abilities and functionality supported by the debugger
+    /// </summary>
     public class Meta
     {
         /// <summary>

@@ -3,6 +3,9 @@ using System.Text.RegularExpressions;
 
 namespace Spectrum
 {
+    /// <summary>
+    /// The ID of a memory bank
+    /// </summary>
     public struct BankID
     {
         public enum TypeEnum
@@ -13,9 +16,21 @@ namespace Spectrum
             Div  = 3
         }
 
+        /// <summary>
+        /// Type of memory bank
+        /// </summary>
         public readonly TypeEnum Type;
+
+        /// <summary>
+        /// ID of memory bank
+        /// </summary>
         public readonly int Number;
 
+        /// <summary>
+        /// Create a new memory bank of the provided type & id
+        /// </summary>
+        /// <param name="pType"></param>
+        /// <param name="pNumber"></param>
         public BankID( TypeEnum pType, int pNumber = 0 )
         {
             Type = pType;
@@ -23,6 +38,10 @@ namespace Spectrum
         }
 
         static Regex _parseBank = new Regex( @"(?'type'BANK|DIV)_(?'number'\d*)(_(?'part'L|H))?" );
+        /// <summary>
+        /// Create a BankID by parsing the provided string into a bank type & number
+        /// </summary>
+        /// <param name="pBank"></param>
         public BankID( string pBank )
         {
             Type = TypeEnum.All;
@@ -45,6 +64,11 @@ namespace Spectrum
             }
         }
 
+        /// <summary>
+        /// Create a BankID from the textual bank type & number
+        /// </summary>
+        /// <param name="pType"></param>
+        /// <param name="pNumber"></param>
         public BankID( string pType, int pNumber )
         {
             Type = TypeEnum.All;
@@ -58,28 +82,6 @@ namespace Spectrum
 
             Number = pNumber;
         }
-
-        //public static implicit operator int(BankID pValue)
-        //{
-        //    if( pValue.Type == BankType.ROM )
-        //        return -2 - pValue.Number;
-
-        //    if( pValue.Type == BankType.All )
-        //        return -1;
-
-        //    return pValue.Number;
-        //}
-
-        //public static implicit operator BankID( int pValue )
-        //{
-        //    if( pValue < -1 )
-        //        return new BankID() { Type = BankType.ROM, Number = -2 - pValue };
-
-        //    if( pValue == -1 )
-        //        return new BankID() { Type = BankType.All };
-
-        //    return new BankID() { Type = BankType.Bank, Number = pValue };
-        //}
 
         public override string ToString()
         {
@@ -95,20 +97,35 @@ namespace Spectrum
             return "ALL";
         }
 
+        /// <summary>
+        /// Create a BankID for the specified ROM number
+        /// </summary>
+        /// <param name="pID">ROM number</param>
+        /// <returns></returns>
         public static BankID ROM( int pID )
         {
             return new BankID( BankID.TypeEnum.ROM, pID );
         }
 
+        /// <summary>
+        /// Create a BankID for the specified BANK number
+        /// </summary>
+        /// <param name="pID">BANK number</param>
+        /// <returns></returns>
         public static BankID Bank( int pID )
         {
             return new BankID( BankID.TypeEnum.Bank, pID );
         }
 
+        /// <summary>
+        /// Create a BankID for unpaged memory
+        /// </summary>
+        /// <returns></returns>
         public static BankID Unpaged()
         {
             return new BankID( BankID.TypeEnum.All );
         }
+
 
         public override bool Equals( Object obj )
         {
