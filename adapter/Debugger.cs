@@ -52,10 +52,6 @@ namespace ZXDebug
         }
 
 
-        public virtual void RefreshStack( Stack pStack )
-        {
-        }
-
         /// <summary>
         /// Connect to the debugger
         /// </summary>
@@ -124,11 +120,6 @@ namespace ZXDebug
         public virtual bool RemoveBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
         {
             return false;
-        }
-
-        public virtual List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pOutput = null )
-        {
-            return pOutput;
         }
 
         public virtual List<string> CustomCommand( string pCommand, List<string> pResults = null )

@@ -237,34 +237,6 @@ namespace ZEsarUX
         }
 
 
-        char[] _space = new char[] { ' ' };
-        public override List<InstructionLine> Disassemble( ushort pAddress, int pCount, List<InstructionLine> pResults = null )
-        {
-            var result = pResults ?? new List<InstructionLine>();
-
-            var lines = SendAndReceive( "disassemble " + pAddress + " " + pCount );
-
-            foreach( var line in lines )
-            {
-                var split = line.Split( _space, 3, StringSplitOptions.RemoveEmptyEntries );
-
-                result.Add( new InstructionLine()
-                    {
-                        Address = Format.Parse( split[0] ),
-                        Instruction = new Disassembler.Instruction()
-                        {
-                            Bytes = Format.HexToBytes( split[1] ),
-                            Text = split[2],
-                            Length = split[1].Length / 2
-                        }
-                    } 
-                );
-            }
-
-            return result;
-        }
-
-
         public override void RefreshMemoryPages( Memory pMemory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
@@ -315,20 +287,6 @@ namespace ZEsarUX
                 pBuffer[i] = (byte)((Format.FromHex( memory[i*2] ) << 4) | Format.FromHex( memory[i * 2 + 1] ));
 
             return pLength;
-        }
-
-        public override void RefreshStack( Stack pStack )
-        {
-            pStack.Clear();
-            var stack = SendAndReceiveSingle( "get-stack-backtrace" );
-
-            // [15E6H 15E1H 0F3BH 107FH FF54H]
-            var split = stack.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-            pStack.Add( _registers.PC );
-
-            foreach( var frame in split )
-                pStack.Add( (ushort)( Format.Parse( frame ) - 3 ) );
         }
 
         Registers _registers;

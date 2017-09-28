@@ -9,10 +9,5 @@ namespace Spectrum
         {
             _machine = pMachine;
         }
-
-        public void Get()
-        {
-            _machine.Connection.RefreshStack( this );
-        }
     }
 }
