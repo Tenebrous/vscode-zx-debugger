@@ -12,18 +12,10 @@ export function activate(context: vscode.ExtensionContext) {
 		)	
     );
 
-	// context.subscriptions.push(
-    //     vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
-    //         if( e.event == 'showHeatMap' ) {
-    //             showHeatMap( e.body );
-    //         }
-    //     })
-    // );
-
 	context.subscriptions.push(
         vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
-            if( e.event == 'showDisassembly' ) {
-                showDisassembly( e.body );
+            if( e.event == 'setDisassemblyLine' ) {
+                setDisassemblyLine( e.body );
             }
         })
     );
@@ -45,43 +37,54 @@ function startSession(config) {
     return { status: 'ok' };
 }
 
-// var decs=[];
-// function showHeatMap( data ) {
+var decorators=[];
+function setDisassemblyLine( data ) {
 
-//     decs.forEach(dec => {
-//         dec.dispose();
-//     });
+    decorators.forEach(decorator => {
+        decorator.dispose();
+    });
 
-//     vscode.window.visibleTextEditors.forEach( editor => {
+    vscode.window.visibleTextEditors.forEach( editor => {
         
-//         var document = editor.document;
+        var document = editor.document;
 
-//         if( document.fileName.endsWith('disasm.zdis') )
-//         {
-//             for (var lineNumber = 0; lineNumber < document.lineCount; lineNumber++) {
+        if( document.fileName.endsWith('disasm.zdis') )
+        {
+            var decorator = vscode.window.createTextEditorDecorationType(
+            {
+                isWholeLine: true,
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                light: {
+                    borderColor: 'black'
+                },
+                dark: {
+                    borderColor: 'white'
+                }
+            });
                 
-//                 var annotation = '';
+            var decRange = new vscode.Range(data.line-1,0,data.line-1,0);
+            var revealRange = new vscode.Range(data.line-3,0,data.line+2,0);
+            
+            editor.setDecorations(
+                decorator,
+                [decRange]
+            );
 
-//                 if( (lineNumber+1) in data )
-//                     annotation = '' + data[lineNumber+1];
+            editor.revealRange( revealRange );
 
-//                 var dec = vscode.window.createTextEditorDecorationType({isWholeLine:true, before:{contentText: annotation, width: '150px'}});
-                
-//                 editor.setDecorations(
-//                     dec,
-//                     [new vscode.Range(lineNumber,0,lineNumber,0)]
-//                 );
+            var pos = new vscode.Position(data.line-1, 0);
+            editor.selection = new vscode.Selection(pos, pos);
 
-//                 decs.push( dec );
-//             }
-//         }
+            decorators.push( decorator );
+        }
 
-//     });
-// }
-
-function showDisassembly( data ) {
-    console.log( "showDisassembly: " + data );
+    });
 }
+
+// function showDisassembly( data ) {
+//     console.log( "showDisassembly: " + data );
+// }
 
 // class DefinitionProvider implements vscode.DefinitionProvider {
 //     provideDefinition(

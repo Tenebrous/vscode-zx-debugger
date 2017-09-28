@@ -612,30 +612,11 @@ namespace ZXDebug
 
             return pExactSymbol != null | pLabelledSymbol != null;
         }
-
-        static string GetRelativeSymbolText( ushort pAddress, Address pSymbol )
-        {
-            if( pAddress == pSymbol.Location )
-            {
-                if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
-                    return $"{pSymbol.Labels[0]} {pAddress.ToHex()}";
-                else
-                    return $"{pAddress.ToHex()} {pSymbol.Labels[0]}";
-            }
-            else
-            {
-                var offset = pAddress - pSymbol.Location;
-
-                if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
-                    return $"{pSymbol.Labels[0]}+{offset} {pAddress.ToHex()}";
-                else
-                    return $"{pAddress.ToHex()} {pSymbol.Labels[0]}+{offset}";
-            }
-        }
-
+        
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
         {
-            _machine.UpdateDisassembly( _stackAddresses[pFrameID-1], DisassemblyFile );
+            var addr = _stackAddresses[pFrameID - 1];
+            _machine.UpdateDisassembly( addr, DisassemblyFile );
 
             var scopes = new List<Scope>();
 
@@ -650,6 +631,17 @@ namespace ZXDebug
             }
 
             _vscode.Send( pRequest, new ScopesResponseBody( scopes ) );
+
+            var disasmLine = _machine.GetLineOfAddressInDisassembly( addr );
+            if( disasmLine > 0 )
+            {
+                _vscode.Send(
+                    new Event(
+                        "setDisassemblyLine",
+                        new { line = disasmLine }
+                    )
+                );
+            }
         }
 
         static void VSCode_OnGetCompletions( Request pRequest, int pFrameID, string pText, int pColumn, int pLine )

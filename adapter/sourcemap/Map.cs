@@ -191,7 +191,7 @@ namespace ZXDebug.SourceMap
                                     sym.File = file;
                                     sym.Line = line;
                                 }
-                                else if( line > sym.Line && label != null )
+                                else if( line > sym.Line ) // && label != null )
                                 {
                                     sym.Line = line;
                                 }
