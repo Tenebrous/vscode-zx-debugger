@@ -131,15 +131,15 @@ namespace ZXDebug.SourceMap
                         var matches = lineRegex.Matches( text );
                         foreach( Match match in matches )
                         {
-                            var label      = match.Groups["label"].Value;
-                            var addressStr = match.Groups["addr"].Value;
-                            var type       = match.Groups["type"].Value;
-                            var scope      = match.Groups["scope"].Value;
-                            var def        = match.Groups["def"].Value;
-                            var module     = match.Groups["module"].Value;
-                            var section    = match.Groups["section"].Value;
-                            var fileStr    = match.Groups["file"].Value;
-                            var lineStr    = match.Groups["line"].Value;
+                            var label       = match.Groups["label"].Value;
+                            var addressStr  = match.Groups["addr"].Value;
+                            var type        = match.Groups["type"].Value;
+                            var scope       = match.Groups["scope"].Value;
+                            var def         = match.Groups["def"].Value;
+                            var module      = match.Groups["module"].Value;
+                            var section     = match.Groups["section"].Value;
+                            var fileStr     = match.Groups["file"].Value;
+                            var lineStr     = match.Groups["line"].Value;
 
                             if( label.StartsWith( "__ASMLINE__" ) || label.StartsWith( "__CLINE__" ) )
                             {
@@ -162,7 +162,9 @@ namespace ZXDebug.SourceMap
                                     lineStr = "0";
                             }
                             else if( label.StartsWith( "__ASM_LINE_" ) || label.StartsWith( "__C_LINE_" ) )
+                            {
                                 label = null;
+                            }
 
                             var address = Format.Parse( addressStr, pKnownHex: true );
                             var bank = new BankID( section );
@@ -178,8 +180,17 @@ namespace ZXDebug.SourceMap
                             if( !string.IsNullOrWhiteSpace( fileStr ) )
                             {
                                 var file = Files[fileStr];
-                                sym.File = file;
-                                sym.Line = int.Parse( lineStr );
+                                var line = int.Parse( lineStr );
+
+                                if( sym.File == null || sym.File.Filename != fileStr )
+                                {
+                                    sym.File = file;
+                                    sym.Line = line;
+                                }
+                                else if( line > sym.Line && label != null )
+                                {
+                                    sym.Line = line;
+                                }
                             }
 
                             sym.Map = this;

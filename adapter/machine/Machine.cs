@@ -482,12 +482,12 @@ namespace Spectrum
 
             //// temporary test
             //
-            var sym = Symbol( pBankID, (ushort)(pLine.Address + pOffset) );
-            if( sym?.File != null )
-            {
-                comment = comment?.PadRight( 20 ) ?? "".PadRight(20);
-                comment += sym.File.Filename + ":" + sym.Line;
-            }
+            //var sym = Symbol( pBankID, (ushort)(pLine.Address + pOffset) );
+            //if( sym?.File != null )
+            //{
+            //    comment = comment?.PadRight( 20 ) ?? "".PadRight(20);
+            //    comment += sym.File.Filename + ":" + sym.Line;
+            //}
             //
             ////
 
@@ -525,7 +525,7 @@ namespace Spectrum
             return d;
         }
 
-        public int FindLine( ushort pAddress )
+        public int GetLineOfAddressInDisassembly( ushort pAddress )
         {
             var slot = Memory.GetSlot( pAddress );
             var bank = GetDisasmBank( slot.Bank.ID );

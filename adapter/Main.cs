@@ -1,14 +1,14 @@
+using Spectrum;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
-using Spectrum;
 using VSCode;
-using VSCodeBreakpoint = VSCode.Breakpoint;
-using File = System.IO.File;
 using ZXDebug.SourceMap;
+using File = System.IO.File;
+using VSCodeBreakpoint = VSCode.Breakpoint;
 
 namespace ZXDebug
 {
@@ -91,6 +91,8 @@ namespace ZXDebug
 			// event loop
 
 	        _running = true;
+
+            //_machine.SourceMaps.Add( new Map( @"D:\Dev\ZX\test1\tmp\game.map" ) );
 
 
             // testing thing
@@ -451,10 +453,12 @@ namespace ZXDebug
 	        {
                 // note: entry at i=0 is PC, so we don't need to get mem and we always show it
 
+	            var stackFrameId = i + 1;
                 var addr = _stackAddresses[i];
 
 	            Address symbolWithLabel = null;
 	            Address symbol = null;
+	            bool isCode = false;
 
 	            var symbolIcon = "";
 
@@ -462,7 +466,8 @@ namespace ZXDebug
 	            {
                     // always try to get symbol for PC
 	                GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
-	            }
+	                isCode = true;
+                }
 	            else
 	            {
 	                _machine.Memory.Get( (ushort)( addr - 3 ), 3, caller );
@@ -472,27 +477,30 @@ namespace ZXDebug
 	                    addr -= 3;
 	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
                         symbolIcon = " ↑";
+	                    isCode = true;
 
-                        // // we can get the original destination for the call here:
+	                    // // we can get the original destination for the call here:
 	                    // var callDest = (ushort) ( caller[2] << 8 | caller[1] );
-                        // var callDestSymbol = GetPreviousSymbol( callDest, ref disassemblyUpdated );
+	                    // var callDestSymbol = GetPreviousSymbol( callDest, ref disassemblyUpdated );
 	                    // if( callDestSymbol != null )
 	                    // {
 	                    //     if( _stackFrames.Count > 0 )
 	                    //         _stackFrames[_stackFrames.Count - 1].name = callDestSymbol + " -> " + _stackFrames[_stackFrames.Count - 1].name;
-                        // }
-                    }
+	                    // }
+	                }
 	                else if( _callerOpcode3.Contains( caller[1] ) )
 	                {
 	                    addr -= 2;
 	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+	                    isCode = true;
                     }
 	                else if( _callerOpcode1.Contains( caller[2] ) )
 	                {
 	                    addr -= 1;
 	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
                         symbolIcon += " ↖";
-	                }
+	                    isCode = true;
+                    }
 
 	                _stackAddresses[i] = addr;
 	            }
@@ -505,8 +513,8 @@ namespace ZXDebug
 	            {
                     _stackFrames.Add(
                         new StackFrame(
-                            i + 1,
-                            text,
+                            stackFrameId,
+                            RelativeLabelText( symbolWithLabel, symbol ) + " " + symbolIcon,
                             new Source( 
                                 null,
 	                            Path.GetFullPath( Path.Combine( _settings.ProjectFolder, symbol.File.Filename ) )
@@ -517,57 +525,40 @@ namespace ZXDebug
                         )
                     );
                 }
-
-	            //{
-	            //    _stackFrames.Add(
-	            //        new StackFrame(
-	            //            i + 1,
-	            //            addr.ToHex(),
-	            //            StackSource,
-	            //            0,
-	            //            0,
-	            //            style
-	            //        )
-	            //    );
-	            //}
-
-	            //else if( symbolWithLabel.File == null )
-	            //    {
-	            //        _stackFrames.Add(
-	            //            new StackFrame(
-	            //                i + 1,
-	            //                GetRelativeSymbolText( addr, symbolWithLabel ),
-	            //                DisassemblySource,
-	            //                0,
-	            //                0,
-	            //                style
-	            //            )
-	            //        );
-	            //    }
-	            //    else
-	            //    {
-	            //        _stackFrames.Add(
-	            //            new StackFrame(
-	            //                i + 1,
-	            //                GetRelativeSymbolText( addr, symbolWithLabel ),
-	            //                new Source( null, Path.Combine( _settings.ProjectFolder, symbolWithLabel.File.Filename ) ),
-	            //                symbolWithLabel.Line,
-	            //                0,
-	            //                style
-	            //            )
-	            //        );
-	            //    }
-	            //}
-	        }
+                else if( isCode )
+                {
+                    _stackFrames.Add(
+                        new StackFrame(
+                            stackFrameId,
+                            text + " " + symbolIcon,
+                            DisassemblySource,
+                            0, // _machine.GetLineOfAddressInDisassembly( addr ),
+                            0,
+                            style
+                        )
+                    );
+                }
+                else
+                {
+                    _stackFrames.Add(
+                        new StackFrame(
+                            stackFrameId,
+                            addr.ToHex(),
+                            StackSource,
+                            0,
+                            0,
+                            style
+                        )
+                    );
+                }
+            }
 
             if( disassemblyUpdated )
                 _machine.WriteDisassemblyFile( DisassemblyFile );
 
 	        foreach( var frame in _stackFrames )
-	        {
-                if( frame.line == 0 )
-	                frame.line = _machine.FindLine( _stackAddresses[frame.id-1] );
-	        }
+                if( frame.source == DisassemblySource && frame.line == 0 )
+	                frame.line = _machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id-1] );
 
 	        _vscode.Send(
                 pRequest,
@@ -575,6 +566,31 @@ namespace ZXDebug
                     _stackFrames
                 )
             );
+        }
+        
+        // hex label
+        // hex label+offset
+        static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
+        {
+            string label = pLabelledSymbol.Labels[0];
+            string offset = "";
+
+            if( pLabelledSymbol != null && pExactSymbol != null )
+            {
+                if( pLabelledSymbol.Location == pExactSymbol.Location )
+                    ;
+                else if( pLabelledSymbol.File == null || pExactSymbol.File == null )
+                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
+                else if( pLabelledSymbol.File == pExactSymbol.File )
+                    offset = $"+{pExactSymbol.Line - pLabelledSymbol.Line}";
+                else
+                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
+            }
+
+            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
+                return $"{label}{offset} {pExactSymbol.Location.ToHex()}";
+            else
+                return $"{pExactSymbol.Location.ToHex()} {label}{offset}";
         }
 
         static bool GetSymbols( ushort pAddress, ref Address pLabelledSymbol, ref Address pExactSymbol, ref bool pDisassemblyUpdated )
@@ -1051,7 +1067,7 @@ namespace ZXDebug
             {
                 try
                 {
-                    var line = _machine.FindLine( heat.Key );
+                    var line = _machine.GetLineOfAddressInDisassembly( heat.Key );
                     if( line > 0 )
                         data[line] = heat.Value;
                 }
