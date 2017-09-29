@@ -98,28 +98,28 @@ namespace ZXDebug
 
 	        _running = true;
 
-	        _machine.SourceMapper.SourceRoot = @"D:\Dev\ZX\test1";
-            _machine.SourceMapper.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
+	        // testing things
 
-
-            // testing thing
-            var f = new FileSystemWatcher(@"D:\Dev\ZX\test1", "*.png");
-            f.EnableRaisingEvents = true;
-            f.Changed += Files_Changed;
-
-
-	        // event loop
-	        while( _running )
-	        {
-	            var vsactive = _vscode.Process();
-				var dbgactive = _debugger.Process();
-
-                if( !vsactive )
-                    System.Threading.Thread.Sleep( 10 );
-
-                if( _files.Count > 0 )
-                    DoFiles();
-	        }
+            //_machine.SourceMapper.SourceRoot = @"D:\Dev\ZX\test1";
+            //_machine.SourceMapper.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
+            //
+            // var f = new FileSystemWatcher(@"D:\Dev\ZX\test1", "*.png");
+            // f.EnableRaisingEvents = true;
+            // f.Changed += Files_Changed;
+            // 
+            // 
+            // // event loop
+            // while( _running )
+            // {
+            //     var vsactive = _vscode.Process();
+            // 	var dbgactive = _debugger.Process();
+            // 
+            //     if( !vsactive )
+            //         System.Threading.Thread.Sleep( 10 );
+            // 
+            //     if( _files.Count > 0 )
+            //         DoFiles();
+            // }
         }
 
 
