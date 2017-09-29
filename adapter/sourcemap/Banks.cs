@@ -1,6 +1,6 @@
 using Spectrum;
 
-namespace ZXDebug.SourceMap
+namespace ZXDebug.SourceMapper
 {
     public class Banks : Cache<BankID, Bank>
     {

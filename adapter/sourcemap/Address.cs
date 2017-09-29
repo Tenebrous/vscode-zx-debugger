@@ -1,6 +1,7 @@
 using System.Collections.Generic;
+using Spectrum;
 
-namespace ZXDebug.SourceMap
+namespace ZXDebug.SourceMapper
 {
     /// <summary>
     /// Represents a memory address mapped to a source file & line number, including any additional information from the source and map files.
@@ -12,6 +13,11 @@ namespace ZXDebug.SourceMap
         /// </summary>
         public Map          Map;
         
+        /// <summary>
+        /// BankID for this line
+        /// </summary>
+        public BankID       BankID;
+
         /// <summary>
         /// Memory location
         /// </summary>
@@ -36,7 +42,7 @@ namespace ZXDebug.SourceMap
         /// Any additional comment provided
         /// </summary>
         public string       Comment;
-
+            
         public override string ToString()
         {
             if( Labels == null )

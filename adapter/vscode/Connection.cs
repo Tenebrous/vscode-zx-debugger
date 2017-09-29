@@ -52,6 +52,9 @@ namespace VSCode
         public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool pHex, ref string pResult );
         public event EvaluateHandler EvaluateEvent;
 
+        public delegate void CustomRequestHandler( Request pRequest );
+        public event CustomRequestHandler CustomRequestEvent;
+
 
         Stream _output;
         StringBuilder _inputBuffer = new StringBuilder();
@@ -329,10 +332,14 @@ namespace VSCode
 //                        break;
 
                     default:
-                        Log.Write( 
-                            Log.Severity.Error,
-                            pMessage: string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
-                        );
+
+                        CustomRequestEvent?.Invoke( pRequest );
+
+                        if( !pRequest.responded )
+                            Log.Write( 
+                                Log.Severity.Error,
+                                pMessage: string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
+                            );
 
                         break;
                 }

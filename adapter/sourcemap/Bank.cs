@@ -1,6 +1,6 @@
 using Spectrum;
 
-namespace ZXDebug.SourceMap
+namespace ZXDebug.SourceMapper
 {
     public class Bank
     {
@@ -15,7 +15,7 @@ namespace ZXDebug.SourceMap
 
         Address NewSymbol( ushort pAddress )
         {
-            return new Address() { Location = pAddress };
+            return new Address() { BankID = ID, Location = pAddress };
         }
 
         public override string ToString()

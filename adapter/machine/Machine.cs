@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using ZXDebug;
-using ZXDebug.SourceMap;
+using ZXDebug.SourceMapper;
 using File = System.IO.File;
 
 namespace Spectrum
@@ -18,7 +18,7 @@ namespace Spectrum
         public Registers Registers { get; }
         public Memory Memory { get; }
         public Stack Stack { get; }
-        public Maps SourceMaps { get; } = new Maps();
+        public Mapper SourceMapper { get; } = new Mapper();
         public Disassembler Disassembler { get; } = new Disassembler();
         public Breakpoints Breakpoints { get; }
 
@@ -500,9 +500,9 @@ namespace Spectrum
 
         Address Symbol( BankID pBankID, ushort pAddress )
         {
-            return SourceMaps.Find( pBankID, pAddress )
-                ?? SourceMaps.Find( BankID.Unpaged(), pAddress )
-                ?? SourceMaps.Find( Memory.GetCurrentBank( pAddress ), pAddress );
+            return SourceMapper.Find( pBankID, pAddress )
+                ?? SourceMapper.Find( BankID.Unpaged(), pAddress )
+                ?? SourceMapper.Find( Memory.GetCurrentBank( pAddress ), pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
@@ -531,10 +531,25 @@ namespace Spectrum
             var bank = GetDisasmBank( slot.Bank.ID );
             var offset = pAddress - slot.Min;
 
-            if( bank.Lines.TryGetValue( (ushort)offset, out var line ) )
-                return line.FileLine;
+            bank.Lines.TryGetValue( (ushort)offset, out var line );
 
-            return 0;
+            return line?.FileLine ?? 0;
+        }
+
+        public int GetLineOfAddressInDisassembly( BankID pBank, ushort pAddress )
+        {
+            DisasmBank bank;
+            if( !_disasmBanks.TryGetValue( pBank, out bank ) )
+            {
+                var slot = Memory.GetSlot( pAddress );
+                bank = GetDisasmBank( slot.Bank.ID );
+            }
+
+            var offset = pAddress - bank.LastAddress;
+
+            bank.Lines.TryGetValue( (ushort)offset, out var line );
+
+            return line?.FileLine ?? 0;
         }
 
         public bool PreloadDisassembly( ushort pAddress, string pFilename = null )

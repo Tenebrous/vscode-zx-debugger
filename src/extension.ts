@@ -20,10 +20,19 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // vscode.languages.registerDefinitionProvider(
-    //     {pattern: "*.{c,asm}"},
-    //     new DefinitionProvider()
-    // );
+	context.subscriptions.push(
+            vscode.languages.registerHoverProvider(
+            '*',
+            new HoverProvider()
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerDefinitionProvider(
+            '*',
+            new DefinitionProvider()
+        )
+    );
 }
 
 function startSession(config) {
@@ -47,7 +56,7 @@ function setDisassemblyLine( data ) {
     vscode.window.visibleTextEditors.forEach( editor => {
         
         var document = editor.document;
-
+        
         if( document.fileName.endsWith('disasm.zdis') )
         {
             var decorator = vscode.window.createTextEditorDecorationType(
@@ -82,19 +91,43 @@ function setDisassemblyLine( data ) {
     });
 }
 
-// function showDisassembly( data ) {
-//     console.log( "showDisassembly: " + data );
-// }
+class DefinitionProvider implements vscode.DefinitionProvider {
+    provideDefinition(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        token: vscode.CancellationToken): Thenable<vscode.Location>
+    {
+        let request = "getDisassemblyForSource";
+        
+        if( document.fileName.endsWith( ".zdis" ) )
+            request = "getSourceFromDisassembly";
+        
+        return vscode.debug.activeDebugSession.customRequest(
+            request,
+            { file: document.fileName, line: position.line }
+        ).then( reply => {
+            return new vscode.Location(
+                vscode.Uri.file( reply.file ),
+                new vscode.Range(
+                    reply.startLine, 0,
+                    reply.endLine, 9999
+                )
+            );
+        }, err => {
+            throw err;
+        });
+    }
+}
 
-// class DefinitionProvider implements vscode.DefinitionProvider {
-//     provideDefinition(
-//         document: vscode.TextDocument,
-//         position: vscode.Position,
-//         token: vscode.CancellationToken): vscode.Definition
-//     {
-//         return new vscode.Location( 
-//             vscode.Uri.file(".zxdbg\\disasm.zdis"), 
-//             new vscode.Position( 10,10 )
-//         );
-//     }
-// }
+class HoverProvider implements vscode.HoverProvider {
+    provideHover(
+        document: vscode.TextDocument, 
+        position: vscode.Position, 
+        token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
+        
+            // console.log( document.fileName + " " + position.line + " " );
+            //return new vscode.Hover("hello");
+            return undefined;
+
+    }
+}

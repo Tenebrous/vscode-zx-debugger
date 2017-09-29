@@ -5,14 +5,16 @@ using System.Text.RegularExpressions;
 using Spectrum;
 using Newtonsoft.Json;
 
-namespace ZXDebug.SourceMap
+namespace ZXDebug.SourceMapper
 {
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg or .map)
     /// </summary>
     public class Map
     {
+        public string SourceRoot;
         public string Filename;
+        public Mapper Mapper;
 
         public Banks Banks = new Banks();
         public Files Files = new Files();
@@ -20,9 +22,12 @@ namespace ZXDebug.SourceMap
         /// <summary>
         /// Create a new map from the referenced file
         /// </summary>
+        /// <param name="pSourceRoot">Root folder for relative source paths</param>
         /// <param name="pFilename">File to read</param>
-        public Map( string pFilename )
+        public Map( Mapper pParent, string pSourceRoot, string pFilename )
         {
+            Mapper = pParent;
+            SourceRoot = pSourceRoot;
             Filename = pFilename;
 
             var ext = Path.GetExtension( pFilename )?.ToLower() ?? "";
@@ -183,10 +188,14 @@ namespace ZXDebug.SourceMap
 
                             if( !string.IsNullOrWhiteSpace( fileStr ) )
                             {
-                                var file = Files[fileStr];
+                                var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, fileStr ) );
+
+                                var file = Files[normalisedFileStr];
                                 var line = int.Parse( lineStr );
 
-                                if( sym.File == null || sym.File.Filename != fileStr )
+                                file.Lines[line] = sym;
+
+                                if( sym.File == null || sym.File.Filename != normalisedFileStr )
                                 {
                                     sym.File = file;
                                     sym.Line = line;

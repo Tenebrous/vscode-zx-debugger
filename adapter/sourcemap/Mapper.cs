@@ -1,13 +1,15 @@
 using System.Collections.Generic;
 using Spectrum;
 
-namespace ZXDebug.SourceMap
+namespace ZXDebug.SourceMapper
 {
     /// <summary>
     /// A collection of Map files
     /// </summary>
-    public class Maps : List<Map>
+    public class Mapper : List<Map>
     {
+        public string SourceRoot;
+
         public Address Find( BankID pBank, ushort pAddress )
         {
             foreach( var map in this )
@@ -44,6 +46,14 @@ namespace ZXDebug.SourceMap
             }
 
             return result;
+        }
+
+        public Map Add( string pFilename )
+        {
+            var map = new Map( this, SourceRoot, pFilename );
+            base.Add( map );
+
+            return map;
         }
     }
 }

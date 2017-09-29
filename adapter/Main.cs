@@ -6,7 +6,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using VSCode;
-using ZXDebug.SourceMap;
+using ZXDebug.SourceMapper;
 using File = System.IO.File;
 using VSCodeBreakpoint = VSCode.Breakpoint;
 
@@ -15,7 +15,8 @@ namespace ZXDebug
     public static class Adapter
     {
         static Connection _vscode;
-	    static Debugger _debugger;
+        static CustomRequests _customRequests;
+        static Debugger _debugger;
 	    static bool _running;
 
 	    static Value _rootValues = new Value();
@@ -71,6 +72,11 @@ namespace ZXDebug
             _vscode.SetBreakpointsEvent += VSCode_OnSetBreakpoints;
 
 
+            // handle custom events not part of the standard vscode protocol
+            _customRequests = new CustomRequests(_vscode);
+	        _customRequests.GetDisassemblyForSourceEvent += VSCode_Custom_OnGetDisassemblyForSource;
+
+
             // debugger events
 
             _debugger = new ZEsarUX.Connection();	  
@@ -92,7 +98,8 @@ namespace ZXDebug
 
 	        _running = true;
 
-            //_machine.SourceMaps.Add( new Map( @"D:\Dev\ZX\test1\tmp\game.map" ) );
+	        _machine.SourceMapper.SourceRoot = @"D:\Dev\ZX\test1";
+            _machine.SourceMapper.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
 
 
             // testing thing
@@ -116,7 +123,8 @@ namespace ZXDebug
         }
 
 
-	    static ConcurrentBag<string> _files = new ConcurrentBag<string>();
+
+        static ConcurrentBag<string> _files = new ConcurrentBag<string>();
 
         static void Files_Changed( object pSender, FileSystemEventArgs pFileSystemEventArgs )
         {
@@ -345,28 +353,6 @@ namespace ZXDebug
 	            _machine.Pause();
 	    }
 
-	    static void Initialise( string pJSONSettings )
-	    {
-	        _settings.FromJSON( pJSONSettings );
-	        _settings.Validate();
-
-            _machine.SourceMaps.Clear();
-	        foreach( var map in _settings.SourceMaps )
-	        {
-	            var file = FindFile( map, "maps" );
-                _machine.SourceMaps.Add( new Map( file ) );
-	            Log.Write( Log.Severity.Message, "Loaded map: " + file );
-	        }
-
-            _machine.Disassembler.ClearLayers();
-	        foreach( var table in _settings.OpcodeTables )
-	        {
-	            var file = FindFile( table, "opcodes" );
-	            _machine.Disassembler.AddLayer( file );
-	            Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file );
-	        }
-	    }
-
 	    static string FindFile( string pFilename, string pSubFolder )
 	    {
 	        if( File.Exists( pFilename ) )
@@ -465,7 +451,7 @@ namespace ZXDebug
 	            if( i == 0 )
 	            {
                     // always try to get symbol for PC
-	                GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+	                GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
 	                isCode = true;
                 }
 	            else
@@ -475,7 +461,7 @@ namespace ZXDebug
                     if( _callerOpcode3.Contains( caller[0] ) )
 	                {
 	                    addr -= 3;
-	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
                         symbolIcon = " ↑";
 	                    isCode = true;
 
@@ -491,13 +477,13 @@ namespace ZXDebug
 	                else if( _callerOpcode3.Contains( caller[1] ) )
 	                {
 	                    addr -= 2;
-	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
 	                    isCode = true;
                     }
 	                else if( _callerOpcode1.Contains( caller[2] ) )
 	                {
 	                    addr -= 1;
-	                    GetSymbols( addr, ref symbolWithLabel, ref symbol, ref disassemblyUpdated );
+	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
                         symbolIcon += " ↖";
 	                    isCode = true;
                     }
@@ -532,7 +518,7 @@ namespace ZXDebug
                             stackFrameId,
                             text + " " + symbolIcon,
                             DisassemblySource,
-                            0, // _machine.GetLineOfAddressInDisassembly( addr ),
+                            0,
                             0,
                             style
                         )
@@ -566,51 +552,6 @@ namespace ZXDebug
                     _stackFrames
                 )
             );
-        }
-        
-        // hex label
-        // hex label+offset
-        static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
-        {
-            string label = pLabelledSymbol.Labels[0];
-            string offset = "";
-
-            if( pLabelledSymbol != null && pExactSymbol != null )
-            {
-                if( pLabelledSymbol.Location == pExactSymbol.Location )
-                    ;
-                else if( pLabelledSymbol.File == null || pExactSymbol.File == null )
-                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
-                else if( pLabelledSymbol.File == pExactSymbol.File )
-                    offset = $"+{pExactSymbol.Line - pLabelledSymbol.Line}";
-                else
-                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
-            }
-
-            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
-                return $"{label}{offset} {pExactSymbol.Location.ToHex()}";
-            else
-                return $"{pExactSymbol.Location.ToHex()} {label}{offset}";
-        }
-
-        static bool GetSymbols( ushort pAddress, ref Address pLabelledSymbol, ref Address pExactSymbol, ref bool pDisassemblyUpdated )
-        {
-            var sm = _machine.SourceMaps;
-            var slot = _machine.Memory.GetSlot( pAddress );
-
-            pExactSymbol = sm.Find( slot.Bank.ID, pAddress )
-                        ?? sm.Find( BankID.Unpaged(), pAddress )
-                        ?? sm.Find( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
-
-            pLabelledSymbol = sm.FindRecentWithLabel( slot.Bank.ID, pAddress, 0x2000 )
-                           ?? sm.FindRecentWithLabel( BankID.Unpaged(), pAddress, 0x2000 )
-                           ?? sm.FindRecentWithLabel( _machine.Memory.GetCurrentBank( pAddress ), pAddress, 0x2000 );
-
-            //if( pAddress - label.Location <  )
-            if( pLabelledSymbol != null )
-                pDisassemblyUpdated |= _machine.UpdateDisassembly( pLabelledSymbol.Location );
-
-            return pExactSymbol != null | pLabelledSymbol != null;
         }
         
         static void VSCode_OnGetScopes( Request pRequest, int pFrameID )
@@ -766,19 +707,6 @@ namespace ZXDebug
                 pResult.Add( CreateVariableForValue( child ) );
         }
 
-	    static Variable CreateVariableForValue( Value pValue )
-	    {
-	        pValue.Refresh();
-
-	        return new Variable(
-	            pValue.Name,
-	            pValue.Formatted,
-	            "value",
-	            pValue.Children.Count == 0 ? -1 : pValue.ID,
-	            new VariablePresentationHint( "data" )
-            );
-	    }
-
 
 	    static void VSCode_OnSetVariable( Request pRequest, Variable pVariable )
 	    {
@@ -876,9 +804,76 @@ namespace ZXDebug
             );
 	    }
 
+        static void VSCode_Custom_OnGetDisassemblyForSource( Request pRequest, string pFile, int pLine )
+        {
+            foreach( var m in _machine.SourceMapper )
+            {
+                if( !m.Files.TryGetValue( pFile, out var file ) )
+                    continue;
+
+                //if( !file.Lines.TryGetValue( pLine + 1, out var lineList ) )
+                if( !file.Lines.TryGetValue( pLine + 1, out var addr ) )
+                    continue;
+
+                int lowLine = int.MaxValue;
+                int highLine = 0;
+
+                // foreach( var addr in lineList )
+                //{
+                    if( addr.Location == 0 )
+                        continue;
+
+                    var disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
+
+                    if( disasmLine == 0 )
+                    {
+                        _machine.UpdateDisassembly( addr.Location, DisassemblyFile );
+                        disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
+                    }
+
+                    if( disasmLine == 0 )
+                        continue;
+
+                    if( disasmLine < lowLine )
+                        lowLine = disasmLine;
+
+                    if( disasmLine > highLine )
+                        highLine = disasmLine;
+                //}
+
+                if( lowLine > highLine )
+                    return;
+
+                _vscode.Send( 
+                    pRequest,
+                    new GetDisassemblyForSourceResponseBody( DisassemblyFile, lowLine-1, highLine-1 )
+                );
+
+                break;
+            }
+        }
+
+        static void VSCode_Custom_OnGetSourceForDisassembly( Request pRequest, string pFile, int pLine )
+        {
+            
+        }
 
 
         // events from values/variables
+
+
+        static Variable CreateVariableForValue( Value pValue )
+        {
+            pValue.Refresh();
+
+            return new Variable(
+                pValue.Name,
+                pValue.Formatted,
+                "value",
+                pValue.Children.Count == 0 ? -1 : pValue.ID,
+                new VariablePresentationHint( "data" )
+            );
+        }
 
         static void SetupValues( Value pValues, Machine pMachine )
         {
@@ -977,13 +972,84 @@ namespace ZXDebug
 	    }
 
 
-	    static bool _prepopulatedDisassemblyFile = false;
+        // other things
+
+        static void Initialise( string pJSONSettings )
+        {
+            _settings.FromJSON( pJSONSettings );
+            _settings.Validate();
+
+            _machine.SourceMapper.Clear();
+            _machine.SourceMapper.SourceRoot = _settings.ProjectFolder;
+            foreach( var map in _settings.SourceMaps )
+            {
+                var file = FindFile( map, "maps" );
+                _machine.SourceMapper.Add( file );
+                Log.Write( Log.Severity.Message, "Loaded map: " + file );
+            }
+
+            _machine.Disassembler.ClearLayers();
+            foreach( var table in _settings.OpcodeTables )
+            {
+                var file = FindFile( table, "opcodes" );
+                _machine.Disassembler.AddLayer( file );
+                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file );
+            }
+        }
+
+
+        static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
+        {
+            string label = pLabelledSymbol?.Labels[0] ?? "";
+            string offset = "";
+
+            if( pLabelledSymbol != null && pExactSymbol != null )
+            {
+                if( pLabelledSymbol.Location == pExactSymbol.Location )
+                    ;
+                else if( pLabelledSymbol.File == null || pExactSymbol.File == null )
+                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
+                else if( pLabelledSymbol.File == pExactSymbol.File )
+                    offset = $"+{pExactSymbol.Line - pLabelledSymbol.Line}";
+                else
+                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
+            }
+
+            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
+                return $"{label}{offset} {pExactSymbol.Location.ToHex()}";
+            else
+                return $"{pExactSymbol.Location.ToHex()} {label}{offset}";
+        }
+
+        static bool GetSymbols( ushort pAddress, out Address pLabelledSymbol, out Address pExactSymbol, ref bool pDisassemblyUpdated )
+        {
+            var sm = _machine.SourceMapper;
+            var slot = _machine.Memory.GetSlot( pAddress );
+
+            pExactSymbol = sm.Find( slot.Bank.ID, pAddress )
+                           ?? sm.Find( BankID.Unpaged(), pAddress )
+                           ?? sm.Find( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
+
+            pLabelledSymbol = sm.FindRecentWithLabel( slot.Bank.ID, pAddress, 0x2000 )
+                              ?? sm.FindRecentWithLabel( BankID.Unpaged(), pAddress, 0x2000 )
+                              ?? sm.FindRecentWithLabel( _machine.Memory.GetCurrentBank( pAddress ), pAddress, 0x2000 );
+
+            //if( pAddress - label.Location <  )
+            if( pLabelledSymbol != null )
+                pDisassemblyUpdated |= _machine.UpdateDisassembly( pLabelledSymbol.Location );
+
+            return pExactSymbol != null | pLabelledSymbol != null;
+        }
+
+
+
+        static bool _prepopulatedDisassemblyFile = false;
 	    static void PrepopulateDisassemblyFile()
 	    {
 	        if( _prepopulatedDisassemblyFile )
 	            return;
 
-	        foreach( var f in _machine.SourceMaps )
+	        foreach( var f in _machine.SourceMapper )
 	        {
 	            foreach( var bankkvp in f.Banks )
 	            {

@@ -1,8 +1,11 @@
-﻿namespace ZXDebug.SourceMap
+﻿using System;
+
+namespace ZXDebug.SourceMapper
 {
     public class Files : Cache<string, File>
     {
-        public Files() : base( NewSource ) { }
+        // case-insensitive filenames? probably ok for now
+        public Files() : base( NewSource, StringComparer.OrdinalIgnoreCase ) { }
 
         static File NewSource( string pFile )
         {
