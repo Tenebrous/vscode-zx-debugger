@@ -3,37 +3,37 @@ using System.Collections.Generic;
 
 namespace ZXDebug
 {
-    class RangeDictionary<TKey, TValue> where TKey : IComparable<TKey>
+    class RangeDictionary<TIndex, TValue> where TIndex : IComparable<TIndex>
     {
         SortedList<Range, TValue> _entries;
-        IList<Range> _keys;
+        IList<Range> _ranges;
 
         public RangeDictionary()
         {
             _entries = new SortedList<Range, TValue>();
-            _keys = _entries.Keys;
+            _ranges = _entries.Keys;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pKey"></param>
+        /// <param name="pIndex"></param>
         /// <param name="pMode">
-        /// 0 = only return the range that contains the key
+        /// 0 = only return the range that contains the index
         /// -1 = if containing range not found, return next lower
         /// 1 = if containing range not found, return next higher</param>
         /// <returns></returns>
-        int BinarySearch( TKey pKey, int pMode )
+        int BinarySearch( TIndex pIndex, int pMode )
         {
             int lower = 0;
-            int upper = _keys.Count - 1;
+            int upper = _ranges.Count - 1;
 
             while( lower <= upper )
             {
                 int middle = lower + (upper - lower) / 2;
 
-                var lowerCompare = pKey.CompareTo( _keys[middle].LowerKey );
-                var upperCompare = pKey.CompareTo( _keys[middle].UpperKey );
+                var lowerCompare = pIndex.CompareTo( _ranges[middle].LowerKey );
+                var upperCompare = pIndex.CompareTo( _ranges[middle].UpperKey );
 
                 if( lowerCompare >= 0 && upperCompare <= 0 )
                     return middle;
@@ -44,7 +44,7 @@ namespace ZXDebug
                     lower = middle + 1;
             }
 
-            if( pMode == 1 && lower < _keys.Count )
+            if( pMode == 1 && lower < _ranges.Count )
                 return lower;
 
             if( pMode == -1 && upper >= 0 )
@@ -56,13 +56,13 @@ namespace ZXDebug
         /// <summary>
         /// Find the range which contains the specified key and return the range & value
         /// </summary>
-        /// <param name="pKey">Key to look up</param>
+        /// <param name="pIndex">Key to look up</param>
         /// <param name="pRange">Range to be returned</param>
         /// <param name="pValue">Value to be returned</param>
         /// <returns>true if the item was found, false if not</returns>
-        public bool TryGetValue( TKey pKey, out Range pRange, out TValue pValue )
+        public bool TryGetValue( TIndex pIndex, out Range pRange, out TValue pValue )
         {
-            int index = BinarySearch( pKey, 0 );
+            int index = BinarySearch( pIndex, 0 );
 
             if( index == -1 )
             {
@@ -71,7 +71,7 @@ namespace ZXDebug
                 return false;
             }
 
-            pRange = _keys[index];
+            pRange = _ranges[index];
             pValue = _entries[pRange];
 
             return true;
@@ -80,13 +80,13 @@ namespace ZXDebug
         /// <summary>
         /// Find the range which contains the specified key and return the value
         /// </summary>
-        /// <param name="pKey">Key to look up</param>
+        /// <param name="pIndex">Key to look up</param>
         /// <param name="pRange">Range to be returned</param>
         /// <param name="pValue">Value to be returned</param>
         /// <returns>true if the item was found, false if not</returns>
-        public bool TryGetValue( TKey pKey, out TValue pValue )
+        public bool TryGetValue( TIndex pIndex, out TValue pValue )
         {
-            int index = BinarySearch( pKey, 0 );
+            int index = BinarySearch( pIndex, 0 );
 
             if( index == -1 )
             {
@@ -94,12 +94,20 @@ namespace ZXDebug
                 return false;
             }
 
-            pValue = _entries[_keys[index]];
+            pValue = _entries[_ranges[index]];
 
             return true;
         }
 
-        public bool TryGetValueOrBelow( TKey pKey, out Range pRange, out TValue pValue )
+        /// <summary>
+        /// Find the range which contains the specified key, or the range immediately preceding the position the key would be in, 
+        /// and and return the range and value
+        /// </summary>
+        /// <param name="pKey">Key to look up</param>
+        /// <param name="pRange">Range to be returned</param>
+        /// <param name="pValue">Value to be returned</param>
+        /// <returns>true if a suitable range was found, false if not</returns>
+        public bool TryGetValueOrBelow( TIndex pKey, out Range pRange, out TValue pValue )
         {
             int index = BinarySearch( pKey, -1 );
 
@@ -110,13 +118,21 @@ namespace ZXDebug
                 return false;
             }
 
-            pRange = _keys[index];
+            pRange = _ranges[index];
             pValue = _entries[pRange];
 
             return true;
         }
 
-        public bool TryGetValueOrAbove( TKey pKey, out Range pRange, out TValue pValue )
+        /// <summary>
+        /// Find the range which contains the specified key, or the range immediately following the position the key would be in, 
+        /// and and return the range and value
+        /// </summary>
+        /// <param name="pKey">Key to look up</param>
+        /// <param name="pRange">Range to be returned</param>
+        /// <param name="pValue">Value to be returned</param>
+        /// <returns>true if a suitable range was found, false if not</returns>
+        public bool TryGetValueOrAbove( TIndex pKey, out Range pRange, out TValue pValue )
         {
             int index = BinarySearch( pKey, 1 );
 
@@ -127,28 +143,46 @@ namespace ZXDebug
                 return false;
             }
 
-            pRange = _keys[index];
+            pRange = _ranges[index];
             pValue = _entries[pRange];
 
             return true;
         }
 
-
-        public Range Add( TKey pKey, TValue pValue )
+        /// <summary>
+        /// Add a new item to the dictionary at the specified position
+        /// </summary>
+        /// <param name="pKey">Start and end of new range</param>
+        /// <param name="pValue">Value associated with range</param>
+        /// <returns>Range of new value</returns>
+        public Range Add( TIndex pKey, TValue pValue )
         {
             var range = new Range( pKey, pKey );
             _entries[range] = pValue;
             return range;
         }
 
-        public Range Add( TKey pLower, TKey pUpper, TValue pValue )
+        /// <summary>
+        /// Add a new item to the dictionary covering the specified range
+        /// </summary>
+        /// <param name="pLower">Start of new range</param>
+        /// <param name="pUpper">End of new range</param>
+        /// <param name="pValue">Value associated with range</param>
+        /// <returns>Range of new value</returns>
+        public Range Add( TIndex pLower, TIndex pUpper, TValue pValue )
         {
             var range = new Range( pLower, pUpper );
             _entries[range] = pValue;
             return range;
         }
 
-        public Range Extend( Range pRange, TKey pInclude )
+        /// <summary>
+        /// Update the specified range to include a new position
+        /// </summary>
+        /// <param name="pRange">Existing range to update</param>
+        /// <param name="pInclude">New position to include</param>
+        /// <returns></returns>
+        public Range Extend( Range pRange, TIndex pInclude )
         {
             _entries.TryGetValue( pRange, out var entry );
             _entries.Remove( pRange );
@@ -161,28 +195,36 @@ namespace ZXDebug
             return pRange;
         }
 
+        /// <summary>
+        /// A range with a lower and upper index
+        /// </summary>
         public class Range : IComparable<Range>
         {
-            public readonly TKey LowerKey;
-            public readonly TKey UpperKey;
+            public readonly TIndex LowerKey;
+            public readonly TIndex UpperKey;
 
-            public Range( TKey pLower, TKey pUpper )
+            /// <summary>
+            /// Create a new range starting at pLower and ending at pUpper
+            /// </summary>
+            /// <param name="pLower">Lower index of the range</param>
+            /// <param name="pUpper">Upper index of the range</param>
+            public Range( TIndex pLower, TIndex pUpper )
             {
                 LowerKey = pLower;
                 UpperKey = pUpper;
             }
 
-            public int CompareTo( Range other )
+            public int CompareTo( Range pOther )
             {
-                return LowerKey.CompareTo( other.LowerKey );
+                return LowerKey.CompareTo( pOther.LowerKey );
             }
 
-            public override bool Equals( System.Object obj )
+            public override bool Equals( object pOther )
             {
-                if( obj == null )
+                if( pOther == null )
                     return false;
 
-                Range p = obj as Range;
+                Range p = pOther as Range;
                 if( (object)p == null )
                     return false;
 
@@ -200,23 +242,23 @@ namespace ZXDebug
                 return this == p;
             }
 
-            public static bool operator ==( Range a, Range b )
+            public static bool operator ==( Range pLeft, Range pRight )
             {
                 // If both are null, or both are same instance, return true.
-                if( object.ReferenceEquals( a, b ) )
+                if( object.ReferenceEquals( pLeft, pRight ) )
                     return true;
 
                 // If one is null, but not both, return false.
-                if( ( (object)a == null ) || ( (object)b == null ) )
+                if( ( (object)pLeft == null ) || ( (object)pRight == null ) )
                     return false;
 
                 // Return true if the fields match:
-                return a.LowerKey.Equals( b.LowerKey ) && a.UpperKey.Equals( b.UpperKey );
+                return pLeft.LowerKey.Equals( pRight.LowerKey ) && pLeft.UpperKey.Equals( pRight.UpperKey );
             }
 
-            public static bool operator !=( Range a, Range b )
+            public static bool operator !=( Range pLeft, Range pRight )
             {
-                return !( a == b );
+                return !( pLeft == pRight );
             }
 
             public override int GetHashCode()
