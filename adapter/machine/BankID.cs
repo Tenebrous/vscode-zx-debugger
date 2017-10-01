@@ -8,7 +8,7 @@ namespace Spectrum
     /// </summary>
     public struct BankID
     {
-        public enum TypeEnum
+        public enum TypeEnum : byte
         {
             All  = 0,
             ROM  = 1,
@@ -17,7 +17,7 @@ namespace Spectrum
         }
 
         /// <summary>
-        /// Type of memory bank
+        /// Type of memory bank - All, ROM, Bank, DIV
         /// </summary>
         public readonly TypeEnum Type;
 

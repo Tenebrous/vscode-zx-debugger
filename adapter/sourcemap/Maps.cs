@@ -6,10 +6,11 @@ namespace ZXDebug.SourceMapper
     /// <summary>
     /// A collection of Map files
     /// </summary>
-    public class Mapper : List<Map>
+    public class Maps : List<Map>
     {
         public string SourceRoot;
-
+        public Files Files = new Files();
+        
         public Address Find( BankID pBank, ushort pAddress )
         {
             foreach( var map in this )

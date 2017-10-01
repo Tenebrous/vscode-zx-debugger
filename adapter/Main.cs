@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using Newtonsoft.Json;
 using VSCode;
 using ZXDebug.SourceMapper;
 using File = System.IO.File;
@@ -45,9 +46,8 @@ namespace ZXDebug
             _settings.DeserializingEvent += Settings_OnDeserializing;
             _settings.DeserializedEvent  += Settings_OnDeserialized;
 
-
+            
             // vscode events
-
             _vscode = new Connection();
             _vscode.InitializeEvent += VSCode_OnInitialize;
 	        _vscode.DisconnectEvent += VSCode_OnDisconnect;
@@ -79,11 +79,11 @@ namespace ZXDebug
 
             // debugger events
 
-            _debugger = new ZEsarUX.Connection();	  
-			// _debugger.OnData += Z_OnData; 
+            _debugger = new ZEsarUX.Connection();
+            // _debugger.OnData += Z_OnData; 
 
 
-			// machine events
+            // machine events
 
             _machine = new Machine( _debugger );
 			_machine.OnPause += Machine_OnPause;
@@ -94,32 +94,33 @@ namespace ZXDebug
             SetupValues( _rootValues, _machine );
 
 
-			// event loop
+            // event loop
 
-	        _running = true;
+            _running = true;
 
-	        // testing things
 
-            //_machine.SourceMapper.SourceRoot = @"D:\Dev\ZX\test1";
-            //_machine.SourceMapper.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
+            // testing things
+
+            //_machine.SourceMaps.SourceRoot = @"D:\Dev\ZX\test1";
+            //_machine.SourceMaps.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
+
             //
             // var f = new FileSystemWatcher(@"D:\Dev\ZX\test1", "*.png");
             // f.EnableRaisingEvents = true;
             // f.Changed += Files_Changed;
-            // 
-            // 
-            // // event loop
-            // while( _running )
-            // {
-            //     var vsactive = _vscode.Process();
-            // 	var dbgactive = _debugger.Process();
-            // 
-            //     if( !vsactive )
-            //         System.Threading.Thread.Sleep( 10 );
-            // 
-            //     if( _files.Count > 0 )
-            //         DoFiles();
-            // }
+
+            // event loop
+            while( _running )
+            {
+                var vsactive = _vscode.Process();
+                var dbgactive = _debugger.Process();
+
+                if( !vsactive )
+                    System.Threading.Thread.Sleep( 10 );
+
+                if( _files.Count > 0 )
+                    DoFiles();
+            }
         }
 
 
@@ -341,10 +342,12 @@ namespace ZXDebug
 
 	    static void VSCode_OnAttach( Request pRequest, string pJSONSettings )
 	    {
-	        Initialise( pJSONSettings );
+            Initialise( pJSONSettings );
 
-            _tempFolder = Path.Combine( _settings.ProjectFolder, ".zxdbg" );
+	        _tempFolder = Path.Combine( _settings.ProjectFolder, ".zxdbg" );
 	        Directory.CreateDirectory( _tempFolder );
+
+	        SaveDebug();
 
             if( !_debugger.Connect() )
 	            _vscode.Send(pRequest, pErrorMessage: "Could not connect to ZEsarUX");
@@ -806,51 +809,58 @@ namespace ZXDebug
 
         static void VSCode_Custom_OnGetDisassemblyForSource( Request pRequest, string pFile, int pLine )
         {
-            foreach( var m in _machine.SourceMapper )
+            var sourceFile = _machine.SourceMaps.Files[pFile];
+
+            foreach( var map in _machine.SourceMaps )
             {
-                if( !m.Files.TryGetValue( pFile, out var file ) )
-                    continue;
-
-                //if( !file.Lines.TryGetValue( pLine + 1, out var lineList ) )
-                if( !file.Lines.TryGetValue( pLine + 1, out var addr ) )
-                    continue;
-
-                int lowLine = int.MaxValue;
-                int highLine = 0;
-
-                // foreach( var addr in lineList )
-                //{
-                    if( addr.Location == 0 )
-                        continue;
-
-                    var disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
-
-                    if( disasmLine == 0 )
-                    {
-                        _machine.UpdateDisassembly( addr.Location, DisassemblyFile );
-                        disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
-                    }
-
-                    if( disasmLine == 0 )
-                        continue;
-
-                    if( disasmLine < lowLine )
-                        lowLine = disasmLine;
-
-                    if( disasmLine > highLine )
-                        highLine = disasmLine;
-                //}
-
-                if( lowLine > highLine )
-                    return;
-
-                _vscode.Send( 
-                    pRequest,
-                    new GetDisassemblyForSourceResponseBody( DisassemblyFile, lowLine-1, highLine-1 )
-                );
-
-                break;
+                var r = map.FileLine[sourceFile];
             }
+
+            //foreach( var m in _machine.SourceMapper )
+            //{
+            //    if( !m.Files.TryGetValue( pFile, out var file ) )
+            //        continue;
+
+            //    //if( !file.Lines.TryGetValue( pLine + 1, out var lineList ) )
+            //    if( !file.Lines.TryGetValue( pLine + 1, out var addr ) )
+            //        continue;
+
+            //    int lowLine = int.MaxValue;
+            //    int highLine = 0;
+
+            //    // foreach( var addr in lineList )
+            //    //{
+            //        if( addr.Location == 0 )
+            //            continue;
+
+            //        var disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
+
+            //        if( disasmLine == 0 )
+            //        {
+            //            _machine.UpdateDisassembly( addr.Location, DisassemblyFile );
+            //            disasmLine = _machine.GetLineOfAddressInDisassembly( addr.BankID, addr.Location );
+            //        }
+
+            //        if( disasmLine == 0 )
+            //            continue;
+
+            //        if( disasmLine < lowLine )
+            //            lowLine = disasmLine;
+
+            //        if( disasmLine > highLine )
+            //            highLine = disasmLine;
+            //    //}
+
+            //    if( lowLine > highLine )
+            //        return;
+
+            //    _vscode.Send( 
+            //        pRequest,
+            //        new GetDisassemblyForSourceResponseBody( DisassemblyFile, lowLine-1, highLine-1 )
+            //    );
+
+            //    break;
+            //}
         }
 
         static void VSCode_Custom_OnGetSourceForDisassembly( Request pRequest, string pFile, int pLine )
@@ -979,12 +989,12 @@ namespace ZXDebug
             _settings.FromJSON( pJSONSettings );
             _settings.Validate();
 
-            _machine.SourceMapper.Clear();
-            _machine.SourceMapper.SourceRoot = _settings.ProjectFolder;
+            _machine.SourceMaps.Clear();
+            _machine.SourceMaps.SourceRoot = _settings.ProjectFolder;
             foreach( var map in _settings.SourceMaps )
             {
                 var file = FindFile( map, "maps" );
-                _machine.SourceMapper.Add( file );
+                _machine.SourceMaps.Add( file );
                 Log.Write( Log.Severity.Message, "Loaded map: " + file );
             }
 
@@ -997,6 +1007,34 @@ namespace ZXDebug
             }
         }
 
+        static void SaveDebug()
+        {
+            File.WriteAllText(
+                Path.Combine( _tempFolder, "map_data.json" ),
+                JsonConvert.SerializeObject(
+                    _machine.SourceMaps,
+                    new JsonSerializerSettings()
+                    {
+                        Formatting = Formatting.Indented,
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        NullValueHandling = NullValueHandling.Ignore
+                    }
+                )
+            );
+
+            File.WriteAllText(
+                Path.Combine( _tempFolder, "map_files.json" ),
+                JsonConvert.SerializeObject(
+                    _machine.SourceMaps.Files,
+                    new JsonSerializerSettings()
+                    {
+                        Formatting = Formatting.Indented,
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        NullValueHandling = NullValueHandling.Ignore
+                    }
+                )
+            );
+        }
 
         static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
         {
@@ -1023,7 +1061,7 @@ namespace ZXDebug
 
         static bool GetSymbols( ushort pAddress, out Address pLabelledSymbol, out Address pExactSymbol, ref bool pDisassemblyUpdated )
         {
-            var sm = _machine.SourceMapper;
+            var sm = _machine.SourceMaps;
             var slot = _machine.Memory.GetSlot( pAddress );
 
             pExactSymbol = sm.Find( slot.Bank.ID, pAddress )
@@ -1049,7 +1087,7 @@ namespace ZXDebug
 	        if( _prepopulatedDisassemblyFile )
 	            return;
 
-	        foreach( var f in _machine.SourceMapper )
+	        foreach( var f in _machine.SourceMaps )
 	        {
 	            foreach( var bankkvp in f.Banks )
 	            {

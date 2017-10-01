@@ -302,8 +302,8 @@ namespace ZEsarUX
             ParseRegisters( pRegisters, result );
         }
 
-        Regex _matchRegisters = new Regex("(?i)([a-z']*)=([0-9a-f].*?)(?: )");
-        Regex _matchFlags = new Regex("(?i)(F'?)=(.{8}) ");
+        Regex _matchRegisters = new Regex("(?i)([a-z']*)=([0-9a-f].*?)(?:\\s)");
+        Regex _matchFlags = new Regex("(?i)(F'?)=(.{8})\\s");
         void ParseRegisters( Registers pRegisters, string pString )
         {
             // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]

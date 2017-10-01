@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace ZXDebug
@@ -9,48 +8,48 @@ namespace ZXDebug
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TValue"></typeparam>
-    public class Cache<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    public class Cache<TKey, TValue> : Dictionary<TKey, TValue> where TValue : new()
     {
         Func<TKey, TValue> _factory;
 
-        Dictionary<TKey, TValue> _dictionary;
+        public Cache() : base()
+        {
+            _factory = pKey => new TValue();
+        }
 
-        public Cache( Func<TKey, TValue> pFactory, IEqualityComparer<TKey> pCompare = null )
+        public Cache( Func<TKey, TValue> pFactory ) : base()
         {
             _factory = pFactory;
-            _dictionary = new Dictionary<TKey, TValue>(pCompare);
         }
 
-        public TValue this[ TKey pKey ]
+        public Cache( IEqualityComparer<TKey> pCompare ) : base( pCompare )
         {
-            get
+            _factory = pKey => new TValue();
+        }
+
+        public Cache( Func<TKey, TValue> pFactory, IEqualityComparer<TKey> pCompare = null ) : base( pCompare )
+        {
+            _factory = pFactory;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pIndex"></param>
+        /// <param name="pValue"></param>
+        /// <returns>true if created, false if already existed</returns>
+        public bool TryAdd( TKey pIndex, out TValue pValue )
+        {
+            if( TryGetValue( pIndex, out var result ) )
             {
-                if( _dictionary.TryGetValue( pKey, out var result ) )
-                    return result;
-
-                result = _factory( pKey );
-
-                _dictionary[pKey] = result;
-
-                return result;
+                pValue = result;
+                return true;
             }
 
-            set => _dictionary[pKey] = value;
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            return _dictionary.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public bool TryGetValue( TKey pKey, out TValue pValue )
-        {
-            return _dictionary.TryGetValue( pKey, out pValue );
+            result = _factory(pIndex);
+            Add( pIndex, result );
+            pValue = result;
+            return false;
         }
     } 
 }

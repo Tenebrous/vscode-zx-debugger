@@ -18,7 +18,7 @@ namespace Spectrum
         public Registers Registers { get; }
         public Memory Memory { get; }
         public Stack Stack { get; }
-        public Mapper SourceMapper { get; } = new Mapper();
+        public Maps SourceMaps { get; } = new Maps();
         public Disassembler Disassembler { get; } = new Disassembler();
         public Breakpoints Breakpoints { get; }
 
@@ -500,9 +500,9 @@ namespace Spectrum
 
         Address Symbol( BankID pBankID, ushort pAddress )
         {
-            return SourceMapper.Find( pBankID, pAddress )
-                ?? SourceMapper.Find( BankID.Unpaged(), pAddress )
-                ?? SourceMapper.Find( Memory.GetCurrentBank( pAddress ), pAddress );
+            return SourceMaps.Find( pBankID, pAddress )
+                ?? SourceMaps.Find( BankID.Unpaged(), pAddress )
+                ?? SourceMaps.Find( Memory.GetCurrentBank( pAddress ), pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )

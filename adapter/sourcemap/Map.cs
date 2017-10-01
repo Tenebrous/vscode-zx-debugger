@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Spectrum;
-using Newtonsoft.Json;
 
 namespace ZXDebug.SourceMapper
 {
@@ -14,19 +13,22 @@ namespace ZXDebug.SourceMapper
     {
         public string SourceRoot;
         public string Filename;
-        public Mapper Mapper;
-
+        public Maps Maps;
+        
         public Banks Banks = new Banks();
-        public Files Files = new Files();
+
+        public Cache<BankID, AddressMatches> BankAddress = new Cache<BankID, AddressMatches>();
+        public Cache<File, LineMatches> FileLine = new Cache<File, LineMatches>();
 
         /// <summary>
         /// Create a new map from the referenced file
         /// </summary>
+        /// <param name="pParent">Mapper</param>
         /// <param name="pSourceRoot">Root folder for relative source paths</param>
         /// <param name="pFilename">File to read</param>
-        public Map( Mapper pParent, string pSourceRoot, string pFilename )
+        public Map( Maps pParent, string pSourceRoot, string pFilename )
         {
-            Mapper = pParent;
+            Maps = pParent;
             SourceRoot = pSourceRoot;
             Filename = pFilename;
 
@@ -78,8 +80,9 @@ namespace ZXDebug.SourceMapper
                         var address = Format.Parse( addressStr );
 
                         var bank = new BankID( bankTypeStr, bankID );
-                        var symBank = Banks[bank];
-                        var sym = symBank.Symbols[address];
+
+                        Banks.TryAdd( bank, out var symBank );
+                        symBank.Symbols.TryAdd( address, out var sym );
 
                         var labelCaptures = labels.Captures;
                         sym.Labels = sym.Labels ?? new List<string>();
@@ -92,7 +95,7 @@ namespace ZXDebug.SourceMapper
 
                         if( !string.IsNullOrWhiteSpace( fileStr ) )
                         {
-                            var file = Files[fileStr];
+                            var file = Maps.Files[fileStr];
                             var line = int.Parse( lineStr );
 
                             if( sym.File == null || sym.File.Filename != fileStr )
@@ -177,8 +180,9 @@ namespace ZXDebug.SourceMapper
 
                             var address = Format.Parse( addressStr, pKnownHex: true );
                             var bank = new BankID( section );
-                            var symBank = Banks[bank];
-                            var sym = symBank.Symbols[address];
+
+                            Banks.TryAdd(bank, out var symBank);
+                            symBank.Symbols.TryAdd( address, out var sym );
 
                             if( label != null )
                             {
@@ -190,10 +194,8 @@ namespace ZXDebug.SourceMapper
                             {
                                 var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, fileStr ) );
 
-                                var file = Files[normalisedFileStr];
+                                Maps.Files.TryAdd( normalisedFileStr, out var file );
                                 var line = int.Parse( lineStr );
-
-                                file.Lines[line] = sym;
 
                                 if( sym.File == null || sym.File.Filename != normalisedFileStr )
                                 {
@@ -204,6 +206,37 @@ namespace ZXDebug.SourceMapper
                                 {
                                     sym.Line = line;
                                 }
+
+                                
+                                SourceLink store;
+
+                                FileLine.TryAdd(file, out var fileLine );
+                                if( fileLine.TryAdd( line, out var fileLineRange, out store ) )
+                                {
+                                    store.File = file;
+                                    store.BankID = bank;
+                                    store.LowerLine = int.MaxValue;
+                                    store.LowerAddress = ushort.MaxValue;
+                                }
+                                fileLine.Extend( fileLineRange, line );
+                                if( line < store.LowerLine ) store.LowerLine = line;
+                                if( line > store.UpperLine ) store.UpperLine = line;
+                                if( address < store.LowerAddress ) store.LowerAddress = address;
+                                if( address > store.UpperAddress ) store.UpperAddress = address;
+                                
+                                BankAddress.TryAdd( bank, out var bankAddress );
+                                if( bankAddress.TryAdd( address, out var bankAddressRange, out store ) )
+                                {
+                                    store.File = file;
+                                    store.BankID = bank;
+                                    store.LowerLine = int.MaxValue;
+                                    store.LowerAddress = ushort.MaxValue;
+                                }
+                                bankAddress.Extend( bankAddressRange, address );
+                                if( line < store.LowerLine ) store.LowerLine = line;
+                                if( line > store.UpperLine ) store.UpperLine = line;
+                                if( address < store.LowerAddress ) store.LowerAddress = address;
+                                if( address > store.UpperAddress ) store.UpperAddress = address;
                             }
 
                             sym.Map = this;
@@ -215,19 +248,6 @@ namespace ZXDebug.SourceMapper
                     }
                 }
             }
-
-            // record our interpretation of the .map file for posterity... and also for testing
-            System.IO.File.WriteAllText( 
-                pFilename + ".json", 
-                JsonConvert.SerializeObject( 
-                    this, 
-                    new JsonSerializerSettings()
-                    {
-                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                        Formatting = Formatting.Indented
-                    } 
-                )
-            );
         }
 
         static string Dequote( string pValue )
@@ -263,5 +283,24 @@ namespace ZXDebug.SourceMapper
         {
             return Filename;
         }
+    }
+     
+    public class SourceLink
+    {
+        public File File;
+        public int LowerLine;
+        public int UpperLine;
+
+        public BankID BankID;
+        public ushort LowerAddress;
+        public ushort UpperAddress;
+    }
+
+    public class AddressMatches : RangeDictionary<ushort, SourceLink>
+    {
+    }
+
+    public class LineMatches : RangeDictionary<int, SourceLink>
+    {
     }
 }

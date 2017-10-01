@@ -68,7 +68,7 @@
     <Compile Include="machine\Slot.cs" />
     <Compile Include="machine\Stack.cs" />
     <Compile Include="Main.cs" />
-    <Compile Include="sourcemap\Mapper.cs" />
+    <Compile Include="sourcemap\Maps.cs" />
     <Compile Include="utils\Format.cs" />
     <Compile Include="utils\Log.cs" />
     <Compile Include="machine\Machine.cs" />

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Dynamic;
+﻿using System.Collections.Generic;
 using Spectrum;
 
 // todo: decide between throwing exceptions or returning success/failure, and make it consistent
