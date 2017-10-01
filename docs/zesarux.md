@@ -1,4 +1,6 @@
-This document describes the interaction with ZEsarUX
+This document describes the interaction with ZEsarUX.
+
+The debugger connects to ZEsarUX locally at 127.0.0.1 on port 10000.
 
 * any response of "`command>·`" indicates CPU is running
 * any response of "`command@cpu-step>·`" indicates CPU is stopped and in step mode
