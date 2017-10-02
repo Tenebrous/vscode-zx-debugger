@@ -49,7 +49,7 @@ Bit 5: Step over interrupt when running cpu-step, cpu-step-over and run verbose.
 
 ## Disable each individual breakpoint
 
-| Send | `disable-breakpoint 1` | (repeats for each) |
+| Send | `disable-breakpoint 1` - repeated for each breakpoint |
 | --- | --- |
 | Receive | `command>·` |
 | or | `Error. You must enable breakpoints first` | 
@@ -152,8 +152,12 @@ Address & length are sent as decimal.
 | Receive | `PC=15f9 SP=ff4a BC=0921 A=00 HL=5cb9 DE=5ca8 IX=ffff IY=5c3a A'=00 BC'=174b HL'=107f DE'=0006 I=3f R=59  F= Z P3H   F'= Z P     MEMPTR=15f7 EI IM1 VPS: 0` |
 | | `command@cpu-step>·` |
 
-Registers parsed by regex: `(?i)([a-z']*)=([0-9a-f].*?)(?:\s)`
-Flags parsed by regex: `(?i)(F'?)=(.{8})\s`
+* Registers parsed by regex:
+  * `(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)`
+  * [see in regex101](https://regex101.com/r/XnpxqF/2)
+* Flags parsed by regex:
+  * `(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})`
+  * [see in regex101](https://regex101.com/r/U508gA/1)
 
 Results are always hex.
 
