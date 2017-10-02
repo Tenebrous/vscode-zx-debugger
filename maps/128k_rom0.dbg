@@ -1,430 +1,430 @@
-ROM_0 0000h L0000 RST $00 - Reset Machine
-ROM_0 0010h L0010 RST $10 - Print A Character
-ROM_0 0018h L0018 RST $18 - Collect A Character
-ROM_0 0020h L0020 RST $20 - Collect Next Character
-ROM_0 0028h L0028 RST $28 - Call Routine in ROM 1
-ROM_0 0038h L0038 MASKABLE INTERRUPT ROUTINE
-ROM_0 004ah L004A 128K Error Routine
-ROM_0 005ch L005C Call ROM 1 Routine (RST $28 Continuation)
-ROM_0 006bh SWAP Swap to Other ROM (copied to $5B00)
-ROM_0 007fh YOUNGER Return to Other ROM Routine (copied to $5B14)
-ROM_0 0088h ONERR Error Handler Routine (copied to $5B1D)
-ROM_0 009ah PIN 'P' Channel Input Routine (copied to $5B2F)
-ROM_0 009fh POUT 'P' Channel Output Routine (copied to $5B34)
-ROM_0 00b5h POUT2 'P' Channel Exit Routine (copied to $5B4A)
-ROM_0 00c3h L00C3 Call Subroutine
-ROM_0 00c7h L00C7 Reset Routine (RST $00 Continuation, Part 1)
-ROM_0 0100h L0100 ROUTINE VECTOR TABLE
-ROM_0 0131h L0131 Fatal RAM Error
-ROM_0 0137h L0137 Reset Routine (RST $00 Continuation, Part 2)
-ROM_0 026bh L026B Execute Command Line
-ROM_0 02bah L02BA Return from BASIC Line Syntax Check
-ROM_0 02dfh L02DF Parse a BASIC Line with No Line Number
-ROM_0 0321h L0321 Error Handler Routine
-ROM_0 03efh L03EF Error Handler Routine When Parsing BASIC Line
-ROM_0 03f7h L03F7 Parse a BASIC Line with a Line Number
-ROM_0 046ch L046C New Error Message Vector Table
-ROM_0 048ch L048C New Error Message Table
-ROM_0 057dh L057D Print Message
-ROM_0 0589h L0589 The 'Initial Channel Information'
-ROM_0 059eh L059E The 'Initial Stream Data'
-ROM_0 05ach L05AC Produce Error Report
-ROM_0 05d6h L05D6 Check for BREAK into Program
-ROM_0 05e6h L05E6 RS232 Channel Handler Routines
-ROM_0 0641h L0641 FORMAT Routine
-ROM_0 06b8h L06B8 Baud Rate Table
-ROM_0 06d8h L06D8 RS232 Input Routine
-ROM_0 06e5h L06E5 Read Byte from RS232 Port
-ROM_0 07cah L07CA RS232 Output Routine
-ROM_0 08a3h L08A3 Write Byte to RS232 Port
-ROM_0 08f0h L08F0 COPY Command Routine
-ROM_0 0915h L0915 Output Half Row
-ROM_0 0955h L0955 Output Nibble of Pixels
-ROM_0 095fh L095F Output Characters from Table
-ROM_0 096dh L096D Test Whether Pixel (B,C) is Set
-ROM_0 0979h L0979 EPSON Printer Control Code Tables
-ROM_0 0985h L0985 Channel Data Block Format
-ROM_0 0a31h L0A31 Calculate Timing Loop Counter <<< RAM Routine >>>
-ROM_0 0a3eh L0A3E Test BREAK Key
-ROM_0 0a4ah L0A4A Select Channel Data Block Duration Pointers
-ROM_0 0a4fh L0A4F Select Channel Data Block Pointers
-ROM_0 0a67h L0A67 Get Channel Data Block Address for Current String
-ROM_0 0a6eh L0A6E Next Channel Data Pointer
-ROM_0 0a7dh L0A7D PLAY Command (Continuation)
-ROM_0 0ab7h L0AB7 PLAY Command Character Table
-ROM_0 0ac5h L0AC5 Get Play Character
-ROM_0 0ad1h L0AD1 Get Next Note in Semitones
-ROM_0 0b1dh L0B1D Get Numeric Value from Play String
-ROM_0 0b50h L0B50 Multiply DE by 10
-ROM_0 0b5ch L0B5C Find Next Note from Channel String
-ROM_0 0b85h L0B85 Play Command '!' (Comment)
-ROM_0 0b90h L0B90 Play Command 'O' (Octave)
-ROM_0 0ba5h L0BA5 Play Command 'N' (Separator)
-ROM_0 0ba6h L0BA6 Play Command '(' (Start of Repeat)
-ROM_0 0bc2h L0BC2 Play Command ')' (End of Repeat)
-ROM_0 0c27h L0C27 Get Address of Bracket Pointer Store
-ROM_0 0c32h L0C32 Play Command 'T' (Tempo)
-ROM_0 0c76h L0C76 Tempo Command Return
-ROM_0 0c84h L0C84 Play Command 'M' (Mixer)
-ROM_0 0c95h L0C95 Play Command 'V' (Volume)
-ROM_0 0cadh L0CAD Play Command 'U' (Use Volume Effect)
-ROM_0 0cbah L0CBA Play command 'W' (Volume Effect Specifier)
-ROM_0 0cceh L0CCE Play Command 'X' (Volume Effect Duration)
-ROM_0 0cddh L0CDD Play Command 'Y' (MIDI Channel)
-ROM_0 0ceeh L0CEE Play Command 'Z' (MIDI Programming Code)
-ROM_0 0cf6h L0CF6 Play Command 'H' (Stop)
-ROM_0 0cfbh L0CFB Play Commands 'a'..'g', 'A'..'G', '1'.."12", '&' and '_'
-ROM_0 0da1h L0DA1 End of String Found
-ROM_0 0dach L0DAC Point to Duration Length within Channel Data Block
-ROM_0 0db4h L0DB4 Store Entry in Command Data Block's Channel Duration Length Pointer Table
-ROM_0 0dcah L0DCA PLAY Command Jump Table
-ROM_0 0de8h L0DE8 Envelope Waveform Lookup Table
-ROM_0 0df0h L0DF0 Identify Command Character
-ROM_0 0df9h L0DF9 Semitones Table
-ROM_0 0e00h L0E00 Find Note Duration Length
-ROM_0 0e0ch L0E0C Note Duration Table
-ROM_0 0e19h L0E19 Is Numeric Digit?
-ROM_0 0e20h L0E20 Play a Note On a Sound Chip Channel
-ROM_0 0e7ch L0E7C Set Sound Generator Register
-ROM_0 0e89h L0E89 Read Sound Generator Register
-ROM_0 0e93h L0E93 Turn Off All Sound
-ROM_0 0ec8h L0EC8 Get Previous Character from Play String
-ROM_0 0ee3h L0EE3 Get Current Character from Play String
-ROM_0 0f12h L0F12 Produce Play Error Reports
-ROM_0 0f42h L0F42 Play Note on Each Channel
-ROM_0 0f76h L0F76 Wait Note Duration
-ROM_0 0f91h L0F91 Find Smallest Duration Length
-ROM_0 0fc1h L0FC1 Play a Note on Each Channel and Update Channel Duration Lengths
-ROM_0 1096h L1096 Note Lookup Table
-ROM_0 116eh L116E Play Note on MIDI Channel
-ROM_0 118dh L118D Turn MIDI Channel Off
-ROM_0 11a3h L11A3 Send Byte to MIDI Device
-ROM_0 11ebh L11EB SAVE Routine
-ROM_0 11f2h L11F2 LOAD Routine
-ROM_0 11f9h L11F9 VERIFY Routine
-ROM_0 1200h L1200 MERGE Routine
-ROM_0 121dh L121D RAM Disk Command Handling
-ROM_0 129bh L129B RAM Disk VERIFY! Routine
-ROM_0 12c5h L12C5 RAM Disk MERGE! Routine
-ROM_0 12dbh L12DB RAM Disk LOAD! Routine
-ROM_0 137eh L137E RAM Disk Load Bytes
-ROM_0 1385h L1385 Get Expression from BASIC Line
-ROM_0 1393h L1393 Check Filename and Copy
-ROM_0 13beh L13BE Cassette / RAM Disk Command Handling
-ROM_0 152fh L152F Relist the BASIC Program from the Current Line
-ROM_0 1605h L1605 Print All Screen Line Edit Buffer Rows to the Display File
-ROM_0 1630h L1630 Clear Editing Display
-ROM_0 1639h L1639 Shift All Edit Buffer Rows Up and Update Display File if Required
-ROM_0 166fh L166F Shift All Edit Buffer Rows Down and Update Display File if Required
-ROM_0 16ach L16AC Insert Character into Edit Buffer Row, Shifting Row Right
-ROM_0 16c1h L16C1 Insert Character into Edit Buffer Row, Shifting Row Left
-ROM_0 16dch L16DC The Syntax Offset Table
-ROM_0 170eh L170E The Syntax Parameter Table
-ROM_0 17afh L17AF The 'Main Parser' Of the BASIC Interpreter
-ROM_0 17c0h L17C0 The Statement Loop
-ROM_0 181ah L181A The 'Separator' Subroutine
-ROM_0 1821h L1821 The 'Statement Return' Subroutine
-ROM_0 1838h L1838 The 'Line Run' Entry Point
-ROM_0 184ch L184C The 'Line New' Subroutine
-ROM_0 1862h L1862 REM Routine
-ROM_0 1863h L1863 The 'Line End' Routine
-ROM_0 1870h L1870 The 'Line Use' Routine
-ROM_0 1882h L1882 The 'Next Line' Routine
-ROM_0 18a1h L18A1 The 'CHECK-END' Subroutine
-ROM_0 18a8h L18A8 The 'STMT-NEXT' Routine
-ROM_0 18b5h L18B5 The 'Command Class' Table
-ROM_0 18c4h L18C4 The 'Command Classes - 0C, 0D & 0E'
-ROM_0 18d6h L18D6 The 'Command Classes - 00, 03 & 05'
-ROM_0 18f9h L18F9 The 'Command Class - 01'
-ROM_0 18fdh L18FD The 'Command Class - 02'
-ROM_0 1905h L1905 The 'Command Class - 04'
-ROM_0 1909h L1909 The 'Command Class - 08'
-ROM_0 190eh L190E The 'Command Class - 06'
-ROM_0 1912h L1912 Report C - Nonsense in BASIC
-ROM_0 1916h L1916 The 'Command Class - 0A'
-ROM_0 191ah L191A The 'Command Class - 07'
-ROM_0 1944h L1944 The 'Command Class - 09'
-ROM_0 1948h L1948 The 'Command Class - 0B'
-ROM_0 1967h L1967 IF Routine
-ROM_0 1981h L1981 FOR Routine
-ROM_0 19aah L19AA READ Routine
-ROM_0 19ebh L19EB DATA Routine
-ROM_0 1a02h L1A02 RUN Routine
-ROM_0 1a0dh L1A0D CLEAR Routine
-ROM_0 1a53h L1A53 GO SUB Routine
-ROM_0 1a6fh L1A6F RETURN Routine
-ROM_0 1a8ch L1A8C DEF FN Routine
-ROM_0 1af0h L1AF0 MOVE Routine
-ROM_0 1af1h L1AF1 Run Tape Loader
-ROM_0 1b14h L1B14 List Program to Printer
-ROM_0 1b2bh L1B2B SPECTRUM Routine
-ROM_0 1b47h L1B47 Main Menu - 48 BASIC Option
-ROM_0 1b53h L1B53 Set 'P' Channel Data
-ROM_0 1b6eh L1B6E LOAD "" Command Bytes
-ROM_0 1b71h L1B71 LLIST Routine
-ROM_0 1b75h L1B75 LIST Routine
-ROM_0 1badh L1BAD RAM Disk SAVE! Routine
-ROM_0 1be5h L1BE5 CAT! Routine
-ROM_0 1c0ch L1C0C ERASE! Routine
-ROM_0 1c2eh L1C2E Load Header from RAM Disk
-ROM_0 1c4bh L1C4B Load from RAM Disk
-ROM_0 1c64h L1C64 Page Logical RAM Bank
-ROM_0 1c81h L1C81 Physical RAM Bank Mapping Table
-ROM_0 1c87h L1C87 Compare Filenames
-ROM_0 1c97h L1C97 Create New Catalogue Entry
-ROM_0 1cf3h L1CF3 Adjust RAM Disk Free Space
-ROM_0 1d12h L1D12 Find Catalogue Entry for Filename
-ROM_0 1d35h L1D35 Find RAM Disk File
-ROM_0 1d56h L1D56 Update Catalogue Entry
-ROM_0 1dach L1DAC Save Bytes to RAM Disk
-ROM_0 1e37h L1E37 Load Bytes from RAM Disk
-ROM_0 1ecfh L1ECF Transfer Bytes to RAM Bank 4 - Vector Table Entry
-ROM_0 1f04h L1F04 Transfer Bytes from RAM Bank 4 - Vector Table Entry
-ROM_0 1f20h L1F20 Use Normal RAM Configuration
-ROM_0 1f3ah L1F3A Select RAM Bank
-ROM_0 1f45h L1F45 Use Workspace RAM Configuration
-ROM_0 1f5fh L1F5F Erase a RAM Disk File
-ROM_0 20d2h L20D2 Print RAM Disk Catalogue
-ROM_0 2121h L2121 Print Catalogue Filename Data
-ROM_0 2135h L2135 Print Single Catalogue Entry
-ROM_0 2174h L2174 LPRINT Routine
-ROM_0 2178h L2178 PRINT Routine
-ROM_0 218ch L218C INPUT Routine
-ROM_0 21a7h L21A7 COPY Routine
-ROM_0 21aah L21AA NEW Routine
-ROM_0 21aeh L21AE CIRCLE Routine
-ROM_0 21beh L21BE DRAW Routine
-ROM_0 21d5h L21D5 DIM Routine
-ROM_0 21ebh L21EB Error Report C - Nonsense in BASIC
-ROM_0 21efh L21EF Clear Screen Routine
-ROM_0 21f8h L21F8 Evaluate Numeric Expression
-ROM_0 226fh L226F Process Key Press
-ROM_0 228eh L228E Find Start of BASIC Command
-ROM_0 2297h L2297 Is LET Command?
-ROM_0 22abh L22AB Is Operator Character?
-ROM_0 22bdh L22BD Operator Tokens Table
-ROM_0 22cbh L22CB Is Function Character?
-ROM_0 22e0h L22E0 Is Numeric or Function Expression?
-ROM_0 230ah L230A Is Numeric Character?
-ROM_0 2317h L2317 PLAY Routine
-ROM_0 2336h L2336 Return to Editor
-ROM_0 2342h L2342 BC=HL-DE, Swap HL and DE
-ROM_0 234ah L234A Create Room for 1 Byte
-ROM_0 2358h L2358 Room for BC Bytes?
-ROM_0 236fh L236F HL = A*32
-ROM_0 2371h L2371 HL = A*8
-ROM_0 2378h L2378 Find Amount of Free Space
-ROM_0 2384h L2384 Print Screen Buffer Row
-ROM_0 23b8h L23B8 Blank Screen Buffer Content
-ROM_0 23cbh L23CB Print Screen Buffer to Display File
-ROM_0 23e1h L23E1 Print Screen Buffer Characters to Display File
-ROM_0 242ch L242C Copy A Character <<< RAM Routine >>>
-ROM_0 2456h L2456 Toggle ROMs 1 <<< RAM Routine >>>
-ROM_0 2464h L2464 Toggle ROMs 2 <<< RAM Routine >>>
-ROM_0 246fh L246F Construct 'Copy Character' Routine in RAM
-ROM_0 2488h L2488 Set Attributes File from Screen Buffer
-ROM_0 249bh L249B Set Attributes for a Screen Buffer Row
-ROM_0 2513h L2513 Swap Ink and Paper Attribute Bits
-ROM_0 2527h L2527 Character Data
-ROM_0 2537h L2537 Editing Keys Action Table
-ROM_0 2577h L2577 Menu Keys Action Table
-ROM_0 2584h L2584 Initialise Mode Settings
-ROM_0 259fh L259F Show Main Menu
-ROM_0 25cbh L25CB Return to Editor / Calculator / Menu from Error
-ROM_0 2604h L2604 Return to the Editor
-ROM_0 2653h L2653 Main Waiting Loop
-ROM_0 2669h L2669 Process Key Press
-ROM_0 269bh L269B TOGGLE Key Handler Routine
-ROM_0 26bbh L26BB Select Lower Screen
-ROM_0 26ceh L26CE Select Upper Screen
-ROM_0 26e7h L26E7 Produce Error Beep
-ROM_0 26fah L26FA Produce Success Beep
-ROM_0 2704h L2704 Menu Key Press Handler - MENU
-ROM_0 2717h L2717 Menu Key Press Handler - SELECT
-ROM_0 272eh L272E Menu Key Press Handler - CURSOR UP
-ROM_0 2731h L2731 Menu Key Press Handler - CURSOR DOWN
-ROM_0 2744h L2744 Main Menu
-ROM_0 2790h L2790 Edit Menu
-ROM_0 27cbh L27CB Calculator Menu
-ROM_0 27ebh L27EB Tape Loader Text
-ROM_0 2811h L2811 Edit Menu - Screen Option
-ROM_0 2816h L2816 Main Menu - Tape Tester Option
-ROM_0 281ch L281C Edit Menu / Calculator Menu - Exit Option
-ROM_0 2831h L2831 Main Menu - Tape Loader Option
-ROM_0 2851h L2851 Edit Menu - Renumber Option
-ROM_0 2862h L2862 Edit Menu - Print Option
-ROM_0 2885h L2885 Main Menu - Calculator Option
-ROM_0 28beh L28BE Reset Cursor Position
-ROM_0 28c7h L28C7 Return to Main Menu
-ROM_0 28d1h L28D1 Main Screen Error Cursor Settings
-ROM_0 28d8h L28D8 Lower Screen Good Cursor Settings
-ROM_0 28dfh L28DF Initialise Lower Screen Editing Settings
-ROM_0 28e8h L28E8 Initialise Main Screen Editing Settings
-ROM_0 28f1h L28F1 Handle Key Press Character Code
-ROM_0 291bh L291B DELETE-RIGHT Key Handler Routine
-ROM_0 292bh L292B DELETE Key Handler Routine
-ROM_0 2944h L2944 ENTER Key Handler Routine
-ROM_0 2983h L2983 TOP-OF-PROGRAM Key Handler Routine
-ROM_0 29abh L29AB END-OF-PROGRAM Key Handler Routine
-ROM_0 29d4h L29D4 WORD-LEFT Key Handler Routine
-ROM_0 29e1h L29E1 WORD-RIGHT Key Handler Routine
-ROM_0 29ech L29EC Remove Cursor
-ROM_0 29f2h L29F2 Show Cursor
-ROM_0 29f8h L29F8 Display Cursor
-ROM_0 2a07h L2A07 Fetch Cursor Position
-ROM_0 2a11h L2A11 Store Cursor Position
-ROM_0 2a1ah L2A1A Get Current Character from Screen Line Edit Buffer
-ROM_0 2a25h L2A25 TEN-ROWS-DOWN Key Handler Routine
-ROM_0 2a4fh L2A4F TEN-ROWS-UP Key Handler Routine
-ROM_0 2a7ah L2A7A END-OF-LINE Key Handler Routine
-ROM_0 2a87h L2A87 START-OF-LINE Key Handler Routine
-ROM_0 2a94h L2A94 CURSOR-UP Key Handler Routine
-ROM_0 2ab5h L2AB5 CURSOR-DOWN Key Handler Routine
-ROM_0 2ad7h L2AD7 CURSOR-LEFT Key Handler Routine
-ROM_0 2ae3h L2AE3 CURSOR-RIGHT Key Handler Routine
-ROM_0 2af9h L2AF9 Find Closest Screen Line Edit Buffer Editable Position to the Right else Left
-ROM_0 2b02h L2B02 Find Closest Screen Line Edit Buffer Editable Position to the Left else Right
-ROM_0 2b0bh L2B0B Insert BASIC Line, Shift Edit Buffer Rows Down If Required and Update Display File If Required
-ROM_0 2b30h L2B30 Insert BASIC Line, Shift Edit Buffer Rows Up If Required and Update Display File If Required
-ROM_0 2b5bh L2B5B Find Next Screen Line Edit Buffer Editable Position to Left, Wrapping Above if Required
-ROM_0 2b78h L2B78 Find Next Screen Line Edit Buffer Editable Position to Right, Wrapping Below if Required
-ROM_0 2bd4h L2BD4 Find Screen Line Edit Buffer Editable Position from Previous Column to the Right
-ROM_0 2bdfh L2BDF Find Screen Line Edit Buffer Editable Position to the Left
-ROM_0 2beah L2BEA Find Start of Word to Left in Screen Line Edit Buffer
-ROM_0 2c09h L2C09 Find Start of Word to Right in Screen Line Edit Buffer
-ROM_0 2c31h L2C31 Find Start of Current BASIC Line in Screen Line Edit Buffer
-ROM_0 2c4ch L2C4C Find End of Current BASIC Line in Screen Line Edit Buffer
-ROM_0 2c68h L2C68 Insert BASIC Line into Program if Altered
-ROM_0 2c7ch L2C7C Insert Line into BASIC Program If Altered and the First Row of the Line
-ROM_0 2c8eh L2C8E Insert Line into BASIC Program
-ROM_0 2d54h L2D54 Fetch Next Character from BASIC Line to Insert
-ROM_0 2d85h L2D85 Fetch Next Character Jump Table
-ROM_0 2d8fh L2D8F Fetch Character from the Current Row of the BASIC Line in the Screen Line Edit Buffer
-ROM_0 2e0eh L2E0E Fetch Character from Edit Buffer Row
-ROM_0 2e1bh L2E1B Upper Screen Rows Table
-ROM_0 2e1dh L2E1D Lower Screen Rows Table
-ROM_0 2e1fh L2E1F Reset to Main Screen
-ROM_0 2e2dh L2E2D Reset to Lower Screen
-ROM_0 2e41h L2E41 Find Edit Buffer Editable Position from Previous Column to the Right
-ROM_0 2e63h L2E63 Find Edit Buffer Editable Position to the Left
-ROM_0 2e7bh L2E7B Fetch Edit Buffer Row Character
-ROM_0 2e81h L2E81 Insert Character into Screen Line Edit Buffer
-ROM_0 2eceh L2ECE Insert Blank Row into Screen Edit Buffer, Shifting Rows Down
-ROM_0 2eefh L2EEF Empty Edit Buffer Row Data
-ROM_0 2f12h L2F12 Delete a Character from a BASIC Line in the Screen Line Edit Buffer
-ROM_0 2f80h L2F80 Shift Rows Up to Close Blank Row in Screen Line Edit Buffer
-ROM_0 2fbch L2FBC DELETE-WORD-LEFT Key Handler Routine
-ROM_0 3017h L3017 DELETE-WORD-RIGHT Key Handler Routine
-ROM_0 303eh L303E DELETE-TO-START-OF-LINE Key Handler Routine
-ROM_0 3072h L3072 DELETE-TO-END-OF-LINE Key Handler Routine
-ROM_0 3084h L3084 Remove Cursor Attribute and Disable Updating Display File
-ROM_0 3095h L3095 Previous Character Exists in Screen Line Edit Buffer?
-ROM_0 30b4h L30B4 Find Row Address in Screen Line Edit Buffer
-ROM_0 30c6h L30C6 Find Position within Screen Line Edit Buffer
-ROM_0 30d0h L30D0 Below-Screen Line Edit Buffer Settings
-ROM_0 30d6h L30D6 Set Below-Screen Line Edit Buffer Settings
-ROM_0 30dfh L30DF Shift Up Rows in Below-Screen Line Edit Buffer
-ROM_0 311eh L311E Shift Down Rows in Below-Screen Line Edit Buffer
-ROM_0 316eh L316E Insert Character into Below-Screen Line Edit Buffer
-ROM_0 31c3h L31C3 Find Row Address in Below-Screen Line Edit Buffer
-ROM_0 31c9h L31C9 Delete a Character from a BASIC Line in the Below-Screen Line Edit Buffer
-ROM_0 321eh L321E Above-Screen Line Edit Buffer Settings
-ROM_0 3222h L3222 Set Above-Screen Line Edit Buffer Settings
-ROM_0 322bh L322B Shift Rows Down in the Above-Screen Line Edit Buffer
-ROM_0 326ah L326A Shift Row Up into the Above-Screen Line Edit Buffer if Required
-ROM_0 32b7h L32B7 Find Row Address in Above-Screen Line Edit Buffer
-ROM_0 32bdh L32BD BASIC Line Character Action Handler Jump Table
-ROM_0 32d6h L32D6 Copy a BASIC Line into the Above-Screen or Below-Screen Line Edit Buffer
-ROM_0 3331h L3331 Set 'Continuation' Row in Line Edit Buffer
-ROM_0 334ah L334A Find Address of BASIC Line with Specified Line Number
-ROM_0 3352h L3352 Create Next Line Number Representation in Keyword Construction Buffer
-ROM_0 335ah L335A Fetch Next De-tokenized Character from Selected BASIC Line in Program Area
-ROM_0 335fh L335F Copy 'Insert Keyword Representation into Keyword Construction Buffer' Routine into RAM
-ROM_0 3374h L3374 Insert Keyword Representation into Keyword Construction Buffer <<< RAM Routine >>>
-ROM_0 33c3h L33C3 Copy Keyword Characters <<< RAM Routine >>>
-ROM_0 33f4h L33F4 Identify Token from Table
-ROM_0 3430h L3430 Create Next Line Number Representation in Keyword Construction Buffer
-ROM_0 3495h L3495 Insert ASCII Line Number Digit
-ROM_0 34b6h L34B6 Find Address of BASIC Line with Specified Line Number
-ROM_0 34cfh L34CF Move to Next BASIC Line
-ROM_0 34d9h L34D9 Check if at End of BASIC Program
-ROM_0 34e0h L34E0 Compare Line Numbers
-ROM_0 34eah L34EA Clear BASIC Line Construction Pointers
-ROM_0 34f6h L34F6 Find Address of BASIC Line
-ROM_0 3517h L3517 Fetch Next De-tokenized Character from BASIC Line in Program Area
-ROM_0 3594h L3594 Keywords String Table
-ROM_0 35b9h L35B9 Indentation Settings
-ROM_0 35bch L35BC Set Indentation Settings
-ROM_0 35c5h L35C5 Store Character in Column of Edit Buffer Row
-ROM_0 35cch L35CC 'Enter' Action Handler Routine
-ROM_0 35dah L35DA 'Null Columns' Action Handler Routine
-ROM_0 35e6h L35E6 Null Column Positions
-ROM_0 35f4h L35F4 Indent Edit Buffer Row
-ROM_0 3604h L3604 Print Edit Buffer Row to Display File if Required
-ROM_0 3618h L3618 Shift Up Edit Rows in Display File if Required
-ROM_0 362ch L362C Shift Down Edit Rows in Display File if Required
-ROM_0 3640h L3640 Set Cursor Attribute Colour
-ROM_0 364fh L364F Restore Cursor Position Previous Attribute
-ROM_0 365eh L365E Reset 'L' Mode
-ROM_0 367fh L367F Wait for a Key Press
-ROM_0 36a8h L36A8 Display Menu
-ROM_0 3719h L3719 Plot a Line
-ROM_0 372bh L372B Print "AT B,C" Characters
-ROM_0 3733h L3733 Print String
-ROM_0 373bh L373B Store Menu Screen Area
-ROM_0 373eh L373E Restore Menu Screen Area
-ROM_0 377eh L377E Store / Restore Menu Screen Row
-ROM_0 37a7h L37A7 Move Up Menu
-ROM_0 37b6h L37B6 Move Down Menu
-ROM_0 37cah L37CA Toggle Menu Option Selection Highlight
-ROM_0 37ech L37EC Menu Title Colours Table
-ROM_0 37fah L37FA Menu Title Space Table
-ROM_0 3802h L3802 Menu Sinclair Stripes Bitmaps
-ROM_0 3812h L3812 Sinclair Strip 'Text'
-ROM_0 3822h L3822 Print the Sinclair stripes on the menu
-ROM_0 3848h L3848 Print '128 BASIC' Banner
-ROM_0 384dh L384D Print 'Calculator' Banner
-ROM_0 3852h L3852 Print 'Tape Loader' Banner
-ROM_0 3857h L3857 Print 'Tape Tester' Banner
-ROM_0 385ah L385A Print Banner
-ROM_0 3881h L3881 Clear Lower Editing Display
-ROM_0 3888h L3888 RENUMBER ROUTINE
-ROM_0 3907h L3907 Tokens Using Line Numbers
-ROM_0 390eh L390E Parse a Line Renumbering Line Number References
-ROM_0 3a05h L3A05 Count the Number of BASIC Lines
-ROM_0 3a35h L3A35 Skip Spaces
-ROM_0 3a3ch L3A3C Create ASCII Line Number Representation
-ROM_0 3a60h L3A60 Insert Line Number Digit
-ROM_0 3a6dh L3A6D Initial Lower Screen Cursor Settings
-ROM_0 3a76h L3A76 Initial Main Screen Cursor Settings
-ROM_0 3a7fh L3A7F Set Main Screen Editing Cursor Details
-ROM_0 3a88h L3A88 Set Lower Screen Editing Cursor Details
-ROM_0 3a91h L3A91 Print 'AD'
-ROM_0 3a96h L3A96 Store Cursor Colour
-ROM_0 3a9dh L3A9D Set Cursor Position Attribute
-ROM_0 3ab2h L3AB2 Restore Cursor Position Attribute
-ROM_0 3abfh L3ABF Shift Up Edit Rows in Display File
-ROM_0 3ac6h L3AC6 Shift Down Edit Rows in Display File
-ROM_0 3b1eh L3B1E Print a Row of the Edit Buffer to the Screen
-ROM_0 3b5eh L3B5E Clear Display Rows
-ROM_0 3b94h L3B94 Find Rows and Columns to End of Screen
-ROM_0 3b98h L3B98 Find Rows to End of Screen
-ROM_0 3ba0h L3BA0 Get Attribute Address
-ROM_0 3bb8h L3BB8 Exchange Colour Items
-ROM_0 3be9h L3BE9 TAPE TESTER ROUTINE
-ROM_0 3c63h L3C63 Tokenize BASIC Line
-ROM_0 3d9dh L3D9D Fetch Next Character and Character Status from BASIC Line to Insert
-ROM_0 3dc6h L3DC6 Is Lowercase Letter?
-ROM_0 3dcdh L3DCD Copy Keyword Conversion Buffer Contents into BASIC Line Workspace
-ROM_0 3de9h L3DE9 Insert Character into Keyword Conversion Buffer
-ROM_0 3e16h L3E16 Insert Character into BASIC Line Workspace, Handling '>' and '<'
-ROM_0 3e64h L3E64 Insert Character into BASIC Line Workspace, Handling 'REM' and Quotes
-ROM_0 3e9ch L3E9C Insert Character into BASIC Line Workspace With Space Suppression
-ROM_0 3efbh L3EFB Insert a Character into BASIC Line Workspace
-ROM_0 3f66h L3F66 Room for BC Bytes?
-ROM_0 3f7eh L3F7E Identify Keyword
-ROM_0 3fbah L3FBA Copy Data Block
-ROM_0 3fc3h L3FC3 Get Numeric Value for ASCII Character
-ROM_0 3fceh L3FCE Call Action Handler Routine
-ROM_0 3fefh L3FEF PROGRAMMERS' INITIALS
-ROM_0 3fffh L3FFF END OF ROM MARKER
+ROM_0 0000h L0000   ; RST $00 - Reset Machine
+ROM_0 0010h L0010   ; RST $10 - Print A Character
+ROM_0 0018h L0018   ; RST $18 - Collect A Character
+ROM_0 0020h L0020   ; RST $20 - Collect Next Character
+ROM_0 0028h L0028   ; RST $28 - Call Routine in ROM 1
+ROM_0 0038h L0038   ; MASKABLE INTERRUPT ROUTINE
+ROM_0 004ah L004A   ; 128K Error Routine
+ROM_0 005ch L005C   ; Call ROM 1 Routine (RST $28 Continuation)
+ROM_0 006bh SWAP    ; Swap to Other ROM (copied to $5B00)
+ROM_0 007fh YOUNGER ; Return to Other ROM Routine (copied to $5B14)
+ROM_0 0088h ONERR   ; Error Handler Routine (copied to $5B1D)
+ROM_0 009ah PIN     ; 'P' Channel Input Routine (copied to $5B2F)
+ROM_0 009fh POUT    ; 'P' Channel Output Routine (copied to $5B34)
+ROM_0 00b5h POUT2   ; 'P' Channel Exit Routine (copied to $5B4A)
+ROM_0 00c3h L00C3   ; Call Subroutine
+ROM_0 00c7h L00C7   ; Reset Routine (RST $00 Continuation, Part 1)
+ROM_0 0100h L0100   ; ROUTINE VECTOR TABLE
+ROM_0 0131h L0131   ; Fatal RAM Error
+ROM_0 0137h L0137   ; Reset Routine (RST $00 Continuation, Part 2)
+ROM_0 026bh L026B   ; Execute Command Line
+ROM_0 02bah L02BA   ; Return from BASIC Line Syntax Check
+ROM_0 02dfh L02DF   ; Parse a BASIC Line with No Line Number
+ROM_0 0321h L0321   ; Error Handler Routine
+ROM_0 03efh L03EF   ; Error Handler Routine When Parsing BASIC Line
+ROM_0 03f7h L03F7   ; Parse a BASIC Line with a Line Number
+ROM_0 046ch L046C   ; New Error Message Vector Table
+ROM_0 048ch L048C   ; New Error Message Table
+ROM_0 057dh L057D   ; Print Message
+ROM_0 0589h L0589   ; The 'Initial Channel Information'
+ROM_0 059eh L059E   ; The 'Initial Stream Data'
+ROM_0 05ach L05AC   ; Produce Error Report
+ROM_0 05d6h L05D6   ; Check for BREAK into Program
+ROM_0 05e6h L05E6   ; RS232 Channel Handler Routines
+ROM_0 0641h L0641   ; FORMAT Routine
+ROM_0 06b8h L06B8   ; Baud Rate Table
+ROM_0 06d8h L06D8   ; RS232 Input Routine
+ROM_0 06e5h L06E5   ; Read Byte from RS232 Port
+ROM_0 07cah L07CA   ; RS232 Output Routine
+ROM_0 08a3h L08A3   ; Write Byte to RS232 Port
+ROM_0 08f0h L08F0   ; COPY Command Routine
+ROM_0 0915h L0915   ; Output Half Row
+ROM_0 0955h L0955   ; Output Nibble of Pixels
+ROM_0 095fh L095F   ; Output Characters from Table
+ROM_0 096dh L096D   ; Test Whether Pixel (B,C) is Set
+ROM_0 0979h L0979   ; EPSON Printer Control Code Tables
+ROM_0 0985h L0985   ; Channel Data Block Format
+ROM_0 0a31h L0A31   ; Calculate Timing Loop Counter <<< RAM Routine >>>
+ROM_0 0a3eh L0A3E   ; Test BREAK Key
+ROM_0 0a4ah L0A4A   ; Select Channel Data Block Duration Pointers
+ROM_0 0a4fh L0A4F   ; Select Channel Data Block Pointers
+ROM_0 0a67h L0A67   ; Get Channel Data Block Address for Current String
+ROM_0 0a6eh L0A6E   ; Next Channel Data Pointer
+ROM_0 0a7dh L0A7D   ; PLAY Command (Continuation)
+ROM_0 0ab7h L0AB7   ; PLAY Command Character Table
+ROM_0 0ac5h L0AC5   ; Get Play Character
+ROM_0 0ad1h L0AD1   ; Get Next Note in Semitones
+ROM_0 0b1dh L0B1D   ; Get Numeric Value from Play String
+ROM_0 0b50h L0B50   ; Multiply DE by 10
+ROM_0 0b5ch L0B5C   ; Find Next Note from Channel String
+ROM_0 0b85h L0B85   ; Play Command '!' (Comment)
+ROM_0 0b90h L0B90   ; Play Command 'O' (Octave)
+ROM_0 0ba5h L0BA5   ; Play Command 'N' (Separator)
+ROM_0 0ba6h L0BA6   ; Play Command '(' (Start of Repeat)
+ROM_0 0bc2h L0BC2   ; Play Command ')' (End of Repeat)
+ROM_0 0c27h L0C27   ; Get Address of Bracket Pointer Store
+ROM_0 0c32h L0C32   ; Play Command 'T' (Tempo)
+ROM_0 0c76h L0C76   ; Tempo Command Return
+ROM_0 0c84h L0C84   ; Play Command 'M' (Mixer)
+ROM_0 0c95h L0C95   ; Play Command 'V' (Volume)
+ROM_0 0cadh L0CAD   ; Play Command 'U' (Use Volume Effect)
+ROM_0 0cbah L0CBA   ; Play command 'W' (Volume Effect Specifier)
+ROM_0 0cceh L0CCE   ; Play Command 'X' (Volume Effect Duration)
+ROM_0 0cddh L0CDD   ; Play Command 'Y' (MIDI Channel)
+ROM_0 0ceeh L0CEE   ; Play Command 'Z' (MIDI Programming Code)
+ROM_0 0cf6h L0CF6   ; Play Command 'H' (Stop)
+ROM_0 0cfbh L0CFB   ; Play Commands 'a'..'g', 'A'..'G', '1'.."12", '&' and '_'
+ROM_0 0da1h L0DA1   ; End of String Found
+ROM_0 0dach L0DAC   ; Point to Duration Length within Channel Data Block
+ROM_0 0db4h L0DB4   ; Store Entry in Command Data Block's Channel Duration Length Pointer Table
+ROM_0 0dcah L0DCA   ; PLAY Command Jump Table
+ROM_0 0de8h L0DE8   ; Envelope Waveform Lookup Table
+ROM_0 0df0h L0DF0   ; Identify Command Character
+ROM_0 0df9h L0DF9   ; Semitones Table
+ROM_0 0e00h L0E00   ; Find Note Duration Length
+ROM_0 0e0ch L0E0C   ; Note Duration Table
+ROM_0 0e19h L0E19   ; Is Numeric Digit?
+ROM_0 0e20h L0E20   ; Play a Note On a Sound Chip Channel
+ROM_0 0e7ch L0E7C   ; Set Sound Generator Register
+ROM_0 0e89h L0E89   ; Read Sound Generator Register
+ROM_0 0e93h L0E93   ; Turn Off All Sound
+ROM_0 0ec8h L0EC8   ; Get Previous Character from Play String
+ROM_0 0ee3h L0EE3   ; Get Current Character from Play String
+ROM_0 0f12h L0F12   ; Produce Play Error Reports
+ROM_0 0f42h L0F42   ; Play Note on Each Channel
+ROM_0 0f76h L0F76   ; Wait Note Duration
+ROM_0 0f91h L0F91   ; Find Smallest Duration Length
+ROM_0 0fc1h L0FC1   ; Play a Note on Each Channel and Update Channel Duration Lengths
+ROM_0 1096h L1096   ; Note Lookup Table
+ROM_0 116eh L116E   ; Play Note on MIDI Channel
+ROM_0 118dh L118D   ; Turn MIDI Channel Off
+ROM_0 11a3h L11A3   ; Send Byte to MIDI Device
+ROM_0 11ebh L11EB   ; SAVE Routine
+ROM_0 11f2h L11F2   ; LOAD Routine
+ROM_0 11f9h L11F9   ; VERIFY Routine
+ROM_0 1200h L1200   ; MERGE Routine
+ROM_0 121dh L121D   ; RAM Disk Command Handling
+ROM_0 129bh L129B   ; RAM Disk VERIFY! Routine
+ROM_0 12c5h L12C5   ; RAM Disk MERGE! Routine
+ROM_0 12dbh L12DB   ; RAM Disk LOAD! Routine
+ROM_0 137eh L137E   ; RAM Disk Load Bytes
+ROM_0 1385h L1385   ; Get Expression from BASIC Line
+ROM_0 1393h L1393   ; Check Filename and Copy
+ROM_0 13beh L13BE   ; Cassette / RAM Disk Command Handling
+ROM_0 152fh L152F   ; Relist the BASIC Program from the Current Line
+ROM_0 1605h L1605   ; Print All Screen Line Edit Buffer Rows to the Display File
+ROM_0 1630h L1630   ; Clear Editing Display
+ROM_0 1639h L1639   ; Shift All Edit Buffer Rows Up and Update Display File if Required
+ROM_0 166fh L166F   ; Shift All Edit Buffer Rows Down and Update Display File if Required
+ROM_0 16ach L16AC   ; Insert Character into Edit Buffer Row, Shifting Row Right
+ROM_0 16c1h L16C1   ; Insert Character into Edit Buffer Row, Shifting Row Left
+ROM_0 16dch L16DC   ; The Syntax Offset Table
+ROM_0 170eh L170E   ; The Syntax Parameter Table
+ROM_0 17afh L17AF   ; The 'Main Parser' Of the BASIC Interpreter
+ROM_0 17c0h L17C0   ; The Statement Loop
+ROM_0 181ah L181A   ; The 'Separator' Subroutine
+ROM_0 1821h L1821   ; The 'Statement Return' Subroutine
+ROM_0 1838h L1838   ; The 'Line Run' Entry Point
+ROM_0 184ch L184C   ; The 'Line New' Subroutine
+ROM_0 1862h L1862   ; REM Routine
+ROM_0 1863h L1863   ; The 'Line End' Routine
+ROM_0 1870h L1870   ; The 'Line Use' Routine
+ROM_0 1882h L1882   ; The 'Next Line' Routine
+ROM_0 18a1h L18A1   ; The 'CHECK-END' Subroutine
+ROM_0 18a8h L18A8   ; The 'STMT-NEXT' Routine
+ROM_0 18b5h L18B5   ; The 'Command Class' Table
+ROM_0 18c4h L18C4   ; The 'Command Classes - 0C, 0D & 0E'
+ROM_0 18d6h L18D6   ; The 'Command Classes - 00, 03 & 05'
+ROM_0 18f9h L18F9   ; The 'Command Class - 01'
+ROM_0 18fdh L18FD   ; The 'Command Class - 02'
+ROM_0 1905h L1905   ; The 'Command Class - 04'
+ROM_0 1909h L1909   ; The 'Command Class - 08'
+ROM_0 190eh L190E   ; The 'Command Class - 06'
+ROM_0 1912h L1912   ; Report C - Nonsense in BASIC
+ROM_0 1916h L1916   ; The 'Command Class - 0A'
+ROM_0 191ah L191A   ; The 'Command Class - 07'
+ROM_0 1944h L1944   ; The 'Command Class - 09'
+ROM_0 1948h L1948   ; The 'Command Class - 0B'
+ROM_0 1967h L1967   ; IF Routine
+ROM_0 1981h L1981   ; FOR Routine
+ROM_0 19aah L19AA   ; READ Routine
+ROM_0 19ebh L19EB   ; DATA Routine
+ROM_0 1a02h L1A02   ; RUN Routine
+ROM_0 1a0dh L1A0D   ; CLEAR Routine
+ROM_0 1a53h L1A53   ; GO SUB Routine
+ROM_0 1a6fh L1A6F   ; RETURN Routine
+ROM_0 1a8ch L1A8C   ; DEF FN Routine
+ROM_0 1af0h L1AF0   ; MOVE Routine
+ROM_0 1af1h L1AF1   ; Run Tape Loader
+ROM_0 1b14h L1B14   ; List Program to Printer
+ROM_0 1b2bh L1B2B   ; SPECTRUM Routine
+ROM_0 1b47h L1B47   ; Main Menu - 48 BASIC Option
+ROM_0 1b53h L1B53   ; Set 'P' Channel Data
+ROM_0 1b6eh L1B6E   ; LOAD "" Command Bytes
+ROM_0 1b71h L1B71   ; LLIST Routine
+ROM_0 1b75h L1B75   ; LIST Routine
+ROM_0 1badh L1BAD   ; RAM Disk SAVE! Routine
+ROM_0 1be5h L1BE5   ; CAT! Routine
+ROM_0 1c0ch L1C0C   ; ERASE! Routine
+ROM_0 1c2eh L1C2E   ; Load Header from RAM Disk
+ROM_0 1c4bh L1C4B   ; Load from RAM Disk
+ROM_0 1c64h L1C64   ; Page Logical RAM Bank
+ROM_0 1c81h L1C81   ; Physical RAM Bank Mapping Table
+ROM_0 1c87h L1C87   ; Compare Filenames
+ROM_0 1c97h L1C97   ; Create New Catalogue Entry
+ROM_0 1cf3h L1CF3   ; Adjust RAM Disk Free Space
+ROM_0 1d12h L1D12   ; Find Catalogue Entry for Filename
+ROM_0 1d35h L1D35   ; Find RAM Disk File
+ROM_0 1d56h L1D56   ; Update Catalogue Entry
+ROM_0 1dach L1DAC   ; Save Bytes to RAM Disk
+ROM_0 1e37h L1E37   ; Load Bytes from RAM Disk
+ROM_0 1ecfh L1ECF   ; Transfer Bytes to RAM Bank 4 - Vector Table Entry
+ROM_0 1f04h L1F04   ; Transfer Bytes from RAM Bank 4 - Vector Table Entry
+ROM_0 1f20h L1F20   ; Use Normal RAM Configuration
+ROM_0 1f3ah L1F3A   ; Select RAM Bank
+ROM_0 1f45h L1F45   ; Use Workspace RAM Configuration
+ROM_0 1f5fh L1F5F   ; Erase a RAM Disk File
+ROM_0 20d2h L20D2   ; Print RAM Disk Catalogue
+ROM_0 2121h L2121   ; Print Catalogue Filename Data
+ROM_0 2135h L2135   ; Print Single Catalogue Entry
+ROM_0 2174h L2174   ; LPRINT Routine
+ROM_0 2178h L2178   ; PRINT Routine
+ROM_0 218ch L218C   ; INPUT Routine
+ROM_0 21a7h L21A7   ; COPY Routine
+ROM_0 21aah L21AA   ; NEW Routine
+ROM_0 21aeh L21AE   ; CIRCLE Routine
+ROM_0 21beh L21BE   ; DRAW Routine
+ROM_0 21d5h L21D5   ; DIM Routine
+ROM_0 21ebh L21EB   ; Error Report C - Nonsense in BASIC
+ROM_0 21efh L21EF   ; Clear Screen Routine
+ROM_0 21f8h L21F8   ; Evaluate Numeric Expression
+ROM_0 226fh L226F   ; Process Key Press
+ROM_0 228eh L228E   ; Find Start of BASIC Command
+ROM_0 2297h L2297   ; Is LET Command?
+ROM_0 22abh L22AB   ; Is Operator Character?
+ROM_0 22bdh L22BD   ; Operator Tokens Table
+ROM_0 22cbh L22CB   ; Is Function Character?
+ROM_0 22e0h L22E0   ; Is Numeric or Function Expression?
+ROM_0 230ah L230A   ; Is Numeric Character?
+ROM_0 2317h L2317   ; PLAY Routine
+ROM_0 2336h L2336   ; Return to Editor
+ROM_0 2342h L2342   ; BC=HL-DE, Swap HL and DE
+ROM_0 234ah L234A   ; Create Room for 1 Byte
+ROM_0 2358h L2358   ; Room for BC Bytes?
+ROM_0 236fh L236F   ; HL = A*32
+ROM_0 2371h L2371   ; HL = A*8
+ROM_0 2378h L2378   ; Find Amount of Free Space
+ROM_0 2384h L2384   ; Print Screen Buffer Row
+ROM_0 23b8h L23B8   ; Blank Screen Buffer Content
+ROM_0 23cbh L23CB   ; Print Screen Buffer to Display File
+ROM_0 23e1h L23E1   ; Print Screen Buffer Characters to Display File
+ROM_0 242ch L242C   ; Copy A Character <<< RAM Routine >>>
+ROM_0 2456h L2456   ; Toggle ROMs 1 <<< RAM Routine >>>
+ROM_0 2464h L2464   ; Toggle ROMs 2 <<< RAM Routine >>>
+ROM_0 246fh L246F   ; Construct 'Copy Character' Routine in RAM
+ROM_0 2488h L2488   ; Set Attributes File from Screen Buffer
+ROM_0 249bh L249B   ; Set Attributes for a Screen Buffer Row
+ROM_0 2513h L2513   ; Swap Ink and Paper Attribute Bits
+ROM_0 2527h L2527   ; Character Data
+ROM_0 2537h L2537   ; Editing Keys Action Table
+ROM_0 2577h L2577   ; Menu Keys Action Table
+ROM_0 2584h L2584   ; Initialise Mode Settings
+ROM_0 259fh L259F   ; Show Main Menu
+ROM_0 25cbh L25CB   ; Return to Editor / Calculator / Menu from Error
+ROM_0 2604h L2604   ; Return to the Editor
+ROM_0 2653h L2653   ; Main Waiting Loop
+ROM_0 2669h L2669   ; Process Key Press
+ROM_0 269bh L269B   ; TOGGLE Key Handler Routine
+ROM_0 26bbh L26BB   ; Select Lower Screen
+ROM_0 26ceh L26CE   ; Select Upper Screen
+ROM_0 26e7h L26E7   ; Produce Error Beep
+ROM_0 26fah L26FA   ; Produce Success Beep
+ROM_0 2704h L2704   ; Menu Key Press Handler - MENU
+ROM_0 2717h L2717   ; Menu Key Press Handler - SELECT
+ROM_0 272eh L272E   ; Menu Key Press Handler - CURSOR UP
+ROM_0 2731h L2731   ; Menu Key Press Handler - CURSOR DOWN
+ROM_0 2744h L2744   ; Main Menu
+ROM_0 2790h L2790   ; Edit Menu
+ROM_0 27cbh L27CB   ; Calculator Menu
+ROM_0 27ebh L27EB   ; Tape Loader Text
+ROM_0 2811h L2811   ; Edit Menu - Screen Option
+ROM_0 2816h L2816   ; Main Menu - Tape Tester Option
+ROM_0 281ch L281C   ; Edit Menu / Calculator Menu - Exit Option
+ROM_0 2831h L2831   ; Main Menu - Tape Loader Option
+ROM_0 2851h L2851   ; Edit Menu - Renumber Option
+ROM_0 2862h L2862   ; Edit Menu - Print Option
+ROM_0 2885h L2885   ; Main Menu - Calculator Option
+ROM_0 28beh L28BE   ; Reset Cursor Position
+ROM_0 28c7h L28C7   ; Return to Main Menu
+ROM_0 28d1h L28D1   ; Main Screen Error Cursor Settings
+ROM_0 28d8h L28D8   ; Lower Screen Good Cursor Settings
+ROM_0 28dfh L28DF   ; Initialise Lower Screen Editing Settings
+ROM_0 28e8h L28E8   ; Initialise Main Screen Editing Settings
+ROM_0 28f1h L28F1   ; Handle Key Press Character Code
+ROM_0 291bh L291B   ; DELETE-RIGHT Key Handler Routine
+ROM_0 292bh L292B   ; DELETE Key Handler Routine
+ROM_0 2944h L2944   ; ENTER Key Handler Routine
+ROM_0 2983h L2983   ; TOP-OF-PROGRAM Key Handler Routine
+ROM_0 29abh L29AB   ; END-OF-PROGRAM Key Handler Routine
+ROM_0 29d4h L29D4   ; WORD-LEFT Key Handler Routine
+ROM_0 29e1h L29E1   ; WORD-RIGHT Key Handler Routine
+ROM_0 29ech L29EC   ; Remove Cursor
+ROM_0 29f2h L29F2   ; Show Cursor
+ROM_0 29f8h L29F8   ; Display Cursor
+ROM_0 2a07h L2A07   ; Fetch Cursor Position
+ROM_0 2a11h L2A11   ; Store Cursor Position
+ROM_0 2a1ah L2A1A   ; Get Current Character from Screen Line Edit Buffer
+ROM_0 2a25h L2A25   ; TEN-ROWS-DOWN Key Handler Routine
+ROM_0 2a4fh L2A4F   ; TEN-ROWS-UP Key Handler Routine
+ROM_0 2a7ah L2A7A   ; END-OF-LINE Key Handler Routine
+ROM_0 2a87h L2A87   ; START-OF-LINE Key Handler Routine
+ROM_0 2a94h L2A94   ; CURSOR-UP Key Handler Routine
+ROM_0 2ab5h L2AB5   ; CURSOR-DOWN Key Handler Routine
+ROM_0 2ad7h L2AD7   ; CURSOR-LEFT Key Handler Routine
+ROM_0 2ae3h L2AE3   ; CURSOR-RIGHT Key Handler Routine
+ROM_0 2af9h L2AF9   ; Find Closest Screen Line Edit Buffer Editable Position to the Right else Left
+ROM_0 2b02h L2B02   ; Find Closest Screen Line Edit Buffer Editable Position to the Left else Right
+ROM_0 2b0bh L2B0B   ; Insert BASIC Line, Shift Edit Buffer Rows Down If Required and Update Display File If Required
+ROM_0 2b30h L2B30   ; Insert BASIC Line, Shift Edit Buffer Rows Up If Required and Update Display File If Required
+ROM_0 2b5bh L2B5B   ; Find Next Screen Line Edit Buffer Editable Position to Left, Wrapping Above if Required
+ROM_0 2b78h L2B78   ; Find Next Screen Line Edit Buffer Editable Position to Right, Wrapping Below if Required
+ROM_0 2bd4h L2BD4   ; Find Screen Line Edit Buffer Editable Position from Previous Column to the Right
+ROM_0 2bdfh L2BDF   ; Find Screen Line Edit Buffer Editable Position to the Left
+ROM_0 2beah L2BEA   ; Find Start of Word to Left in Screen Line Edit Buffer
+ROM_0 2c09h L2C09   ; Find Start of Word to Right in Screen Line Edit Buffer
+ROM_0 2c31h L2C31   ; Find Start of Current BASIC Line in Screen Line Edit Buffer
+ROM_0 2c4ch L2C4C   ; Find End of Current BASIC Line in Screen Line Edit Buffer
+ROM_0 2c68h L2C68   ; Insert BASIC Line into Program if Altered
+ROM_0 2c7ch L2C7C   ; Insert Line into BASIC Program If Altered and the First Row of the Line
+ROM_0 2c8eh L2C8E   ; Insert Line into BASIC Program
+ROM_0 2d54h L2D54   ; Fetch Next Character from BASIC Line to Insert
+ROM_0 2d85h L2D85   ; Fetch Next Character Jump Table
+ROM_0 2d8fh L2D8F   ; Fetch Character from the Current Row of the BASIC Line in the Screen Line Edit Buffer
+ROM_0 2e0eh L2E0E   ; Fetch Character from Edit Buffer Row
+ROM_0 2e1bh L2E1B   ; Upper Screen Rows Table
+ROM_0 2e1dh L2E1D   ; Lower Screen Rows Table
+ROM_0 2e1fh L2E1F   ; Reset to Main Screen
+ROM_0 2e2dh L2E2D   ; Reset to Lower Screen
+ROM_0 2e41h L2E41   ; Find Edit Buffer Editable Position from Previous Column to the Right
+ROM_0 2e63h L2E63   ; Find Edit Buffer Editable Position to the Left
+ROM_0 2e7bh L2E7B   ; Fetch Edit Buffer Row Character
+ROM_0 2e81h L2E81   ; Insert Character into Screen Line Edit Buffer
+ROM_0 2eceh L2ECE   ; Insert Blank Row into Screen Edit Buffer, Shifting Rows Down
+ROM_0 2eefh L2EEF   ; Empty Edit Buffer Row Data
+ROM_0 2f12h L2F12   ; Delete a Character from a BASIC Line in the Screen Line Edit Buffer
+ROM_0 2f80h L2F80   ; Shift Rows Up to Close Blank Row in Screen Line Edit Buffer
+ROM_0 2fbch L2FBC   ; DELETE-WORD-LEFT Key Handler Routine
+ROM_0 3017h L3017   ; DELETE-WORD-RIGHT Key Handler Routine
+ROM_0 303eh L303E   ; DELETE-TO-START-OF-LINE Key Handler Routine
+ROM_0 3072h L3072   ; DELETE-TO-END-OF-LINE Key Handler Routine
+ROM_0 3084h L3084   ; Remove Cursor Attribute and Disable Updating Display File
+ROM_0 3095h L3095   ; Previous Character Exists in Screen Line Edit Buffer?
+ROM_0 30b4h L30B4   ; Find Row Address in Screen Line Edit Buffer
+ROM_0 30c6h L30C6   ; Find Position within Screen Line Edit Buffer
+ROM_0 30d0h L30D0   ; Below-Screen Line Edit Buffer Settings
+ROM_0 30d6h L30D6   ; Set Below-Screen Line Edit Buffer Settings
+ROM_0 30dfh L30DF   ; Shift Up Rows in Below-Screen Line Edit Buffer
+ROM_0 311eh L311E   ; Shift Down Rows in Below-Screen Line Edit Buffer
+ROM_0 316eh L316E   ; Insert Character into Below-Screen Line Edit Buffer
+ROM_0 31c3h L31C3   ; Find Row Address in Below-Screen Line Edit Buffer
+ROM_0 31c9h L31C9   ; Delete a Character from a BASIC Line in the Below-Screen Line Edit Buffer
+ROM_0 321eh L321E   ; Above-Screen Line Edit Buffer Settings
+ROM_0 3222h L3222   ; Set Above-Screen Line Edit Buffer Settings
+ROM_0 322bh L322B   ; Shift Rows Down in the Above-Screen Line Edit Buffer
+ROM_0 326ah L326A   ; Shift Row Up into the Above-Screen Line Edit Buffer if Required
+ROM_0 32b7h L32B7   ; Find Row Address in Above-Screen Line Edit Buffer
+ROM_0 32bdh L32BD   ; BASIC Line Character Action Handler Jump Table
+ROM_0 32d6h L32D6   ; Copy a BASIC Line into the Above-Screen or Below-Screen Line Edit Buffer
+ROM_0 3331h L3331   ; Set 'Continuation' Row in Line Edit Buffer
+ROM_0 334ah L334A   ; Find Address of BASIC Line with Specified Line Number
+ROM_0 3352h L3352   ; Create Next Line Number Representation in Keyword Construction Buffer
+ROM_0 335ah L335A   ; Fetch Next De-tokenized Character from Selected BASIC Line in Program Area
+ROM_0 335fh L335F   ; Copy 'Insert Keyword Representation into Keyword Construction Buffer' Routine into RAM
+ROM_0 3374h L3374   ; Insert Keyword Representation into Keyword Construction Buffer <<< RAM Routine >>>
+ROM_0 33c3h L33C3   ; Copy Keyword Characters <<< RAM Routine >>>
+ROM_0 33f4h L33F4   ; Identify Token from Table
+ROM_0 3430h L3430   ; Create Next Line Number Representation in Keyword Construction Buffer
+ROM_0 3495h L3495   ; Insert ASCII Line Number Digit
+ROM_0 34b6h L34B6   ; Find Address of BASIC Line with Specified Line Number
+ROM_0 34cfh L34CF   ; Move to Next BASIC Line
+ROM_0 34d9h L34D9   ; Check if at End of BASIC Program
+ROM_0 34e0h L34E0   ; Compare Line Numbers
+ROM_0 34eah L34EA   ; Clear BASIC Line Construction Pointers
+ROM_0 34f6h L34F6   ; Find Address of BASIC Line
+ROM_0 3517h L3517   ; Fetch Next De-tokenized Character from BASIC Line in Program Area
+ROM_0 3594h L3594   ; Keywords String Table
+ROM_0 35b9h L35B9   ; Indentation Settings
+ROM_0 35bch L35BC   ; Set Indentation Settings
+ROM_0 35c5h L35C5   ; Store Character in Column of Edit Buffer Row
+ROM_0 35cch L35CC   ; 'Enter' Action Handler Routine
+ROM_0 35dah L35DA   ; 'Null Columns' Action Handler Routine
+ROM_0 35e6h L35E6   ; Null Column Positions
+ROM_0 35f4h L35F4   ; Indent Edit Buffer Row
+ROM_0 3604h L3604   ; Print Edit Buffer Row to Display File if Required
+ROM_0 3618h L3618   ; Shift Up Edit Rows in Display File if Required
+ROM_0 362ch L362C   ; Shift Down Edit Rows in Display File if Required
+ROM_0 3640h L3640   ; Set Cursor Attribute Colour
+ROM_0 364fh L364F   ; Restore Cursor Position Previous Attribute
+ROM_0 365eh L365E   ; Reset 'L' Mode
+ROM_0 367fh L367F   ; Wait for a Key Press
+ROM_0 36a8h L36A8   ; Display Menu
+ROM_0 3719h L3719   ; Plot a Line
+ROM_0 372bh L372B   ; Print "AT B,C" Characters
+ROM_0 3733h L3733   ; Print String
+ROM_0 373bh L373B   ; Store Menu Screen Area
+ROM_0 373eh L373E   ; Restore Menu Screen Area
+ROM_0 377eh L377E   ; Store / Restore Menu Screen Row
+ROM_0 37a7h L37A7   ; Move Up Menu
+ROM_0 37b6h L37B6   ; Move Down Menu
+ROM_0 37cah L37CA   ; Toggle Menu Option Selection Highlight
+ROM_0 37ech L37EC   ; Menu Title Colours Table
+ROM_0 37fah L37FA   ; Menu Title Space Table
+ROM_0 3802h L3802   ; Menu Sinclair Stripes Bitmaps
+ROM_0 3812h L3812   ; Sinclair Strip 'Text'
+ROM_0 3822h L3822   ; Print the Sinclair stripes on the menu
+ROM_0 3848h L3848   ; Print '128 BASIC' Banner
+ROM_0 384dh L384D   ; Print 'Calculator' Banner
+ROM_0 3852h L3852   ; Print 'Tape Loader' Banner
+ROM_0 3857h L3857   ; Print 'Tape Tester' Banner
+ROM_0 385ah L385A   ; Print Banner
+ROM_0 3881h L3881   ; Clear Lower Editing Display
+ROM_0 3888h L3888   ; RENUMBER ROUTINE
+ROM_0 3907h L3907   ; Tokens Using Line Numbers
+ROM_0 390eh L390E   ; Parse a Line Renumbering Line Number References
+ROM_0 3a05h L3A05   ; Count the Number of BASIC Lines
+ROM_0 3a35h L3A35   ; Skip Spaces
+ROM_0 3a3ch L3A3C   ; Create ASCII Line Number Representation
+ROM_0 3a60h L3A60   ; Insert Line Number Digit
+ROM_0 3a6dh L3A6D   ; Initial Lower Screen Cursor Settings
+ROM_0 3a76h L3A76   ; Initial Main Screen Cursor Settings
+ROM_0 3a7fh L3A7F   ; Set Main Screen Editing Cursor Details
+ROM_0 3a88h L3A88   ; Set Lower Screen Editing Cursor Details
+ROM_0 3a91h L3A91   ; Print 'AD'
+ROM_0 3a96h L3A96   ; Store Cursor Colour
+ROM_0 3a9dh L3A9D   ; Set Cursor Position Attribute
+ROM_0 3ab2h L3AB2   ; Restore Cursor Position Attribute
+ROM_0 3abfh L3ABF   ; Shift Up Edit Rows in Display File
+ROM_0 3ac6h L3AC6   ; Shift Down Edit Rows in Display File
+ROM_0 3b1eh L3B1E   ; Print a Row of the Edit Buffer to the Screen
+ROM_0 3b5eh L3B5E   ; Clear Display Rows
+ROM_0 3b94h L3B94   ; Find Rows and Columns to End of Screen
+ROM_0 3b98h L3B98   ; Find Rows to End of Screen
+ROM_0 3ba0h L3BA0   ; Get Attribute Address
+ROM_0 3bb8h L3BB8   ; Exchange Colour Items
+ROM_0 3be9h L3BE9   ; TAPE TESTER ROUTINE
+ROM_0 3c63h L3C63   ; Tokenize BASIC Line
+ROM_0 3d9dh L3D9D   ; Fetch Next Character and Character Status from BASIC Line to Insert
+ROM_0 3dc6h L3DC6   ; Is Lowercase Letter?
+ROM_0 3dcdh L3DCD   ; Copy Keyword Conversion Buffer Contents into BASIC Line Workspace
+ROM_0 3de9h L3DE9   ; Insert Character into Keyword Conversion Buffer
+ROM_0 3e16h L3E16   ; Insert Character into BASIC Line Workspace, Handling '>' and '<'
+ROM_0 3e64h L3E64   ; Insert Character into BASIC Line Workspace, Handling 'REM' and Quotes
+ROM_0 3e9ch L3E9C   ; Insert Character into BASIC Line Workspace With Space Suppression
+ROM_0 3efbh L3EFB   ; Insert a Character into BASIC Line Workspace
+ROM_0 3f66h L3F66   ; Room for BC Bytes?
+ROM_0 3f7eh L3F7E   ; Identify Keyword
+ROM_0 3fbah L3FBA   ; Copy Data Block
+ROM_0 3fc3h L3FC3   ; Get Numeric Value for ASCII Character
+ROM_0 3fceh L3FCE   ; Call Action Handler Routine
+ROM_0 3fefh L3FEF   ; PROGRAMMERS' INITIALS
+ROM_0 3fffh L3FFF   ; END OF ROM MARKER

@@ -1,366 +1,366 @@
-ROM_1 0000h L0000 THE 'START'
-ROM_1 0008h L0008 THE 'ERROR' RESTART
-ROM_1 0010h L0010 THE 'PRINT CHARACTER' RESTART
-ROM_1 0018h L0018 THE 'COLLECT CHARACTER' RESTART
-ROM_1 0020h L0020 THE 'COLLECT NEXT CHARACTER' RESTART
-ROM_1 0028h L0028 THE 'CALCULATE' RESTART
-ROM_1 0030h L0030 THE 'CREATE BC SPACES' RESTART
-ROM_1 0038h L0038 THE 'MASKABLE INTERRUPT' ROUTINE
-ROM_1 0053h L0053 THE 'ERROR-2' ROUTINE
-ROM_1 0066h L0066 THE 'NON-MASKABLE INTERRUPT' ROUTINE
-ROM_1 0074h L0074 THE 'CH ADD + 1' SUBROUTINE
-ROM_1 007dh L007D THE 'SKIP OVER' SUBROUTINE
-ROM_1 0095h L0095 THE 'TOKEN TABLES'
-ROM_1 0205h L0205 THE 'KEY' TABLES
-ROM_1 028eh L028E THE 'KEYBOARD SCANNING' ROUTINE
-ROM_1 02bfh L02BF Scan keyboard and decode value
-ROM_1 0310h L0310 THE 'REPEAT KEY' SUBROUTINE
-ROM_1 031eh L031E Test key value
-ROM_1 0333h L0333 Keyboard decoding
-ROM_1 03b5h L03B5 Routine to control loudspeaker
-ROM_1 03f8h L03F8 Handle BEEP command
-ROM_1 046eh L046E Semi-tone table
-ROM_1 04aah L04AA THE 'ZX81 NAME' ROUTINE
-ROM_1 04c2h L04C2 Save header and program/data bytes
-ROM_1 04feh L04FE During the save loop a parity byte is maintained in H.
-ROM_1 053fh L053F Reset border and check BREAK key for LOAD and SAVE
-ROM_1 0556h L0556 Load header or block of information
-ROM_1 05a9h L05A9 the loading loop loads each byte and is entered at the mid point.
-ROM_1 05e3h L05E3 Check signal being loaded
-ROM_1 0605h L0605 Entry point for all tape commands
-ROM_1 07cbh L07CB Handle VERIFY control
-ROM_1 0802h L0802 Load a data block
-ROM_1 0808h L0808 Handle LOAD control
-ROM_1 0873h L0873 the branch is here when a program as opposed to an array is to be loaded.
-ROM_1 08b6h L08B6 Handle MERGE control
-ROM_1 092ch L092C Merge a Line or Variable
-ROM_1 0970h L0970 Handle SAVE control
-ROM_1 09a1h L09A1 Canned cassette messages
-ROM_1 09f4h L09F4 General PRINT routine
-ROM_1 0a11h L0A11 Control character table
-ROM_1 0a23h L0A23 Cursor left routine
-ROM_1 0a3dh L0A3D Cursor right routine
-ROM_1 0a4fh L0A4F Perform carriage return
-ROM_1 0a5fh L0A5F Print comma
-ROM_1 0a69h L0A69 Print question mark
-ROM_1 0a6dh L0A6D Control characters with operands
-ROM_1 0ad9h L0AD9 Printable character(s)
-ROM_1 0adch L0ADC Store line, column, and pixel address
-ROM_1 0b03h L0B03 Fetch position parameters
-ROM_1 0b24h L0B24 Print any character
-ROM_1 0b7fh L0B7F Print all characters
-ROM_1 0bdbh L0BDB Set attribute
-ROM_1 0c0ah L0C0A Message printing
-ROM_1 0c3bh L0C3B Handle recursive printing
-ROM_1 0c41h L0C41 Table search
-ROM_1 0c55h L0C55 Test for scroll
-ROM_1 0d4dh L0D4D Temporary colour items
-ROM_1 0d6bh L0D6B Handle CLS command
-ROM_1 0dafh L0DAF Clearing whole display area
-ROM_1 0dd9h L0DD9 Set line and column numbers
-ROM_1 0dfeh L0DFE Handle scrolling
-ROM_1 0e44h L0E44 Clear text lines of display
-ROM_1 0e88h L0E88 Attribute handling
-ROM_1 0e9bh L0E9B Handle display with line number
-ROM_1 0each L0EAC Handle COPY command
-ROM_1 0ecdh L0ECD Pass printer buffer to printer
-ROM_1 0edfh L0EDF Clear Printer Buffer
-ROM_1 0ef4h L0EF4 Copy line routine
-ROM_1 0f2ch L0F2C Editor routine for BASIC and INPUT
-ROM_1 0f81h L0F81 Add code to current line
-ROM_1 0fa0h L0FA0 Editing keys table
-ROM_1 0fa9h L0FA9 Handle EDIT key
-ROM_1 0ff3h L0FF3 Cursor down editing
-ROM_1 1007h L1007 Cursor left editing
-ROM_1 100ch L100C Cursor right editing
-ROM_1 1015h L1015 DELETE editing
-ROM_1 101eh L101E Ignore next 2 codes from key-input routine
-ROM_1 1024h L1024 Enter/newline
-ROM_1 1031h L1031 Move cursor left when editing
-ROM_1 1059h L1059 Cursor up editing
-ROM_1 1076h L1076 Use of symbol and graphics codes
-ROM_1 107fh L107F Editor error routine
-ROM_1 1097h L1097 Clear edit/work space
-ROM_1 10a8h L10A8 Handle keyboard input
-ROM_1 111dh L111D Lower screen copying
-ROM_1 1167h L1167 ED-FULL
-ROM_1 1190h L1190 Point to first and last locations of work space
-ROM_1 11a7h L11A7 Remove floating point from line
-ROM_1 11b7h L11B7 Handle NEW command
-ROM_1 11cbh L11CB Main entry (initialization)
-ROM_1 11dah L11DA Check RAM
-ROM_1 12a2h L12A2 Main execution loop
-ROM_1 1391h L1391 Canned report messages
-ROM_1 1555h L1555 REPORT-G
-ROM_1 155dh L155D Handle addition of BASIC line
-ROM_1 15afh L15AF Initial channel information
-ROM_1 15c6h L15C6 Initial stream data
-ROM_1 15d4h L15D4 Control for input subroutine
-ROM_1 15e6h L15E6 Make HL point to input address
-ROM_1 15efh L15EF Main Output Routine
-ROM_1 1601h L1601 Open channel
-ROM_1 1615h L1615 Set channel flags
-ROM_1 162dh L162D Channel code look-up table
-ROM_1 1634h L1634 Channel K flag
-ROM_1 1642h L1642 Channel S flag
-ROM_1 164dh L164D Channel P flag
-ROM_1 1652h L1652 Just one space required
-ROM_1 1655h L1655 Make Room
-ROM_1 1664h L1664 Adjust pointers before making or reclaiming room
-ROM_1 168fh L168F Collect line number
-ROM_1 169eh L169E Handle reserve room
-ROM_1 16b0h L16B0 Clear various editing areas
-ROM_1 16d4h L16D4 Reclaim edit-line?
-ROM_1 16dbh L16DB The Table INDEXING routine
-ROM_1 16e5h L16E5 Handle CLOSE# command
-ROM_1 1701h L1701 CLOSE-2 Subroutine
-ROM_1 1716h L1716 CLOSE stream look-up table
-ROM_1 171ch L171C Close Stream Subroutines
-ROM_1 171eh L171E Stream data
-ROM_1 1736h L1736 Handle OPEN# command
-ROM_1 175dh L175D OPEN-2 Subroutine
-ROM_1 177ah L177A OPEN stream look-up table
-ROM_1 1781h L1781 OPEN-K Subroutine
-ROM_1 1785h L1785 OPEN-S Subroutine
-ROM_1 1789h L1789 OPEN-P Subroutine
-ROM_1 1793h L1793 Handle CAT, ERASE, FORMAT, MOVE commands
-ROM_1 1795h L1795 Perform AUTO-LIST
-ROM_1 17f5h L17F5 Handle LLIST
-ROM_1 17f9h L17F9 Handle LIST
-ROM_1 1855h L1855 Print a whole BASIC line
-ROM_1 18b6h L18B6 Check for a number marker
-ROM_1 18c1h L18C1 Print a flashing character
-ROM_1 18e1h L18E1 Print the cursor
-ROM_1 190fh L190F Get line number of next line
-ROM_1 1925h L1925 Outputting numbers at start of BASIC line
-ROM_1 1937h L1937 Outputting characters in a BASIC line
-ROM_1 196eh L196E Get starting address of line, or line after
-ROM_1 1980h L1980 Compare line numbers
-ROM_1 1988h L1988 Find each statement
-ROM_1 19b8h L19B8 Get next one
-ROM_1 19ddh L19DD Difference routine
-ROM_1 19e5h L19E5 Handle reclaiming space
-ROM_1 19fbh L19FB Read line number of line in editing area
-ROM_1 1a1bh L1A1B Report and line number outputting
-ROM_1 1a48h L1A48 The offset table
-ROM_1 1a7ah L1A7A The parameter or "Syntax" table
-ROM_1 1b17h L1B17 Main parser (BASIC interpreter)
-ROM_1 1b28h L1B28 Statement loop
-ROM_1 1b52h L1B52 The main scanning loop
-ROM_1 1b6fh L1B6F Verify separator
-ROM_1 1b76h L1B76 Come here after interpretation
-ROM_1 1b8ah L1B8A Run a direct command
-ROM_1 1b9eh L1B9E Find start address of new line
-ROM_1 1bb2h L1BB2 Handle REM command
-ROM_1 1bb3h L1BB3 End of line?
-ROM_1 1bbfh L1BBF General line checking
-ROM_1 1bd1h L1BD1 Update NEXT LINE but consider
-ROM_1 1beeh L1BEE End of statement?
-ROM_1 1bf4h L1BF4 Go to next statement
-ROM_1 1c01h L1C01 Command class table
-ROM_1 1c0dh L1C0D Command classes---00, 03, and 05
-ROM_1 1c1fh L1C1F Command classes---01, 02, and 04
-ROM_1 1c22h L1C22 Variable in assignment
-ROM_1 1c4eh L1C4E class-02 e.g. LET a = 1 + 1   ; an expression must follow
-ROM_1 1c56h L1C56 Fetch a value
-ROM_1 1c6ch L1C6C Command class---04
-ROM_1 1c79h L1C79 Expect numeric/string expression
-ROM_1 1c7ah L1C7A class-08 e.g POKE 65535,2     ; two numeric expressions separated by comma
-ROM_1 1c8ch L1C8C class-0A e.g. ERASE "????"    ; a string expression must follow.
-ROM_1 1c96h L1C96 Set permanent colours
-ROM_1 1cbeh L1CBE Command class---09
-ROM_1 1cdbh L1CDB Command class---0B
-ROM_1 1cdeh L1CDE Fetch a number
-ROM_1 1ce6h L1CE6 Use zero routine
-ROM_1 1ceeh L1CEE Handle STOP command
-ROM_1 1cf0h L1CF0 Handle IF command
-ROM_1 1d03h L1D03 Handle FOR command
-ROM_1 1d86h L1D86 LOOK-PROG
-ROM_1 1dabh L1DAB Handle NEXT command
-ROM_1 1ddah L1DDA Perform NEXT loop
-ROM_1 1dech L1DEC Handle READ command
-ROM_1 1e27h L1E27 Handle DATA command
-ROM_1 1e39h L1E39 Check statement for DATA or DEF FN
-ROM_1 1e42h L1E42 Handle RESTORE command
-ROM_1 1e4fh L1E4F Handle RANDOMIZE command
-ROM_1 1e5fh L1E5F Handle CONTINUE command
-ROM_1 1e67h L1E67 Handle GO TO command
-ROM_1 1e7ah L1E7A Handle OUT command
-ROM_1 1e80h L1E80 Handle POKE command
-ROM_1 1e85h L1E85 Fetch two  parameters from calculator stack
-ROM_1 1e94h L1E94 Find integers
-ROM_1 1ea1h L1EA1 Handle RUN command
-ROM_1 1each L1EAC Handle CLEAR command
-ROM_1 1eedh L1EED Handle GO SUB command
-ROM_1 1f05h L1F05 Check available memory
-ROM_1 1f1ah L1F1A THE 'FREE MEMORY' USER ROUTINE
-ROM_1 1f23h L1F23 THE 'RETURN' COMMAND
-ROM_1 1f3ah L1F3A Handle PAUSE command
-ROM_1 1f54h L1F54 Check for BREAK key
-ROM_1 1f60h L1F60 Handle DEF FN command
-ROM_1 1fc3h L1FC3 Returning early from subroutine
-ROM_1 1fc9h L1FC9 Handle LPRINT command
-ROM_1 1fcdh L1FCD Handle PRINT commands
-ROM_1 1fdfh L1FDF this subroutine is called from above
-ROM_1 1ff5h L1FF5 Print carriage return
-ROM_1 1ffch L1FFC Print items
-ROM_1 2045h L2045 End of printing
-ROM_1 204eh L204E Print position
-ROM_1 2070h L2070 Alter stream
-ROM_1 2089h L2089 Handle INPUT command
-ROM_1 20c1h L20C1 INPUT ITEM subroutine
-ROM_1 21b9h L21B9 INPUT ASSIGNMENT Subroutine
-ROM_1 21d6h L21D6 Test for channel K
-ROM_1 21f2h L21F2 CO-TEMP-3
-ROM_1 2211h L2211 The colour system variable handler.
-ROM_1 226ch L226C Handle change of colour
-ROM_1 2294h L2294 Handle BORDER command
-ROM_1 22aah L22AA Get pixel address
-ROM_1 22cbh L22CB Point Subroutine
-ROM_1 22dch L22DC Handle PLOT command
-ROM_1 22e5h L22E5 The Plot subroutine
-ROM_1 2307h L2307 Put two numbers in BC register
-ROM_1 2314h L2314 Put stack in A register
-ROM_1 2320h L2320 Handle CIRCLE command
-ROM_1 2382h L2382 Handle DRAW command
-ROM_1 247dh L247D Initial parameters
-ROM_1 24b7h L24B7 Line drawing
-ROM_1 24fbh L24FB Scan expression or sub-expression
-ROM_1 250fh L250F The four service subroutines for routines in the scannings function table
-ROM_1 2530h L2530 Check syntax
-ROM_1 2535h L2535 Scanning SCREEN$
-ROM_1 2580h L2580 Scanning ATTR
-ROM_1 2596h L2596 Scanning function table
-ROM_1 25afh L25AF Scanning function routines
-ROM_1 26c9h L26C9 Scanning variable routines
-ROM_1 26dfh L26DF -> the scanning branch was here if not alphanumeric.
-ROM_1 2734h L2734 Scanning main loop
-ROM_1 2795h L2795 Table of operators
-ROM_1 27b0h L27B0 Table of priorities
-ROM_1 27bdh L27BD Scanning function (FN)
-ROM_1 28abh L28AB Used to parse DEF FN
-ROM_1 28b2h L28B2 LOOK-VARS
-ROM_1 2951h L2951 Stack function argument
-ROM_1 2996h L2996 Stack variable component
-ROM_1 29c3h L29C3 the dimension counting loop which is entered at mid-point.
-ROM_1 29e7h L29E7 -> the mid-point entry point of the loop
-ROM_1 2a52h L2A52 Handle slicing of strings
-ROM_1 2ab1h L2AB1 other than from above, this routine is called from STK-VAR to stack
-ROM_1 2ab2h L2AB2 this routine is called from chr$, scrn$ etc. to store a simple string result.
-ROM_1 2ab6h L2AB6 Pass five registers to calculator stack
-ROM_1 2acch L2ACC Return result of evaluating next expression
-ROM_1 2aeeh L2AEE LD DE,(DE+1) Subroutine
-ROM_1 2af4h L2AF4 HL=HL*DE Subroutine
-ROM_1 2affh L2AFF THE 'LET' COMMAND
-ROM_1 2bf1h L2BF1 Get last value from calculator stack
-ROM_1 2c02h L2C02 Handle DIM command
-ROM_1 2c88h L2C88 Check whether digit or letter
-ROM_1 2c9bh L2C9B Decimal to floating point
-ROM_1 2d1bh L2D1B Check for valid digit
-ROM_1 2d22h L2D22 Stack Digit
-ROM_1 2d28h L2D28 Stack accumulator
-ROM_1 2d2bh L2D2B Stack BC register pair
-ROM_1 2d3bh L2D3B Integer to floating point
-ROM_1 2d4fh L2D4F E-format to floating point
-ROM_1 2d7fh L2D7F Fetch integer
-ROM_1 2d8ch L2D8C Store a positive integer
-ROM_1 2d8eh L2D8E Store integer
-ROM_1 2da2h L2DA2 Floating point to BC register
-ROM_1 2dc1h L2DC1 LOG(2^A)
-ROM_1 2dd5h L2DD5 Floating point to A
-ROM_1 2de3h L2DE3 Print a floating point number
-ROM_1 2f8bh L2F8B Handle printing floating point
-ROM_1 2f9bh L2F9B Prepare to add
-ROM_1 2fbah L2FBA Fetch two numbers
-ROM_1 2fddh L2FDD Shift floating point number right
-ROM_1 3004h L3004 Add back any carry
-ROM_1 300fh L300F Handle subtraction (03)
-ROM_1 3014h L3014 Handle addition (0F)
-ROM_1 30a9h L30A9 Used in 16 bit multiplication
-ROM_1 30c0h L30C0 Prepare to multiply or divide
-ROM_1 30cah L30CA Handle multiplication (04)
-ROM_1 31afh L31AF Handle division (05)
-ROM_1 3214h L3214 Integer truncation towards zero ($3A)
-ROM_1 3293h L3293 Re-stack two `small' integers
-ROM_1 3297h L3297 Re-stack one number in full form
-ROM_1 32c5h L32C5 Table of constants
-ROM_1 32d7h L32D7 Table of addresses
-ROM_1 335bh L335B The Calculator
-ROM_1 33a1h L33A1 Handle delete (02)
-ROM_1 33a2h L33A2 Single operation (3B)
-ROM_1 33a9h L33A9 Test five-spaces
-ROM_1 33b4h L33B4 Stack number
-ROM_1 33c0h L33C0 Move a floating point number (31)
-ROM_1 33c6h L33C6 Stack literals ($34)
-ROM_1 33f7h L33F7 THE 'SKIP CONSTANTS' SUBROUTINE
-ROM_1 3406h L3406 Memory location
-ROM_1 340fh L340F Get from memory area ($E0 etc.)
-ROM_1 341bh L341B Stack a constant (A0 etc.)
-ROM_1 342dh L342D Store in a memory area ($C0 etc.)
-ROM_1 343ch L343C Swap first number with second number
-ROM_1 3449h L3449 Series generator (86 etc.)
-ROM_1 346ah L346A Absolute magnitude (2A)
-ROM_1 346eh L346E Handle unary minus (1B)
-ROM_1 3492h L3492 Signum (29)
-ROM_1 34a5h L34A5 Handle IN function (2C)
-ROM_1 34ach L34AC Handle PEEK function (2B)
-ROM_1 34b3h L34B3 USR number (2D)
-ROM_1 34bch L34BC USR string (19)
-ROM_1 34e9h L34E9 Test for zero
-ROM_1 34f9h L34F9 Greater than zero ($37)
-ROM_1 3501h L3501 Handle NOT operator ($30)
-ROM_1 3506h L3506 Less than zero (36)
-ROM_1 350bh L350B Zero or one
-ROM_1 351bh L351B Handle OR operator (07)
-ROM_1 3524h L3524 Handle number AND number (08)
-ROM_1 352dh L352D Handle string AND number (10)
-ROM_1 353bh L353B The 'x>y' example is the easiest as it employs straight-thru logic.
-ROM_1 359ch L359C String concatenation ($17)
-ROM_1 35bfh L35BF Check stack pointers
-ROM_1 35c9h L35C9 Handle CHR$ (2F)
-ROM_1 35deh L35DE Handle VAL and VAL$ ($1D, $18)
-ROM_1 361fh L361F Handle STR$ (2E)
-ROM_1 3645h L3645 Read-in (1A)
-ROM_1 3669h L3669 Handle CODE (1C)
-ROM_1 3674h L3674 Handle LEN (1E)
-ROM_1 367ah L367A Decrease the counter (35)
-ROM_1 3686h L3686 Jump (33)
-ROM_1 368fh L368F Jump on true (00)
-ROM_1 369bh L369B End of calculation (38)
-ROM_1 36a0h L36A0 THE 'MODULUS' SUBROUTINE
-ROM_1 36afh L36AF THE 'INT' FUNCTION
-ROM_1 36c4h L36C4 Exponential (26)
-ROM_1 3713h L3713 Natural logarithm (25)
-ROM_1 3783h --------------------------------- THE 'TRIGONOMETRIC' FUNCTIONS
-ROM_1 384ah L384A THE 'SQUARE ROOT' FUNCTION
-ROM_1 3851h L3851 THE 'EXPONENTIATION' OPERATION
-ROM_1 386eh L386E SCAN THE KEYPAD AND THE KEYBOARD
-ROM_1 387fh L387F READ THE STATE OF THE OUTPUT LINES
-ROM_1 3896h L3896 SET THE OUTPUT LINE, BIT 0
-ROM_1 389fh L389F FETCH THE STATE OF THE INPUT LINE, BIT 5
-ROM_1 38a7h L38A7 SET THE OUTPUT LINE LOW, BIT 0
-ROM_1 38adh L38AD SET THE OUTPUT LINE HIGH, BIT 0
-ROM_1 38b3h L38B3 MINOR DELAY ROUTINE
-ROM_1 38b6h L38B6 MAJOR DELAY ROUTINE
-ROM_1 38c0h L38C0 MONITOR FOR THE INPUT LINE TO GO LOW
-ROM_1 38cch L38CC MONITOR FOR THE INPUT LINE TO GO HIGH
-ROM_1 38d8h L38D8 READ KEY PRESS STATUS BIT
-ROM_1 38dfh L38DF READ IN A NIBBLE
-ROM_1 392bh L392B LINE ERROR
-ROM_1 3938h L3938 POLL THE KEYPAD
-ROM_1 39a0h L39A0 SCAN THE KEYPAD ROUTINE
-ROM_1 3a3fh L3A3F KEYPAD MASK DATA
-ROM_1 3a42h L3A42 READ THE KEYPAD
-ROM_1 3a9eh L3A9E THE KEY REPEAT SUBROUTINE
-ROM_1 3aaeh L3AAE THE TEST FOR A VALID KEY CODE SUBROUTINE
-ROM_1 3ad7h L3AD7 THE KEY DECODING SUBROUTINE
-ROM_1 3b13h L3B13 THE KEYPAD DECODE LOOK-UP TABLES
-ROM_1 3b3bh L3B3B PRINT NEW ERROR MESSAGE PATCH
-ROM_1 3b4dh L3B4D STATEMENT INTERPRETATION RETURN PATCH
-ROM_1 3b5dh L3B5D GO TO NEXT STATEMENT PATCH
-ROM_1 3b6ch L3B6C INKEY$ ROUTINE TO DEAL WITH THE KEYPAD
-ROM_1 3b9fh L3B9F PRINT TOKEN/UDG PATCH
-ROM_1 3c04h L3C04 TV TUNER VECTOR ENTRIES
-ROM_1 3c10h L3C10 TV TUNER ROUTINE
-ROM_1 3c97h L3C97 UNUSED
-ROM_1 3d00h L3D00 THE 'ZX SPECTRUM CHARACTER SET'
+ROM_1 0000h L0000 ; THE 'START'
+ROM_1 0008h L0008 ; THE 'ERROR' RESTART
+ROM_1 0010h L0010 ; THE 'PRINT CHARACTER' RESTART
+ROM_1 0018h L0018 ; THE 'COLLECT CHARACTER' RESTART
+ROM_1 0020h L0020 ; THE 'COLLECT NEXT CHARACTER' RESTART
+ROM_1 0028h L0028 ; THE 'CALCULATE' RESTART
+ROM_1 0030h L0030 ; THE 'CREATE BC SPACES' RESTART
+ROM_1 0038h L0038 ; THE 'MASKABLE INTERRUPT' ROUTINE
+ROM_1 0053h L0053 ; THE 'ERROR-2' ROUTINE
+ROM_1 0066h L0066 ; THE 'NON-MASKABLE INTERRUPT' ROUTINE
+ROM_1 0074h L0074 ; THE 'CH ADD + 1' SUBROUTINE
+ROM_1 007dh L007D ; THE 'SKIP OVER' SUBROUTINE
+ROM_1 0095h L0095 ; THE 'TOKEN TABLES'
+ROM_1 0205h L0205 ; THE 'KEY' TABLES
+ROM_1 028eh L028E ; THE 'KEYBOARD SCANNING' ROUTINE
+ROM_1 02bfh L02BF ; Scan keyboard and decode value
+ROM_1 0310h L0310 ; THE 'REPEAT KEY' SUBROUTINE
+ROM_1 031eh L031E ; Test key value
+ROM_1 0333h L0333 ; Keyboard decoding
+ROM_1 03b5h L03B5 ; Routine to control loudspeaker
+ROM_1 03f8h L03F8 ; Handle BEEP command
+ROM_1 046eh L046E ; Semi-tone table
+ROM_1 04aah L04AA ; THE 'ZX81 NAME' ROUTINE
+ROM_1 04c2h L04C2 ; Save header and program/data bytes
+ROM_1 04feh L04FE ; During the save loop a parity byte is maintained in H.
+ROM_1 053fh L053F ; Reset border and check BREAK key for LOAD and SAVE
+ROM_1 0556h L0556 ; Load header or block of information
+ROM_1 05a9h L05A9 ; the loading loop loads each byte and is entered at the mid point.
+ROM_1 05e3h L05E3 ; Check signal being loaded
+ROM_1 0605h L0605 ; Entry point for all tape commands
+ROM_1 07cbh L07CB ; Handle VERIFY control
+ROM_1 0802h L0802 ; Load a data block
+ROM_1 0808h L0808 ; Handle LOAD control
+ROM_1 0873h L0873 ; the branch is here when a program as opposed to an array is to be loaded.
+ROM_1 08b6h L08B6 ; Handle MERGE control
+ROM_1 092ch L092C ; Merge a Line or Variable
+ROM_1 0970h L0970 ; Handle SAVE control
+ROM_1 09a1h L09A1 ; Canned cassette messages
+ROM_1 09f4h L09F4 ; General PRINT routine
+ROM_1 0a11h L0A11 ; Control character table
+ROM_1 0a23h L0A23 ; Cursor left routine
+ROM_1 0a3dh L0A3D ; Cursor right routine
+ROM_1 0a4fh L0A4F ; Perform carriage return
+ROM_1 0a5fh L0A5F ; Print comma
+ROM_1 0a69h L0A69 ; Print question mark
+ROM_1 0a6dh L0A6D ; Control characters with operands
+ROM_1 0ad9h L0AD9 ; Printable character(s)
+ROM_1 0adch L0ADC ; Store line, column, and pixel address
+ROM_1 0b03h L0B03 ; Fetch position parameters
+ROM_1 0b24h L0B24 ; Print any character
+ROM_1 0b7fh L0B7F ; Print all characters
+ROM_1 0bdbh L0BDB ; Set attribute
+ROM_1 0c0ah L0C0A ; Message printing
+ROM_1 0c3bh L0C3B ; Handle recursive printing
+ROM_1 0c41h L0C41 ; Table search
+ROM_1 0c55h L0C55 ; Test for scroll
+ROM_1 0d4dh L0D4D ; Temporary colour items
+ROM_1 0d6bh L0D6B ; Handle CLS command
+ROM_1 0dafh L0DAF ; Clearing whole display area
+ROM_1 0dd9h L0DD9 ; Set line and column numbers
+ROM_1 0dfeh L0DFE ; Handle scrolling
+ROM_1 0e44h L0E44 ; Clear text lines of display
+ROM_1 0e88h L0E88 ; Attribute handling
+ROM_1 0e9bh L0E9B ; Handle display with line number
+ROM_1 0each L0EAC ; Handle COPY command
+ROM_1 0ecdh L0ECD ; Pass printer buffer to printer
+ROM_1 0edfh L0EDF ; Clear Printer Buffer
+ROM_1 0ef4h L0EF4 ; Copy line routine
+ROM_1 0f2ch L0F2C ; Editor routine for BASIC and INPUT
+ROM_1 0f81h L0F81 ; Add code to current line
+ROM_1 0fa0h L0FA0 ; Editing keys table
+ROM_1 0fa9h L0FA9 ; Handle EDIT key
+ROM_1 0ff3h L0FF3 ; Cursor down editing
+ROM_1 1007h L1007 ; Cursor left editing
+ROM_1 100ch L100C ; Cursor right editing
+ROM_1 1015h L1015 ; DELETE editing
+ROM_1 101eh L101E ; Ignore next 2 codes from key-input routine
+ROM_1 1024h L1024 ; Enter/newline
+ROM_1 1031h L1031 ; Move cursor left when editing
+ROM_1 1059h L1059 ; Cursor up editing
+ROM_1 1076h L1076 ; Use of symbol and graphics codes
+ROM_1 107fh L107F ; Editor error routine
+ROM_1 1097h L1097 ; Clear edit/work space
+ROM_1 10a8h L10A8 ; Handle keyboard input
+ROM_1 111dh L111D ; Lower screen copying
+ROM_1 1167h L1167 ; ED-FULL
+ROM_1 1190h L1190 ; Point to first and last locations of work space
+ROM_1 11a7h L11A7 ; Remove floating point from line
+ROM_1 11b7h L11B7 ; Handle NEW command
+ROM_1 11cbh L11CB ; Main entry (initialization)
+ROM_1 11dah L11DA ; Check RAM
+ROM_1 12a2h L12A2 ; Main execution loop
+ROM_1 1391h L1391 ; Canned report messages
+ROM_1 1555h L1555 ; REPORT-G
+ROM_1 155dh L155D ; Handle addition of BASIC line
+ROM_1 15afh L15AF ; Initial channel information
+ROM_1 15c6h L15C6 ; Initial stream data
+ROM_1 15d4h L15D4 ; Control for input subroutine
+ROM_1 15e6h L15E6 ; Make HL point to input address
+ROM_1 15efh L15EF ; Main Output Routine
+ROM_1 1601h L1601 ; Open channel
+ROM_1 1615h L1615 ; Set channel flags
+ROM_1 162dh L162D ; Channel code look-up table
+ROM_1 1634h L1634 ; Channel K flag
+ROM_1 1642h L1642 ; Channel S flag
+ROM_1 164dh L164D ; Channel P flag
+ROM_1 1652h L1652 ; Just one space required
+ROM_1 1655h L1655 ; Make Room
+ROM_1 1664h L1664 ; Adjust pointers before making or reclaiming room
+ROM_1 168fh L168F ; Collect line number
+ROM_1 169eh L169E ; Handle reserve room
+ROM_1 16b0h L16B0 ; Clear various editing areas
+ROM_1 16d4h L16D4 ; Reclaim edit-line?
+ROM_1 16dbh L16DB ; The Table INDEXING routine
+ROM_1 16e5h L16E5 ; Handle CLOSE# command
+ROM_1 1701h L1701 ; CLOSE-2 Subroutine
+ROM_1 1716h L1716 ; CLOSE stream look-up table
+ROM_1 171ch L171C ; Close Stream Subroutines
+ROM_1 171eh L171E ; Stream data
+ROM_1 1736h L1736 ; Handle OPEN# command
+ROM_1 175dh L175D ; OPEN-2 Subroutine
+ROM_1 177ah L177A ; OPEN stream look-up table
+ROM_1 1781h L1781 ; OPEN-K Subroutine
+ROM_1 1785h L1785 ; OPEN-S Subroutine
+ROM_1 1789h L1789 ; OPEN-P Subroutine
+ROM_1 1793h L1793 ; Handle CAT, ERASE, FORMAT, MOVE commands
+ROM_1 1795h L1795 ; Perform AUTO-LIST
+ROM_1 17f5h L17F5 ; Handle LLIST
+ROM_1 17f9h L17F9 ; Handle LIST
+ROM_1 1855h L1855 ; Print a whole BASIC line
+ROM_1 18b6h L18B6 ; Check for a number marker
+ROM_1 18c1h L18C1 ; Print a flashing character
+ROM_1 18e1h L18E1 ; Print the cursor
+ROM_1 190fh L190F ; Get line number of next line
+ROM_1 1925h L1925 ; Outputting numbers at start of BASIC line
+ROM_1 1937h L1937 ; Outputting characters in a BASIC line
+ROM_1 196eh L196E ; Get starting address of line, or line after
+ROM_1 1980h L1980 ; Compare line numbers
+ROM_1 1988h L1988 ; Find each statement
+ROM_1 19b8h L19B8 ; Get next one
+ROM_1 19ddh L19DD ; Difference routine
+ROM_1 19e5h L19E5 ; Handle reclaiming space
+ROM_1 19fbh L19FB ; Read line number of line in editing area
+ROM_1 1a1bh L1A1B ; Report and line number outputting
+ROM_1 1a48h L1A48 ; The offset table
+ROM_1 1a7ah L1A7A ; The parameter or "Syntax" table
+ROM_1 1b17h L1B17 ; Main parser (BASIC interpreter)
+ROM_1 1b28h L1B28 ; Statement loop
+ROM_1 1b52h L1B52 ; The main scanning loop
+ROM_1 1b6fh L1B6F ; Verify separator
+ROM_1 1b76h L1B76 ; Come here after interpretation
+ROM_1 1b8ah L1B8A ; Run a direct command
+ROM_1 1b9eh L1B9E ; Find start address of new line
+ROM_1 1bb2h L1BB2 ; Handle REM command
+ROM_1 1bb3h L1BB3 ; End of line?
+ROM_1 1bbfh L1BBF ; General line checking
+ROM_1 1bd1h L1BD1 ; Update NEXT LINE but consider
+ROM_1 1beeh L1BEE ; End of statement?
+ROM_1 1bf4h L1BF4 ; Go to next statement
+ROM_1 1c01h L1C01 ; Command class table
+ROM_1 1c0dh L1C0D ; Command classes---00, 03, and 05
+ROM_1 1c1fh L1C1F ; Command classes---01, 02, and 04
+ROM_1 1c22h L1C22 ; Variable in assignment
+ROM_1 1c4eh L1C4E ; class-02 e.g. LET a = 1 + 1   ; an expression must follow
+ROM_1 1c56h L1C56 ; Fetch a value
+ROM_1 1c6ch L1C6C ; Command class---04
+ROM_1 1c79h L1C79 ; Expect numeric/string expression
+ROM_1 1c7ah L1C7A ; class-08 e.g POKE 65535,2     ; two numeric expressions separated by comma
+ROM_1 1c8ch L1C8C ; class-0A e.g. ERASE "????"    ; a string expression must follow.
+ROM_1 1c96h L1C96 ; Set permanent colours
+ROM_1 1cbeh L1CBE ; Command class---09
+ROM_1 1cdbh L1CDB ; Command class---0B
+ROM_1 1cdeh L1CDE ; Fetch a number
+ROM_1 1ce6h L1CE6 ; Use zero routine
+ROM_1 1ceeh L1CEE ; Handle STOP command
+ROM_1 1cf0h L1CF0 ; Handle IF command
+ROM_1 1d03h L1D03 ; Handle FOR command
+ROM_1 1d86h L1D86 ; LOOK-PROG
+ROM_1 1dabh L1DAB ; Handle NEXT command
+ROM_1 1ddah L1DDA ; Perform NEXT loop
+ROM_1 1dech L1DEC ; Handle READ command
+ROM_1 1e27h L1E27 ; Handle DATA command
+ROM_1 1e39h L1E39 ; Check statement for DATA or DEF FN
+ROM_1 1e42h L1E42 ; Handle RESTORE command
+ROM_1 1e4fh L1E4F ; Handle RANDOMIZE command
+ROM_1 1e5fh L1E5F ; Handle CONTINUE command
+ROM_1 1e67h L1E67 ; Handle GO TO command
+ROM_1 1e7ah L1E7A ; Handle OUT command
+ROM_1 1e80h L1E80 ; Handle POKE command
+ROM_1 1e85h L1E85 ; Fetch two  parameters from calculator stack
+ROM_1 1e94h L1E94 ; Find integers
+ROM_1 1ea1h L1EA1 ; Handle RUN command
+ROM_1 1each L1EAC ; Handle CLEAR command
+ROM_1 1eedh L1EED ; Handle GO SUB command
+ROM_1 1f05h L1F05 ; Check available memory
+ROM_1 1f1ah L1F1A ; THE 'FREE MEMORY' USER ROUTINE
+ROM_1 1f23h L1F23 ; THE 'RETURN' COMMAND
+ROM_1 1f3ah L1F3A ; Handle PAUSE command
+ROM_1 1f54h L1F54 ; Check for BREAK key
+ROM_1 1f60h L1F60 ; Handle DEF FN command
+ROM_1 1fc3h L1FC3 ; Returning early from subroutine
+ROM_1 1fc9h L1FC9 ; Handle LPRINT command
+ROM_1 1fcdh L1FCD ; Handle PRINT commands
+ROM_1 1fdfh L1FDF ; this subroutine is called from above
+ROM_1 1ff5h L1FF5 ; Print carriage return
+ROM_1 1ffch L1FFC ; Print items
+ROM_1 2045h L2045 ; End of printing
+ROM_1 204eh L204E ; Print position
+ROM_1 2070h L2070 ; Alter stream
+ROM_1 2089h L2089 ; Handle INPUT command
+ROM_1 20c1h L20C1 ; INPUT ITEM subroutine
+ROM_1 21b9h L21B9 ; INPUT ASSIGNMENT Subroutine
+ROM_1 21d6h L21D6 ; Test for channel K
+ROM_1 21f2h L21F2 ; CO-TEMP-3
+ROM_1 2211h L2211 ; The colour system variable handler.
+ROM_1 226ch L226C ; Handle change of colour
+ROM_1 2294h L2294 ; Handle BORDER command
+ROM_1 22aah L22AA ; Get pixel address
+ROM_1 22cbh L22CB ; Point Subroutine
+ROM_1 22dch L22DC ; Handle PLOT command
+ROM_1 22e5h L22E5 ; The Plot subroutine
+ROM_1 2307h L2307 ; Put two numbers in BC register
+ROM_1 2314h L2314 ; Put stack in A register
+ROM_1 2320h L2320 ; Handle CIRCLE command
+ROM_1 2382h L2382 ; Handle DRAW command
+ROM_1 247dh L247D ; Initial parameters
+ROM_1 24b7h L24B7 ; Line drawing
+ROM_1 24fbh L24FB ; Scan expression or sub-expression
+ROM_1 250fh L250F ; The four service subroutines for routines in the scannings function table
+ROM_1 2530h L2530 ; Check syntax
+ROM_1 2535h L2535 ; Scanning SCREEN$
+ROM_1 2580h L2580 ; Scanning ATTR
+ROM_1 2596h L2596 ; Scanning function table
+ROM_1 25afh L25AF ; Scanning function routines
+ROM_1 26c9h L26C9 ; Scanning variable routines
+ROM_1 26dfh L26DF ; -> the scanning branch was here if not alphanumeric.
+ROM_1 2734h L2734 ; Scanning main loop
+ROM_1 2795h L2795 ; Table of operators
+ROM_1 27b0h L27B0 ; Table of priorities
+ROM_1 27bdh L27BD ; Scanning function (FN)
+ROM_1 28abh L28AB ; Used to parse DEF FN
+ROM_1 28b2h L28B2 ; LOOK-VARS
+ROM_1 2951h L2951 ; Stack function argument
+ROM_1 2996h L2996 ; Stack variable component
+ROM_1 29c3h L29C3 ; the dimension counting loop which is entered at mid-point.
+ROM_1 29e7h L29E7 ; -> the mid-point entry point of the loop
+ROM_1 2a52h L2A52 ; Handle slicing of strings
+ROM_1 2ab1h L2AB1 ; other than from above, this routine is called from STK-VAR to stack
+ROM_1 2ab2h L2AB2 ; this routine is called from chr$, scrn$ etc. to store a simple string result.
+ROM_1 2ab6h L2AB6 ; Pass five registers to calculator stack
+ROM_1 2acch L2ACC ; Return result of evaluating next expression
+ROM_1 2aeeh L2AEE ; LD DE,(DE+1) Subroutine
+ROM_1 2af4h L2AF4 ; HL=HL*DE Subroutine
+ROM_1 2affh L2AFF ; THE 'LET' COMMAND
+ROM_1 2bf1h L2BF1 ; Get last value from calculator stack
+ROM_1 2c02h L2C02 ; Handle DIM command
+ROM_1 2c88h L2C88 ; Check whether digit or letter
+ROM_1 2c9bh L2C9B ; Decimal to floating point
+ROM_1 2d1bh L2D1B ; Check for valid digit
+ROM_1 2d22h L2D22 ; Stack Digit
+ROM_1 2d28h L2D28 ; Stack accumulator
+ROM_1 2d2bh L2D2B ; Stack BC register pair
+ROM_1 2d3bh L2D3B ; Integer to floating point
+ROM_1 2d4fh L2D4F ; E-format to floating point
+ROM_1 2d7fh L2D7F ; Fetch integer
+ROM_1 2d8ch L2D8C ; Store a positive integer
+ROM_1 2d8eh L2D8E ; Store integer
+ROM_1 2da2h L2DA2 ; Floating point to BC register
+ROM_1 2dc1h L2DC1 ; LOG(2^A)
+ROM_1 2dd5h L2DD5 ; Floating point to A
+ROM_1 2de3h L2DE3 ; Print a floating point number
+ROM_1 2f8bh L2F8B ; Handle printing floating point
+ROM_1 2f9bh L2F9B ; Prepare to add
+ROM_1 2fbah L2FBA ; Fetch two numbers
+ROM_1 2fddh L2FDD ; Shift floating point number right
+ROM_1 3004h L3004 ; Add back any carry
+ROM_1 300fh L300F ; Handle subtraction (03)
+ROM_1 3014h L3014 ; Handle addition (0F)
+ROM_1 30a9h L30A9 ; Used in 16 bit multiplication
+ROM_1 30c0h L30C0 ; Prepare to multiply or divide
+ROM_1 30cah L30CA ; Handle multiplication (04)
+ROM_1 31afh L31AF ; Handle division (05)
+ROM_1 3214h L3214 ; Integer truncation towards zero ($3A)
+ROM_1 3293h L3293 ; Re-stack two `small' integers
+ROM_1 3297h L3297 ; Re-stack one number in full form
+ROM_1 32c5h L32C5 ; Table of constants
+ROM_1 32d7h L32D7 ; Table of addresses
+ROM_1 335bh L335B ; The Calculator
+ROM_1 33a1h L33A1 ; Handle delete (02)
+ROM_1 33a2h L33A2 ; Single operation (3B)
+ROM_1 33a9h L33A9 ; Test five-spaces
+ROM_1 33b4h L33B4 ; Stack number
+ROM_1 33c0h L33C0 ; Move a floating point number (31)
+ROM_1 33c6h L33C6 ; Stack literals ($34)
+ROM_1 33f7h L33F7 ; THE 'SKIP CONSTANTS' SUBROUTINE
+ROM_1 3406h L3406 ; Memory location
+ROM_1 340fh L340F ; Get from memory area ($E0 etc.)
+ROM_1 341bh L341B ; Stack a constant (A0 etc.)
+ROM_1 342dh L342D ; Store in a memory area ($C0 etc.)
+ROM_1 343ch L343C ; Swap first number with second number
+ROM_1 3449h L3449 ; Series generator (86 etc.)
+ROM_1 346ah L346A ; Absolute magnitude (2A)
+ROM_1 346eh L346E ; Handle unary minus (1B)
+ROM_1 3492h L3492 ; Signum (29)
+ROM_1 34a5h L34A5 ; Handle IN function (2C)
+ROM_1 34ach L34AC ; Handle PEEK function (2B)
+ROM_1 34b3h L34B3 ; USR number (2D)
+ROM_1 34bch L34BC ; USR string (19)
+ROM_1 34e9h L34E9 ; Test for zero
+ROM_1 34f9h L34F9 ; Greater than zero ($37)
+ROM_1 3501h L3501 ; Handle NOT operator ($30)
+ROM_1 3506h L3506 ; Less than zero (36)
+ROM_1 350bh L350B ; Zero or one
+ROM_1 351bh L351B ; Handle OR operator (07)
+ROM_1 3524h L3524 ; Handle number AND number (08)
+ROM_1 352dh L352D ; Handle string AND number (10)
+ROM_1 353bh L353B ; The 'x>y' example is the easiest as it employs straight-thru logic.
+ROM_1 359ch L359C ; String concatenation ($17)
+ROM_1 35bfh L35BF ; Check stack pointers
+ROM_1 35c9h L35C9 ; Handle CHR$ (2F)
+ROM_1 35deh L35DE ; Handle VAL and VAL$ ($1D, $18)
+ROM_1 361fh L361F ; Handle STR$ (2E)
+ROM_1 3645h L3645 ; Read-in (1A)
+ROM_1 3669h L3669 ; Handle CODE (1C)
+ROM_1 3674h L3674 ; Handle LEN (1E)
+ROM_1 367ah L367A ; Decrease the counter (35)
+ROM_1 3686h L3686 ; Jump (33)
+ROM_1 368fh L368F ; Jump on true (00)
+ROM_1 369bh L369B ; End of calculation (38)
+ROM_1 36a0h L36A0 ; THE 'MODULUS' SUBROUTINE
+ROM_1 36afh L36AF ; THE 'INT' FUNCTION
+ROM_1 36c4h L36C4 ; Exponential (26)
+ROM_1 3713h L3713 ; Natural logarithm (25)
+ROM_1 3783h L3783 ; THE 'TRIGONOMETRIC' FUNCTIONS
+ROM_1 384ah L384A ; THE 'SQUARE ROOT' FUNCTION
+ROM_1 3851h L3851 ; THE 'EXPONENTIATION' OPERATION
+ROM_1 386eh L386E ; SCAN THE KEYPAD AND THE KEYBOARD
+ROM_1 387fh L387F ; READ THE STATE OF THE OUTPUT LINES
+ROM_1 3896h L3896 ; SET THE OUTPUT LINE, BIT 0
+ROM_1 389fh L389F ; FETCH THE STATE OF THE INPUT LINE, BIT 5
+ROM_1 38a7h L38A7 ; SET THE OUTPUT LINE LOW, BIT 0
+ROM_1 38adh L38AD ; SET THE OUTPUT LINE HIGH, BIT 0
+ROM_1 38b3h L38B3 ; MINOR DELAY ROUTINE
+ROM_1 38b6h L38B6 ; MAJOR DELAY ROUTINE
+ROM_1 38c0h L38C0 ; MONITOR FOR THE INPUT LINE TO GO LOW
+ROM_1 38cch L38CC ; MONITOR FOR THE INPUT LINE TO GO HIGH
+ROM_1 38d8h L38D8 ; READ KEY PRESS STATUS BIT
+ROM_1 38dfh L38DF ; READ IN A NIBBLE
+ROM_1 392bh L392B ; LINE ERROR
+ROM_1 3938h L3938 ; POLL THE KEYPAD
+ROM_1 39a0h L39A0 ; SCAN THE KEYPAD ROUTINE
+ROM_1 3a3fh L3A3F ; KEYPAD MASK DATA
+ROM_1 3a42h L3A42 ; READ THE KEYPAD
+ROM_1 3a9eh L3A9E ; THE KEY REPEAT SUBROUTINE
+ROM_1 3aaeh L3AAE ; THE TEST FOR A VALID KEY CODE SUBROUTINE
+ROM_1 3ad7h L3AD7 ; THE KEY DECODING SUBROUTINE
+ROM_1 3b13h L3B13 ; THE KEYPAD DECODE LOOK-UP TABLES
+ROM_1 3b3bh L3B3B ; PRINT NEW ERROR MESSAGE PATCH
+ROM_1 3b4dh L3B4D ; STATEMENT INTERPRETATION RETURN PATCH
+ROM_1 3b5dh L3B5D ; GO TO NEXT STATEMENT PATCH
+ROM_1 3b6ch L3B6C ; INKEY$ ROUTINE TO DEAL WITH THE KEYPAD
+ROM_1 3b9fh L3B9F ; PRINT TOKEN/UDG PATCH
+ROM_1 3c04h L3C04 ; TV TUNER VECTOR ENTRIES
+ROM_1 3c10h L3C10 ; TV TUNER ROUTINE
+ROM_1 3c97h L3C97 ; UNUSED
+ROM_1 3d00h L3D00 ; THE 'ZX SPECTRUM CHARACTER SET'
