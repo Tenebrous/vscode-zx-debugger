@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Spectrum;
+using ZXDebug.utils;
 
 namespace ZXDebug.SourceMapper
 {
@@ -14,11 +15,9 @@ namespace ZXDebug.SourceMapper
         public string SourceRoot;
         public string Filename;
         public Maps Maps;
-        
-        public Banks Banks = new Banks();
 
-        public Cache<BankID, AddressMatches> BankAddress = new Cache<BankID, AddressMatches>();
-        public Cache<File, LineMatches> FileLine = new Cache<File, LineMatches>();
+        public AddressStorage Addresses = new AddressStorage();
+        public AddressStorage Labels = new AddressStorage();
 
         /// <summary>
         /// Create a new map from the referenced file
@@ -77,17 +76,20 @@ namespace ZXDebug.SourceMapper
                         int bankID;
                         int.TryParse( bankIDStr, out bankID );
 
+                        var bank = new BankID( bankTypeStr, bankID );
                         var address = Format.Parse( addressStr );
 
-                        var bank = new BankID( bankTypeStr, bankID );
+                        Addresses.TryAdd( bank, address, out var sym );
 
-                        Banks.TryAdd( bank, out var symBank );
-                        symBank.Symbols.TryAdd( address, out var sym );
+                        if( labels.Captures.Count > 0 )
+                        {
+                            var labelCaptures = labels.Captures;
+                            sym.Labels = sym.Labels ?? new List<string>();
+                            for( var i = 0; i < labelCaptures.Count; i++ )
+                                sym.Labels.Add( labelCaptures[i].Value.Trim() );
 
-                        var labelCaptures = labels.Captures;
-                        sym.Labels = sym.Labels ?? new List<string>();
-                        for( var i = 0; i < labelCaptures.Count; i++ )
-                            sym.Labels.Add( labelCaptures[i].Value.Trim() );
+                            Labels.TryAdd( bank, address, out var sym2, pCreated => sym );
+                        }
 
                         sym.Comment = commentStr.Trim();
                         if( sym.Comment.StartsWith( ";" ) )
@@ -178,11 +180,10 @@ namespace ZXDebug.SourceMapper
                                 label = null;
                             }
 
-                            var address = Format.Parse( addressStr, pKnownHex: true );
                             var bank = new BankID( section );
+                            var address = Format.Parse( addressStr, pKnownHex: true );
 
-                            Banks.TryAdd(bank, out var symBank);
-                            symBank.Symbols.TryAdd( address, out var sym );
+                            Addresses.TryAdd( bank, address, out var sym );
 
                             if( label != null )
                             {
@@ -207,36 +208,35 @@ namespace ZXDebug.SourceMapper
                                     sym.Line = line;
                                 }
 
-                                
-                                SourceLink store;
+                                //SourceLink store;
 
-                                FileLine.TryAdd(file, out var fileLine );
-                                if( fileLine.TryAdd( line, out var fileLineRange, out store ) )
-                                {
-                                    store.File = file;
-                                    store.BankID = bank;
-                                    store.LowerLine = int.MaxValue;
-                                    store.LowerAddress = ushort.MaxValue;
-                                }
-                                fileLine.Extend( fileLineRange, line );
-                                if( line < store.LowerLine ) store.LowerLine = line;
-                                if( line > store.UpperLine ) store.UpperLine = line;
-                                if( address < store.LowerAddress ) store.LowerAddress = address;
-                                if( address > store.UpperAddress ) store.UpperAddress = address;
-                                
-                                BankAddress.TryAdd( bank, out var bankAddress );
-                                if( bankAddress.TryAdd( address, out var bankAddressRange, out store ) )
-                                {
-                                    store.File = file;
-                                    store.BankID = bank;
-                                    store.LowerLine = int.MaxValue;
-                                    store.LowerAddress = ushort.MaxValue;
-                                }
-                                bankAddress.Extend( bankAddressRange, address );
-                                if( line < store.LowerLine ) store.LowerLine = line;
-                                if( line > store.UpperLine ) store.UpperLine = line;
-                                if( address < store.LowerAddress ) store.LowerAddress = address;
-                                if( address > store.UpperAddress ) store.UpperAddress = address;
+                                //FileLine.TryAdd( file, out var fileLine );
+                                //if( fileLine.TryAdd( line, out var fileLineRange, out store ) )
+                                //{
+                                //    store.File = file;
+                                //    store.BankID = bank;
+                                //    store.LowerLine = int.MaxValue;
+                                //    store.LowerAddress = ushort.MaxValue;
+                                //}
+                                //fileLine.Extend( fileLineRange, line );
+                                //if( line < store.LowerLine ) store.LowerLine = line;
+                                //if( line > store.UpperLine ) store.UpperLine = line;
+                                //if( address < store.LowerAddress ) store.LowerAddress = address;
+                                //if( address > store.UpperAddress ) store.UpperAddress = address;
+
+                                //BankAddress.TryAdd( bank, out var bankAddress );
+                                //if( bankAddress.TryAdd( address, out var bankAddressRange, out store ) )
+                                //{
+                                //    store.File = file;
+                                //    store.BankID = bank;
+                                //    store.LowerLine = int.MaxValue;
+                                //    store.LowerAddress = ushort.MaxValue;
+                                //}
+                                //bankAddress.Extend( bankAddressRange, address );
+                                //if( line < store.LowerLine ) store.LowerLine = line;
+                                //if( line > store.UpperLine ) store.UpperLine = line;
+                                //if( address < store.LowerAddress ) store.LowerAddress = address;
+                                //if( address > store.UpperAddress ) store.UpperAddress = address;
                             }
 
                             sym.Map = this;

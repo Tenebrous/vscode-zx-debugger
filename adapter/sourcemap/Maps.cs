@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Spectrum;
 
 namespace ZXDebug.SourceMapper
@@ -13,10 +14,16 @@ namespace ZXDebug.SourceMapper
         
         public Address Find( BankID pBank, ushort pAddress )
         {
-            foreach( var map in this )
-                if( map.Banks.TryGetValue( pBank, out var bank ) )
-                    if( bank.Symbols.TryGetValue( pAddress, out var value ) )
-                        return value;
+            //foreach( var map in this )
+            //{
+            //    if( map.BankAddress.TryGetValue( pBank, out var address ) )
+            //        if( address.TryGetValue( pAddress, out var range, out var link ) )
+            //            return link;
+            //}
+            //foreach( var map in this )
+            //    if( map.Banks.TryGetValue( pBank, out var bank ) )
+            //        if( bank.Symbols.TryGetValue( pAddress, out var value ) )
+            //            return value;
 
             return null;
         }
@@ -26,25 +33,25 @@ namespace ZXDebug.SourceMapper
             Address result = null;
             ushort highest = 0;
 
-            foreach( var map in this )
-            {
-                if( !map.Banks.TryGetValue( pBank, out var bank ) )
-                    continue;
+            //foreach( var map in this )
+            //{
+            //    if( !map.Banks.TryGetValue( pBank, out var bank ) )
+            //        continue;
 
-                foreach( var s in bank.Symbols )
-                {
-                    var sym = s.Value;
+            //    foreach( var s in bank.Symbols )
+            //    {
+            //        var sym = s.Value;
 
-                    if( sym.Location <= highest || sym.Location > pAddress || ( pAddress - sym.Location ) > pMaxDistance )
-                        continue;
+            //        if( sym.Location <= highest || sym.Location > pAddress || ( pAddress - sym.Location ) > pMaxDistance )
+            //            continue;
 
-                    if( sym.Labels == null || sym.Labels.Count <= 0 )
-                        continue;
+            //        if( sym.Labels == null || sym.Labels.Count <= 0 )
+            //            continue;
 
-                    highest = sym.Location;
-                    result = sym;
-                }
-            }
+            //        highest = sym.Location;
+            //        result = sym;
+            //    }
+            //}
 
             return result;
         }

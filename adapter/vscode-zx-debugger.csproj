@@ -56,6 +56,7 @@
     <Compile Include="sourcemap\Address.cs" />
     <Compile Include="sourcemap\Bank.cs" />
     <Compile Include="sourcemap\Banks.cs" />
+    <Compile Include="sourcemap\AddressStorage.cs" />
     <Compile Include="sourcemap\File.cs" />
     <Compile Include="sourcemap\Files.cs" />
     <Compile Include="utils\Cache.cs" />
@@ -74,6 +75,8 @@
     <Compile Include="machine\Machine.cs" />
     <Compile Include="sourcemap\Map.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="utils\PartitionedSpatialDictionary.cs" />
+    <Compile Include="utils\SpatialDictionary.cs" />
     <Compile Include="utils\RangeDictionary.cs" />
     <Compile Include="utils\Value.cs" />
     <Compile Include="Debugger.cs" />

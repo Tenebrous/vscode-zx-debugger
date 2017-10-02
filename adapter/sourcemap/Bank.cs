@@ -6,11 +6,11 @@ namespace ZXDebug.SourceMapper
     {
         public BankID ID;
 
-        public Cache<ushort, Address> Symbols;
+        public SpatialDictionary<ushort, Address> Symbols;
 
         public Bank()
         {
-            Symbols = new Cache<ushort, Address>( NewSymbol );
+            Symbols = new SpatialDictionary<ushort, Address>( NewSymbol );
         }
 
         Address NewSymbol( ushort pAddress )

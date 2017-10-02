@@ -717,13 +717,6 @@ namespace ZXDebug
 
         static void VSCode_Custom_OnGetDisassemblyForSource( Request pRequest, string pFile, int pLine )
         {
-            var sourceFile = _machine.SourceMaps.Files[pFile];
-
-            foreach( var map in _machine.SourceMaps )
-            {
-                var r = map.FileLine[sourceFile];
-            }
-
             //foreach( var m in _machine.SourceMapper )
             //{
             //    if( !m.Files.TryGetValue( pFile, out var file ) )
@@ -899,20 +892,36 @@ namespace ZXDebug
 
             _machine.SourceMaps.Clear();
             _machine.SourceMaps.SourceRoot = _settings.ProjectFolder;
+
+            long beforeTotal = GC.GetTotalMemory(true);
+            long beforeSingle = 0;
+
             foreach( var map in _settings.SourceMaps )
             {
                 var file = FindFile( map, "maps" );
+
+                beforeSingle = GC.GetTotalMemory( true );
                 _machine.SourceMaps.Add( file );
-                Log.Write( Log.Severity.Message, "Loaded map: " + file );
+                Log.Write( Log.Severity.Message, "Loaded map: " + file + " (" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
             }
 
+            Log.Write( Log.Severity.Message, "Loaded maps (" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+
+
             _machine.Disassembler.ClearLayers();
+
+            beforeTotal = GC.GetTotalMemory(true);
+
             foreach( var table in _settings.OpcodeTables )
             {
                 var file = FindFile( table, "opcodes" );
+
+                beforeSingle = GC.GetTotalMemory( true );
                 _machine.Disassembler.AddLayer( file );
-                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file );
+                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file + " (" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
             }
+
+            Log.Write( Log.Severity.Message, "Loaded opcode layers (" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
         }
 
         static void SaveDebug()
@@ -992,33 +1001,33 @@ namespace ZXDebug
         static bool _prepopulatedDisassemblyFile = false;
 	    static void PrepopulateDisassemblyFile()
 	    {
-	        if( _prepopulatedDisassemblyFile )
-	            return;
+	        //if( _prepopulatedDisassemblyFile )
+	        //    return;
 
-	        foreach( var f in _machine.SourceMaps )
-	        {
-	            foreach( var bankkvp in f.Banks )
-	            {
-	                var bank = bankkvp.Value;
+	        //foreach( var f in _machine.SourceMaps )
+	        //{
+	        //    foreach( var bankkvp in f.Banks )
+	        //    {
+	        //        var bank = bankkvp.Value;
 
-                    // todo: check bank is paged in
+            //        // todo: check bank is paged in
 
-	                foreach( var symbolkvp in bank.Symbols )
-	                {
-	                    var symbol = symbolkvp.Value;
+	        //        foreach( var symbolkvp in bank.Symbols )
+	        //        {
+	        //            var symbol = symbolkvp.Value;
 
-	                    if( symbol.File != null && symbol.Labels != null && symbol.Labels.Count > 0 )
-	                    {
-	                        //Log.Write( Log.Severity.Message, bankkvp.Key + " " + symbol.Address.ToHex() + " " + string.Join( " ", symbol.Labels ) + " " + symbol.File.Filename + ":" + symbol.Line );
-	                        //_machine.UpdateDisassembly( s.Value.Address );
-	                    }
-	                }
-	            }
-	        }
+	        //            if( symbol.File != null && symbol.Labels != null && symbol.Labels.Count > 0 )
+	        //            {
+	        //                //Log.Write( Log.Severity.Message, bankkvp.Key + " " + symbol.Address.ToHex() + " " + string.Join( " ", symbol.Labels ) + " " + symbol.File.Filename + ":" + symbol.Line );
+	        //                //_machine.UpdateDisassembly( s.Value.Address );
+	        //            }
+	        //        }
+	        //    }
+	        //}
 
-	        //_machine.WriteDisassemblyFile( DisassemblyFile );
+	        ////_machine.WriteDisassemblyFile( DisassemblyFile );
 
-	        _prepopulatedDisassemblyFile = true;
+	        //_prepopulatedDisassemblyFile = true;
 	    }
 
 	    static string _tempFolder;
