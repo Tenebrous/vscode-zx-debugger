@@ -132,7 +132,7 @@ namespace ZXDebug
 
                         if( saveByte == -1 )
                         {
-                            Log.Write( Log.Severity.Error, "Ran out of bytes decoding {b} in table '" + tableName + "'" );
+                            Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {b} in table '" + tableName + "'" );
                             return null;
                         }
 
@@ -209,7 +209,7 @@ namespace ZXDebug
 
                 if( lo == -1 || hi == -1 )
                 {
-                    Log.Write( Log.Severity.Error, "Ran out of bytes decoding {" + specifier + "} in instruction '" + pInstruction.Text + "'" );
+                    Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {" + specifier + "} in instruction '" + pInstruction.Text + "'" );
                     return;
                 }
 
