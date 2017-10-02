@@ -302,21 +302,17 @@ namespace ZEsarUX
             ParseRegisters( pRegisters, result );
         }
 
-        Regex _matchRegisters = new Regex("(?i)([a-z']*)=([0-9a-f].*?)(?:\\s)");
-        Regex _matchFlags = new Regex("(?i)(F'?)=(.{8})\\s");
+        // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
+        Regex _matchRegisters = new Regex(@"(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)");
+        Regex _matchFlags = new Regex(@"(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})");
         void ParseRegisters( Registers pRegisters, string pString )
         {
-            // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
-
             var matches = _matchRegisters.Matches(pString);
             foreach( Match match in matches )
             {
-                var register = match.Groups[1].ToString();
-                var value = Format.Parse(match.Groups[2].ToString(), pKnownHex:true);
-
                 try
                 {
-                    pRegisters[register] = value;
+                    pRegisters[match.Groups["register"].Value] = Format.Parse( match.Groups["value"].Value, pKnownHex: true );
                 }
                 catch
                 {
@@ -327,10 +323,14 @@ namespace ZEsarUX
             matches = _matchFlags.Matches(pString);
             foreach( Match match in matches )
             {
-                var register = match.Groups[1].ToString();
-                var value = match.Groups[2].ToString().Trim();
-            
-            //    SetRegister(register, value);
+                // match.Groups["register"].Value
+                // match.Groups["s"].Value
+                // match.Groups["z"].Value
+                // match.Groups["bit5"].Value
+                // match.Groups["h"].Value
+                // match.Groups["bit3"].Value
+                // match.Groups["n"].Value
+                // match.Groups["c"].Value
             }
         }
 
