@@ -1,0 +1,42 @@
+﻿ConvertAsmToDbg( @"D:\Dev\ZX\vscode-zx-debugger\maps\128k_rom0.asm", @"D:\Dev\ZX\vscode-zx-debugger\maps\128k_rom0.dbg", "ROM_0" );
+ConvertAsmToDbg( @"D:\Dev\ZX\vscode-zx-debugger\maps\128k_rom1.asm", @"D:\Dev\ZX\vscode-zx-debugger\maps\128k_rom1.dbg", "ROM_1" );
+
+static void ConvertAsmToDbg( string pIn, string pOut, string pType )
+{
+    using( var fileIn = new StreamReader( pIn ) )
+    using( var fileOut = new StreamWriter( pOut ) )
+    {
+        bool canReadHeader = false;
+        bool inHeader = false;
+        string header = null;
+        string label = null;
+
+        string line;
+        while( ( line = fileIn.ReadLine() ) != null )
+        {
+            if( (line.StartsWith( "; ----" ) || line.StartsWith( "; ====" )) && !inHeader )
+            {
+                inHeader = true;
+                header = null;
+            }
+            else if( (line.StartsWith( "; ----" ) || line.StartsWith( "; ====" ) || string.IsNullOrWhiteSpace( line )) && inHeader )
+            {
+                inHeader = false;
+            }
+            else if( inHeader && line.StartsWith( "; " ) && header == null )
+            {
+                header = line.Substring( 1 ).Trim();
+                label = null;
+            }
+            else if( header != null && line.StartsWith( ";" ) && !line.Contains( " " ) && !string.IsNullOrWhiteSpace( line.Substring(1) ) )
+                label = line.Substring( 1 ).Trim();
+            else if( line.StartsWith( "L" ) && line.Substring( 5, 1 ) == ":" && header != null )
+            {
+                fileOut.WriteLine( pType + " " + line.Substring( 1, 4 ).ToLower() + "h " + ( label ?? line.Substring( 0, 5 ) ) + " " + header );
+                header = null;
+                label = null;
+            }
+        }
+    }
+}
+
