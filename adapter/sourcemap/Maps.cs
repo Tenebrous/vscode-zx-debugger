@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Spectrum;
 
 namespace ZXDebug.SourceMapper
@@ -14,16 +13,15 @@ namespace ZXDebug.SourceMapper
         
         public Address Find( BankID pBank, ushort pAddress )
         {
-            //foreach( var map in this )
-            //{
-            //    if( map.BankAddress.TryGetValue( pBank, out var address ) )
-            //        if( address.TryGetValue( pAddress, out var range, out var link ) )
-            //            return link;
-            //}
-            //foreach( var map in this )
-            //    if( map.Banks.TryGetValue( pBank, out var bank ) )
-            //        if( bank.Symbols.TryGetValue( pAddress, out var value ) )
-            //            return value;
+            foreach( var map in this )
+                if( map.AddressToSource.TryGetValue( pBank, pAddress, out var pLine ) )
+                    return new Address()
+                    {
+                        BankID = pBank,
+                        Location = pAddress,
+                        File = pLine.File,
+                        Line = pLine.Line
+                    };
 
             return null;
         }
@@ -33,25 +31,15 @@ namespace ZXDebug.SourceMapper
             Address result = null;
             ushort highest = 0;
 
-            //foreach( var map in this )
-            //{
-            //    if( !map.Banks.TryGetValue( pBank, out var bank ) )
-            //        continue;
-
-            //    foreach( var s in bank.Symbols )
-            //    {
-            //        var sym = s.Value;
-
-            //        if( sym.Location <= highest || sym.Location > pAddress || ( pAddress - sym.Location ) > pMaxDistance )
-            //            continue;
-
-            //        if( sym.Labels == null || sym.Labels.Count <= 0 )
-            //            continue;
-
-            //        highest = sym.Location;
-            //        result = sym;
-            //    }
-            //}
+            foreach( var map in this )
+                if( map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var pLabels ) )
+                    if( actualAddress >= highest && (pAddress - actualAddress) < pMaxDistance )
+                        result = new Address()
+                        {
+                            BankID = pBank,
+                            Location = actualAddress,
+                            Labels = pLabels
+                        };
 
             return result;
         }

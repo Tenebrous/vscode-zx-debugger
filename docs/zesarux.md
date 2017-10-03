@@ -30,6 +30,8 @@ Note: · = space
 | | `Disabled 100: None` | 
 | | `command>·` |
 
+* Breakpoint numbers are parsed by regex:
+  * `(?'number'\d+):` [open in regex101](https://regex101.com/r/VX09Zj/1)
 
 ## Set debug settings
 
@@ -153,11 +155,9 @@ Address & length are sent as decimal.
 | | `command@cpu-step>·` |
 
 * Registers parsed by regex:
-  * `(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)`
-  * [see in regex101](https://regex101.com/r/XnpxqF/2)
+  * `(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)` [open in regex101](https://regex101.com/r/XnpxqF/2)
 * Flags parsed by regex:
-  * `(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})`
-  * [see in regex101](https://regex101.com/r/U508gA/1)
+  * `(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})` [open in regex101](https://regex101.com/r/U508gA/1)
 
 Results are always hex.
 

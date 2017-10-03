@@ -2,11 +2,19 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Spectrum;
 using ZXDebug.utils;
 
 namespace ZXDebug.SourceMapper
 {
+    public class SourceLine
+    {
+        public File File;
+        public int Line;
+    }
+
+
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg or .map)
     /// </summary>
@@ -16,8 +24,18 @@ namespace ZXDebug.SourceMapper
         public string Filename;
         public Maps Maps;
 
-        public AddressStorage Addresses = new AddressStorage();
-        public AddressStorage Labels = new AddressStorage();
+        public SpatialDictionary<BankID, ushort, SourceLine> AddressToSource = new SpatialDictionary<BankID, ushort, SourceLine>();
+        public SpatialDictionary<BankID, ushort, List<string>> Labels = new SpatialDictionary<BankID, ushort, List<string>>();
+
+        Regex regexDbg = new Regex(
+                @"(?i)^(?'bank'(ROM|RAM|BANK|DIV|ALL)(_)?(\d*)?) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)(?'comment' *;.*?)?$",
+                RegexOptions.Compiled
+            );
+
+        Regex regexMap = new Regex(
+                @"(?i)^(?'label'.*?)\s*=\s*(\$(?'addr'[0-9a-fA-F]*))\s?;\s(?'type'addr)\s*,\s*(?'scope'.*?)\s*,\s*(?'def'.*?)\s*,\s*(?'module'.*?)\s*,\s*(?'bank'.*?)\s*,\s*(?'file'.*):(?'line'\d*).*?$",
+                RegexOptions.Compiled
+            );
 
         /// <summary>
         /// Create a new map from the referenced file
@@ -34,219 +52,138 @@ namespace ZXDebug.SourceMapper
             var ext = Path.GetExtension( pFilename )?.ToLower() ?? "";
 
             if( ext == ".dbg" )
-                ReadDbg( pFilename );
+                Parse( pFilename, regexDbg );
             else if( ext == ".map" )
-                ReadMap( pFilename );
+                Parse( pFilename, regexMap );
 
-            //File.WriteAllText( pFilename + ".json", JsonConvert.SerializeObject( this, new JsonSerializerSettings() {Formatting = Formatting.Indented,ReferenceLoopHandling = ReferenceLoopHandling.Ignore} ) );
-        }
-
-        void ReadDbg( string pFilename )
-        {
-            // banktype_bankid addr(h) ("filename":line) (label1 (label2...)) (; comment)
-            //
-            // ROM_0 0000h start                 ; cold start restart
-            // BANK_02 8000h "C:\Users\m\AppData\Local\Temp\zcc53216.asm":1367 __Start
-
-            var fileLine = new Regex(
-                @"(?i)^(?'banktype'ROM|RAM|BANK|DIV|ALL)(?:_)?((?'bankid'\d*))? (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)(?'comment' *;.*?)?$",
-                RegexOptions.Compiled
+            System.IO.File.WriteAllText(
+                pFilename + ".address.json",
+                JsonConvert.SerializeObject(
+                    AddressToSource,
+                    new JsonSerializerSettings() { Formatting = Formatting.Indented, ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
+                )
             );
 
+            System.IO.File.WriteAllText(
+                pFilename + ".labels.json",
+                JsonConvert.SerializeObject(
+                    Labels,
+                    new JsonSerializerSettings() { Formatting = Formatting.Indented, ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
+                )
+            );
+
+        }
+
+
+        List<string> _tempLabels = new List<string>();
+        void Parse( string pFilename, Regex pRegex )
+        {
             using( var reader = new StreamReader( pFilename ) )
             {
                 string text;
 
                 while( ( text = reader.ReadLine() ) != null )
                 {
-                    var matches = fileLine.Matches( text );
+                    var matches = pRegex.Matches( text );
+
                     foreach( Match match in matches )
                     {
-                        var bankTypeStr = match.Groups["banktype"].Value;
-                        var bankIDStr   = match.Groups["bankid"].Value;
-                        var addressStr  = match.Groups["addr"].Value;
-                        var fileStr     = match.Groups["file"].Value;
-                        var lineStr     = match.Groups["line"].Value;
-                        var labels      = match.Groups["labels"];
-                        var commentStr  = match.Groups["comment"].Value;
+                        var bankStr    = match.Groups["bank"].Value;
+                        var addressStr = match.Groups["addr"].Value;
+                        var fileStr    = match.Groups["file"].Value;
+                        var lineStr    = match.Groups["line"].Value;
+                        var labelStr   = match.Groups["label"].Value;
+                        var labelsGrp  = match.Groups["labels"];
+                        var commentStr = match.Groups["comment"].Value;
+                        var typeStr    = match.Groups["type"].Value;
+                        var scopeStr   = match.Groups["scope"].Value;
+                        var defStr     = match.Groups["def"].Value;
+                        var moduleStr  = match.Groups["module"].Value;
 
-                        if( labels.Length == 0 )
-                            continue;
+                        if( labelStr.StartsWith( "__ASM_LINE_" ) 
+                            || labelStr.StartsWith( "__C_LINE_" ) 
+                            || labelStr.StartsWith( "__CLINE_" ) )
+                            labelStr = null;
 
-                        int bankID;
-                        int.TryParse( bankIDStr, out bankID );
+                        _tempLabels.Clear();
 
-                        var bank = new BankID( bankTypeStr, bankID );
-                        var address = Format.Parse( addressStr );
+                        if( !string.IsNullOrWhiteSpace(labelStr) )
+                            _tempLabels.Add( labelStr );
 
-                        Addresses.TryAdd( bank, address, out var sym );
+                        for( var i = 0; i < labelsGrp.Captures.Count; i++ )
+                            _tempLabels.Add( labelsGrp.Captures[i].Value.Trim() );
 
-                        if( labels.Captures.Count > 0 )
-                        {
-                            var labelCaptures = labels.Captures;
-                            sym.Labels = sym.Labels ?? new List<string>();
-                            for( var i = 0; i < labelCaptures.Count; i++ )
-                                sym.Labels.Add( labelCaptures[i].Value.Trim() );
-
-                            Labels.TryAdd( bank, address, out var sym2, pCreated => sym );
-                        }
-
-                        sym.Comment = commentStr.Trim();
-                        if( sym.Comment.StartsWith( ";" ) )
-                            sym.Comment = sym.Comment.Substring( 1 ).Trim();
-
-                        if( !string.IsNullOrWhiteSpace( fileStr ) )
-                        {
-                            var file = Maps.Files[fileStr];
-                            var line = int.Parse( lineStr );
-
-                            if( sym.File == null || sym.File.Filename != fileStr )
-                            {
-                                sym.File = file;
-                                sym.Line = line;
-                            }
-                            else if( line > sym.Line )
-                                sym.Line = line;
-                        }
-
-                        sym.Map = this;
+                        SaveData( bankStr, addressStr, fileStr, lineStr, _tempLabels );
                     }
                 }
             }
         }
 
-        void ReadMap( string pFilename )
+        void SaveData( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<string> pLabels )
         {
-            // symbol = $address ; type, scope, def, module, section, file:line
-            //
-            // DEFINED_startup                 = $0001 ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:10
-            // startup                         = $001F ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:11
-            // DEFINED_REGISTER_SP             = $0001 ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:18
-            // REGISTER_SP                     = $7FFF ; const, local, , zxn_crt, , C:\Users\m\AppData\Local\Temp\zcc12716.asm:19
+            var bank = new BankID( pBankStr );
+            var address = Format.Parse( pAddressStr, pKnownHex : true );
 
-            var lineRegex = new Regex(
-                @"(?i)^(?'label'.*?)\s*=\s*(\$(?'addr'[0-9a-fA-F]*))\s?;\s(?'type'addr)\s*,\s*(?'scope'.*?)\s*,\s*(?'def'.*?)\s*,\s*(?'module'.*?)\s*,\s*(?'section'.*?)\s*,\s*(?'file'.*):(?'line'\d*).*?$",
-                RegexOptions.Compiled
-            );
-
-            var symbolRegex = new Regex(
-                @"^(?'name'.*):(?'line'\d*)(:(?'section'.*))?$",
-                RegexOptions.Compiled
-            );
-
-            using( var reader = new StreamReader( pFilename ) )
+            if( pLabels != null && pLabels.Count > 0 )
             {
-                string text;
+                Labels.TryAdd( bank, address, out var labels );
+                labels.AddRange( pLabels );
+            }
 
-                while( ( text = reader.ReadLine() ) != null )
+            if( !string.IsNullOrWhiteSpace( pFileStr ) )
+            {
+                var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, pFileStr ) );
+                var line = int.Parse( pLineStr );
+
+                Maps.Files.TryAdd( normalisedFileStr, out var file );
+
+                if( !AddressToSource.TryAdd( bank, address, out var sym,
+                        ( pBank, pAddress ) => new SourceLine() { File = file, Line = line }
+                    )
+                )
                 {
-                    try
+                    // TryAdd returns false if item was already there, true if it was added
+
+                    if( sym.File != file )
                     {
-                        var matches = lineRegex.Matches( text );
-                        foreach( Match match in matches )
-                        {
-                            var label       = match.Groups["label"].Value;
-                            var addressStr  = match.Groups["addr"].Value;
-                            var type        = match.Groups["type"].Value;
-                            var scope       = match.Groups["scope"].Value;
-                            var def         = match.Groups["def"].Value;
-                            var module      = match.Groups["module"].Value;
-                            var section     = match.Groups["section"].Value;
-                            var fileStr     = match.Groups["file"].Value;
-                            var lineStr     = match.Groups["line"].Value;
-
-                            if( label.StartsWith( "__ASMLINE__" ) || label.StartsWith( "__CLINE__" ) )
-                            {
-                                // decode symbol
-                                //  _22src_5Cmain_2Easm_22_3A0_3Adefault
-                                //  "src\main.asm":0:default
-
-                                if( label.StartsWith( "__ASMLINE__" ) )
-                                    label = Decode( label.Substring( 11 ) ).Trim();
-                                else if( label.StartsWith( "__CLINE__" ) )
-                                    label = Decode( label.Substring( 9 ) ).Trim();
-
-                                var labelMatch = symbolRegex.Match( label );
-                                fileStr = labelMatch.Groups["name"].Value;
-                                lineStr = labelMatch.Groups["line"].Value;
-                                section = labelMatch.Groups["section"].Value;
-                                label = null;
-
-                                if( string.IsNullOrWhiteSpace( lineStr ) )
-                                    lineStr = "0";
-                            }
-                            else if( label.StartsWith( "__ASM_LINE_" ) || label.StartsWith( "__C_LINE_" ) )
-                            {
-                                label = null;
-                            }
-
-                            var bank = new BankID( section );
-                            var address = Format.Parse( addressStr, pKnownHex: true );
-
-                            Addresses.TryAdd( bank, address, out var sym );
-
-                            if( label != null )
-                            {
-                                sym.Labels = sym.Labels ?? new List<string>();
-                                sym.Labels.Add( label );
-                            }
-
-                            if( !string.IsNullOrWhiteSpace( fileStr ) )
-                            {
-                                var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, fileStr ) );
-
-                                Maps.Files.TryAdd( normalisedFileStr, out var file );
-                                var line = int.Parse( lineStr );
-
-                                if( sym.File == null || sym.File.Filename != normalisedFileStr )
-                                {
-                                    sym.File = file;
-                                    sym.Line = line;
-                                }
-                                else if( line > sym.Line ) // && label != null )
-                                {
-                                    sym.Line = line;
-                                }
-
-                                //SourceLink store;
-
-                                //FileLine.TryAdd( file, out var fileLine );
-                                //if( fileLine.TryAdd( line, out var fileLineRange, out store ) )
-                                //{
-                                //    store.File = file;
-                                //    store.BankID = bank;
-                                //    store.LowerLine = int.MaxValue;
-                                //    store.LowerAddress = ushort.MaxValue;
-                                //}
-                                //fileLine.Extend( fileLineRange, line );
-                                //if( line < store.LowerLine ) store.LowerLine = line;
-                                //if( line > store.UpperLine ) store.UpperLine = line;
-                                //if( address < store.LowerAddress ) store.LowerAddress = address;
-                                //if( address > store.UpperAddress ) store.UpperAddress = address;
-
-                                //BankAddress.TryAdd( bank, out var bankAddress );
-                                //if( bankAddress.TryAdd( address, out var bankAddressRange, out store ) )
-                                //{
-                                //    store.File = file;
-                                //    store.BankID = bank;
-                                //    store.LowerLine = int.MaxValue;
-                                //    store.LowerAddress = ushort.MaxValue;
-                                //}
-                                //bankAddress.Extend( bankAddressRange, address );
-                                //if( line < store.LowerLine ) store.LowerLine = line;
-                                //if( line > store.UpperLine ) store.UpperLine = line;
-                                //if( address < store.LowerAddress ) store.LowerAddress = address;
-                                //if( address > store.UpperAddress ) store.UpperAddress = address;
-                            }
-
-                            sym.Map = this;
-                        }
+                        sym.File = file;
+                        sym.Line = line;
                     }
-                    catch( Exception e )
+                    else if( line > sym.Line )
                     {
-                        throw new Exception( "Error with line [" + text + "]", e );
+                        sym.Line = line;
                     }
                 }
+
+                //SourceLink store;
+
+                //FileLine.TryAdd( file, out var fileLine );
+                //if( fileLine.TryAdd( line, out var fileLineRange, out store ) )
+                //{
+                //    store.File = file;
+                //    store.BankID = bank;
+                //    store.LowerLine = int.MaxValue;
+                //    store.LowerAddress = ushort.MaxValue;
+                //}
+                //fileLine.Extend( fileLineRange, line );
+                //if( line < store.LowerLine ) store.LowerLine = line;
+                //if( line > store.UpperLine ) store.UpperLine = line;
+                //if( address < store.LowerAddress ) store.LowerAddress = address;
+                //if( address > store.UpperAddress ) store.UpperAddress = address;
+
+                //BankAddress.TryAdd( bank, out var bankAddress );
+                //if( bankAddress.TryAdd( address, out var bankAddressRange, out store ) )
+                //{
+                //    store.File = file;
+                //    store.BankID = bank;
+                //    store.LowerLine = int.MaxValue;
+                //    store.LowerAddress = ushort.MaxValue;
+                //}
+                //bankAddress.Extend( bankAddressRange, address );
+                //if( line < store.LowerLine ) store.LowerLine = line;
+                //if( line > store.UpperLine ) store.UpperLine = line;
+                //if( address < store.LowerAddress ) store.LowerAddress = address;
+                //if( address > store.UpperAddress ) store.UpperAddress = address;
             }
         }
 

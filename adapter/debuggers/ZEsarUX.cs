@@ -53,8 +53,6 @@ namespace ZEsarUX
                 // clear initial buffer ready for setup
                 ReadAll();
 
-                GetVersion();
-                GetBreakpointCount();
                 Setup();
             }
             catch( Exception e )
@@ -127,6 +125,9 @@ namespace ZEsarUX
 
         public void Setup()
         {
+            GetVersion();
+            GetBreakpointCount();
+
             var debugSettings = DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt;
             SendAndReceiveSingle( "set-debug-settings " + (int)debugSettings );
             SendAndReceiveSingle( "set-memory-zone -1" );
@@ -233,7 +234,6 @@ namespace ZEsarUX
         void ReadBreakpoints()
         {
             SendAndReceive( "get-breakpoints" );
-            Log.Write( _protocolLogLevel, "" );
         }
 
 

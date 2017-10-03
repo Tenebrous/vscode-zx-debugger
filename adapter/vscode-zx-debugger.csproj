@@ -56,7 +56,6 @@
     <Compile Include="sourcemap\Address.cs" />
     <Compile Include="sourcemap\Bank.cs" />
     <Compile Include="sourcemap\Banks.cs" />
-    <Compile Include="sourcemap\AddressStorage.cs" />
     <Compile Include="sourcemap\File.cs" />
     <Compile Include="sourcemap\Files.cs" />
     <Compile Include="utils\Cache.cs" />

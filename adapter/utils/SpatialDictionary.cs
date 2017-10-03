@@ -3,6 +3,11 @@ using System.Collections.Generic;
 
 namespace ZXDebug
 {
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <typeparam name="TKey">Key type - each entry has a key, and the key must be comparable as they are put in order</typeparam>
+    /// <typeparam name="TValue">Value type - each key is associated with a value</typeparam>
     public class SpatialDictionary<TKey, TValue> : SortedList<TKey, TValue>
         where TKey : IComparable<TKey>
         where TValue : new()

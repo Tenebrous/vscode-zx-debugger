@@ -53,32 +53,29 @@ namespace ZXDebug
 
             try
             {
-                if( !isHex )
+                var updated = true;
+                while( updated )
                 {
-                    var updated = true;
-                    while( updated )
-                    {
-                        updated = false;
+                    updated = false;
 
-                        if( !string.IsNullOrWhiteSpace( HexPrefix ) )
-                            updated |= RemovePrefix( ref pValue, HexPrefix );
+                    if( !string.IsNullOrWhiteSpace( HexPrefix ) )
+                        updated |= RemovePrefix( ref pValue, HexPrefix );
 
-                        updated |= RemovePrefix( ref pValue, "&h" );
-                        updated |= RemovePrefix( ref pValue, "&H" );
-                        updated |= RemovePrefix( ref pValue, "0x" );
-                        updated |= RemovePrefix( ref pValue, "$" );
-                        updated |= RemovePrefix( ref pValue, "&" );
-                        updated |= RemovePrefix( ref pValue, "h" );
-                        updated |= RemovePrefix( ref pValue, "H" );
+                    updated |= RemovePrefix( ref pValue, "&h" );
+                    updated |= RemovePrefix( ref pValue, "&H" );
+                    updated |= RemovePrefix( ref pValue, "0x" );
+                    updated |= RemovePrefix( ref pValue, "$" );
+                    updated |= RemovePrefix( ref pValue, "&" );
+                    updated |= RemovePrefix( ref pValue, "h" );
+                    updated |= RemovePrefix( ref pValue, "H" );
 
-                        if( !string.IsNullOrWhiteSpace( HexSuffix ) )
-                            updated |= RemoveSuffix( ref pValue, HexSuffix );
+                    if( !string.IsNullOrWhiteSpace( HexSuffix ) )
+                        updated |= RemoveSuffix( ref pValue, HexSuffix );
 
-                        updated |= RemoveSuffix( ref pValue, "h" );
-                        updated |= RemoveSuffix( ref pValue, "H" );
+                    updated |= RemoveSuffix( ref pValue, "h" );
+                    updated |= RemoveSuffix( ref pValue, "H" );
 
-                        isHex |= updated;
-                    }
+                    isHex |= updated;
                 }
 
                 result =  isHex ? Convert.ToUInt16( pValue, 16 ) : ushort.Parse( pValue );

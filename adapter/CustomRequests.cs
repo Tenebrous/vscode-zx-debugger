@@ -7,8 +7,6 @@ namespace ZXDebug
     /// </summary>
     class CustomRequests
     {
-        Connection _vscode;
-
         public delegate void GetDisassemblyForSourceHandler( Request pRequest, string pFile, int pLine );
         public event GetDisassemblyForSourceHandler GetDisassemblyForSourceEvent;
 
@@ -17,9 +15,7 @@ namespace ZXDebug
 
         public CustomRequests( Connection pVSCode )
         {
-            _vscode = pVSCode;
-
-            _vscode.CustomRequestEvent += VSCode_CustomRequest;
+            pVSCode.CustomRequestEvent += VSCode_CustomRequest;
         }
 
         void VSCode_CustomRequest( Request pRequest )

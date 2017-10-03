@@ -104,7 +104,6 @@ namespace ZXDebug
             //_machine.SourceMaps.SourceRoot = @"D:\Dev\ZX\test1";
             //_machine.SourceMaps.Add( @"D:\Dev\ZX\test1\tmp\game.map" );
 
-
             // event loop
             while( _running )
             {
