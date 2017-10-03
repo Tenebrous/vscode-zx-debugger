@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using Spectrum;
 using ZXDebug.utils;
 
@@ -14,6 +12,11 @@ namespace ZXDebug.SourceMapper
         public int Line;
     }
 
+    public class Label
+    {
+        public string Name;
+        public string Comment;
+    }
 
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg or .map)
@@ -25,10 +28,10 @@ namespace ZXDebug.SourceMapper
         public Maps Maps;
 
         public SpatialDictionary<BankID, ushort, SourceLine> AddressToSource = new SpatialDictionary<BankID, ushort, SourceLine>();
-        public SpatialDictionary<BankID, ushort, List<string>> Labels = new SpatialDictionary<BankID, ushort, List<string>>();
+        public SpatialDictionary<BankID, ushort, List<Label>> Labels = new SpatialDictionary<BankID, ushort, List<Label>>();
 
         Regex regexDbg = new Regex(
-                @"(?i)^(?'bank'(ROM|RAM|BANK|DIV|ALL)(_)?(\d*)?) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)(?'comment' *;.*?)?$",
+                @"(?i)^(?'bank'(ROM|RAM|BANK|DIV|ALL)(_)?(\d*)?) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)( *;(?'comment'.*?))?$",
                 RegexOptions.Compiled
             );
 
@@ -55,27 +58,10 @@ namespace ZXDebug.SourceMapper
                 Parse( pFilename, regexDbg );
             else if( ext == ".map" )
                 Parse( pFilename, regexMap );
-
-            System.IO.File.WriteAllText(
-                pFilename + ".address.json",
-                JsonConvert.SerializeObject(
-                    AddressToSource,
-                    new JsonSerializerSettings() { Formatting = Formatting.Indented, ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
-                )
-            );
-
-            System.IO.File.WriteAllText(
-                pFilename + ".labels.json",
-                JsonConvert.SerializeObject(
-                    Labels,
-                    new JsonSerializerSettings() { Formatting = Formatting.Indented, ReferenceLoopHandling = ReferenceLoopHandling.Ignore }
-                )
-            );
-
         }
 
 
-        List<string> _tempLabels = new List<string>();
+        List<Label> _tempLabels = new List<Label>();
         void Parse( string pFilename, Regex pRegex )
         {
             using( var reader = new StreamReader( pFilename ) )
@@ -105,13 +91,19 @@ namespace ZXDebug.SourceMapper
                             || labelStr.StartsWith( "__CLINE_" ) )
                             labelStr = null;
 
+                        if( string.IsNullOrWhiteSpace( commentStr ) )
+                            commentStr = null;
+                        else
+                            commentStr = commentStr.Trim();
+
                         _tempLabels.Clear();
 
-                        if( !string.IsNullOrWhiteSpace(labelStr) )
-                            _tempLabels.Add( labelStr );
+                        if( labelsGrp.Captures.Count == 0 )
+                            if( !string.IsNullOrWhiteSpace(labelStr) )
+                                _tempLabels.Add( new Label() { Name = labelStr, Comment = commentStr } );
 
                         for( var i = 0; i < labelsGrp.Captures.Count; i++ )
-                            _tempLabels.Add( labelsGrp.Captures[i].Value.Trim() );
+                            _tempLabels.Add( new Label() { Name = labelsGrp.Captures[i].Value.Trim(), Comment = commentStr } );
 
                         SaveData( bankStr, addressStr, fileStr, lineStr, _tempLabels );
                     }
@@ -119,7 +111,7 @@ namespace ZXDebug.SourceMapper
             }
         }
 
-        void SaveData( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<string> pLabels )
+        void SaveData( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<Label> pLabels )
         {
             var bank = new BankID( pBankStr );
             var address = Format.Parse( pAddressStr, pKnownHex : true );
@@ -185,35 +177,6 @@ namespace ZXDebug.SourceMapper
                 //if( address < store.LowerAddress ) store.LowerAddress = address;
                 //if( address > store.UpperAddress ) store.UpperAddress = address;
             }
-        }
-
-        static string Dequote( string pValue )
-        {
-            if( pValue.StartsWith( "\"" ) && pValue.EndsWith( "\"" ) )
-                return pValue.Substring( 1, pValue.Length - 2 );
-
-            return pValue;
-        }
-
-        static string Decode( string pValue )
-        {
-            // replace _(hex) values with ascii equivelant
-
-            var result = "";
-
-            for( int i = 0; i < pValue.Length; i++ )
-            {
-                if( pValue[i] == '_' )
-                {
-                    var hex = Convert.ToUInt32( pValue.Substring(i+1,2), 16 );
-                    i += 2;
-                    result += (char)hex;
-                }
-                else
-                    result += pValue[i];
-            }
-
-            return result.Trim();
         }
 
         public override string ToString()

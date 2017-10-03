@@ -11,17 +11,11 @@ namespace ZXDebug.SourceMapper
         public string SourceRoot;
         public Files Files = new Files();
         
-        public Address Find( BankID pBank, ushort pAddress )
+        public List<Label> GetLabels( BankID pBank, ushort pAddress )
         {
             foreach( var map in this )
-                if( map.AddressToSource.TryGetValue( pBank, pAddress, out var pLine ) )
-                    return new Address()
-                    {
-                        BankID = pBank,
-                        Location = pAddress,
-                        File = pLine.File,
-                        Line = pLine.Line
-                    };
+                if( map.Labels.TryGetValue( pBank, pAddress, out var pLabels ) )
+                    return pLabels;
 
             return null;
         }

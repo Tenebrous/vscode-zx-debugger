@@ -36,7 +36,7 @@ namespace ZXDebug.SourceMapper
         /// <summary>
         /// Any labels attached to this address
         /// </summary>
-        public List<string> Labels;
+        public List<Label>  Labels;
 
         /// <summary>
         /// Any additional comment provided

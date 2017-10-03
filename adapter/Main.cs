@@ -251,9 +251,6 @@ namespace ZXDebug
 	    {
             Initialise( pJSONSettings );
 
-	        _tempFolder = Path.Combine( _settings.ProjectFolder, ".zxdbg" );
-	        Directory.CreateDirectory( _tempFolder );
-
 	        SaveDebug();
 
             if( !_debugger.Connect() )
@@ -403,7 +400,7 @@ namespace ZXDebug
 
 	            var style = i == 0 ? "subtle" : "normal";
 
-	            var text = symbolWithLabel?.Labels[0] ?? addr.ToHex();
+	            var text = symbolWithLabel?.Labels[0].Name ?? addr.ToHex();
 
 	            if( symbol?.File != null )
 	            {
@@ -886,27 +883,55 @@ namespace ZXDebug
 
         static void Initialise( string pJSONSettings )
         {
+            // read settings
             _settings.FromJSON( pJSONSettings );
             _settings.Validate();
 
+            
+            // set up a temp folder
+            _tempFolder = Path.Combine( _settings.ProjectFolder, ".zxdbg" );
+            Directory.CreateDirectory( _tempFolder );
+
+            
+            // load source maps
             _machine.SourceMaps.Clear();
             _machine.SourceMaps.SourceRoot = _settings.ProjectFolder;
+
+            var jsonSettings = new JsonSerializerSettings()
+            {
+                Formatting = Formatting.Indented,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore, 
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                NullValueHandling = NullValueHandling.Ignore
+            };
 
             long beforeTotal = GC.GetTotalMemory(true);
             long beforeSingle = 0;
 
-            foreach( var map in _settings.SourceMaps )
+            foreach( var filename in _settings.SourceMaps )
             {
-                var file = FindFile( map, "maps" );
+                var file = FindFile( filename, "maps" );
 
                 beforeSingle = GC.GetTotalMemory( true );
-                _machine.SourceMaps.Add( file );
-                Log.Write( Log.Severity.Message, "Loaded map: " + file + " (" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                var map = _machine.SourceMaps.Add( file );
+                Log.Write( Log.Severity.Message, "Loaded map: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+
+                var fileOnly = Path.GetFileName( filename );
+                System.IO.File.WriteAllText(
+                    Path.Combine( _tempFolder, fileOnly + ".address.json" ),
+                    JsonConvert.SerializeObject( map.AddressToSource, jsonSettings )
+                );
+
+                System.IO.File.WriteAllText(
+                    Path.Combine( _tempFolder, fileOnly + ".labels.json" ),
+                    JsonConvert.SerializeObject( map.Labels, jsonSettings )
+                );
             }
 
-            Log.Write( Log.Severity.Message, "Loaded maps (" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            Log.Write( Log.Severity.Message, "Loaded maps (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
 
 
+            // load opcode layers for the disassembler
             _machine.Disassembler.ClearLayers();
 
             beforeTotal = GC.GetTotalMemory(true);
@@ -917,10 +942,13 @@ namespace ZXDebug
 
                 beforeSingle = GC.GetTotalMemory( true );
                 _machine.Disassembler.AddLayer( file );
-                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file + " (" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
             }
 
-            Log.Write( Log.Severity.Message, "Loaded opcode layers (" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            Log.Write( Log.Severity.Message, "Loaded opcode layers (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+
+
+            // all done
         }
 
         static void SaveDebug()
@@ -954,7 +982,7 @@ namespace ZXDebug
 
         static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
         {
-            string label = pLabelledSymbol?.Labels[0] ?? "";
+            string label = pLabelledSymbol?.Labels[0].Name ?? "";
             string offset = "";
 
             if( pLabelledSymbol != null && pExactSymbol != null )
@@ -980,9 +1008,10 @@ namespace ZXDebug
             var sm = _machine.SourceMaps;
             var slot = _machine.Memory.GetSlot( pAddress );
 
-            pExactSymbol = sm.Find( slot.Bank.ID, pAddress )
-                           ?? sm.Find( BankID.Unpaged(), pAddress )
-                           ?? sm.Find( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
+            //pExactSymbol = sm.GetLabels( slot.Bank.ID, pAddress )
+            //               ?? sm.GetLabels( BankID.Unpaged(), pAddress )
+            //               ?? sm.GetLabels( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
+            pExactSymbol = null;
 
             pLabelledSymbol = sm.FindRecentWithLabel( slot.Bank.ID, pAddress, 0x2000 )
                               ?? sm.FindRecentWithLabel( BankID.Unpaged(), pAddress, 0x2000 )
@@ -992,7 +1021,8 @@ namespace ZXDebug
             if( pLabelledSymbol != null )
                 pDisassemblyUpdated |= _machine.UpdateDisassembly( pLabelledSymbol.Location );
 
-            return pExactSymbol != null | pLabelledSymbol != null;
+            //return pExactSymbol != null | pLabelledSymbol != null;
+            return pLabelledSymbol != null;
         }
 
 

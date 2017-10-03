@@ -305,47 +305,31 @@ namespace Spectrum
                 
                 prev = (ushort) ( line.Address + line.Instruction.Length );
 
-                var symbol = Symbol( pBank.ID, (ushort)(line.Address + pOffset) );
+                var labels = Labels( pBank.ID, (ushort)(line.Address + pOffset) );
 
-                if( symbol?.Labels != null )
+                if( labels != null )
                 {
                     var doneComment = false;
 
-                    foreach( var label in symbol.Labels )
+                    foreach( var label in labels )
                     {
                         _tempLabel.Append( ' ', 4 );
-                        _tempLabel.Append( label );
+                        _tempLabel.Append( label.Name );
                         _tempLabel.Append( ':' );
 
                         if( !doneComment )
                         {
-                            if( !string.IsNullOrWhiteSpace( symbol.Comment ) || symbol.File != null || symbol.Map != null )
+                            if( !string.IsNullOrWhiteSpace( label.Comment ) )
                             {
                                 // line up comment with start of mnemonics at col 21
                                 _tempLabel.Append( ' ', Math.Max( 20 - _tempLabel.Length, 0 ) );
                                 _tempLabel.Append( ';' );
                             }
 
-                            if( !string.IsNullOrWhiteSpace( symbol.Comment ) )
+                            if( !string.IsNullOrWhiteSpace( label.Comment ) )
                             {
                                 _tempLabel.Append( ' ' );
-                                _tempLabel.Append( symbol.Comment );
-                            }
-
-                            if( symbol.File != null )
-                            {
-                                _tempLabel.Append( ' ' );
-                                _tempLabel.Append( symbol.File.Filename );
-                                _tempLabel.Append( ':' );
-                                _tempLabel.Append( symbol.Line );
-                            }
-
-                            if( symbol.Map != null )
-                            {
-                                _tempLabel.Append( ' ' );
-                                _tempLabel.Append( '(' );
-                                _tempLabel.Append( Path.GetFileName( symbol.Map.Filename ) );
-                                _tempLabel.Append( ')' );
+                                _tempLabel.Append( label.Comment );
                             }
 
                             doneComment = true;
@@ -395,7 +379,7 @@ namespace Spectrum
                     int offset;
                     int absOffset;
                     char sign;
-                    Address symbol;
+                    List<Label> labels;
 
                     switch( op.Type )
                     {
@@ -433,12 +417,12 @@ namespace Spectrum
                             }
 
                             var addr = (ushort) ( pOffset + pLine.Address + offset + pLine.Instruction.Length );
-                            symbol = Symbol( pBankID, addr );
+                            labels = Labels( pBankID, addr );
                             absOffset = Math.Abs( offset );
 
-                            if( symbol != null )
+                            if( labels != null )
                             {
-                                text = text.ReplaceFirst( "{+b}", symbol.Labels[0] );
+                                text = text.ReplaceFirst( "{+b}", labels[0].Name );
                                 comment = sign + ( (byte) absOffset ).ToHex() + " " + addr.ToHex() + " ";
                             }
                             else
@@ -451,11 +435,11 @@ namespace Spectrum
 
                         case Disassembler.Operand.TypeEnum.DataAddr:
 
-                            symbol = Symbol( pBankID, op.Value );
+                            labels = Labels( pBankID, op.Value );
 
-                            if( symbol != null )
+                            if( labels != null )
                             {
-                                text = text.ReplaceFirst( "{data}", symbol.Labels[0] );
+                                text = text.ReplaceFirst( "{data}", labels[0].Name );
                                 comment = op.Value.ToHex();
                             }
                             else
@@ -465,11 +449,11 @@ namespace Spectrum
 
                         case Disassembler.Operand.TypeEnum.CodeAddr:
 
-                            symbol = Symbol( pBankID, op.Value );
+                            labels = Labels( pBankID, op.Value );
 
-                            if( symbol != null )
+                            if( labels != null )
                             {
-                                text = text.ReplaceFirst( "{code}", symbol.Labels[0] );
+                                text = text.ReplaceFirst( "{code}", labels[0].Name );
                                 comment = op.Value.ToHex();
                             }
                             else
@@ -498,11 +482,11 @@ namespace Spectrum
         }
 
 
-        Address Symbol( BankID pBankID, ushort pAddress )
+        List<Label> Labels( BankID pBankID, ushort pAddress )
         {
-            return SourceMaps.Find( pBankID, pAddress )
-                ?? SourceMaps.Find( BankID.Unpaged(), pAddress )
-                ?? SourceMaps.Find( Memory.GetCurrentBank( pAddress ), pAddress );
+            return SourceMaps.GetLabels( pBankID, pAddress )
+                ?? SourceMaps.GetLabels( BankID.Unpaged(), pAddress )
+                ?? SourceMaps.GetLabels( Memory.GetCurrentBank( pAddress ), pAddress );
         }
 
         //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
