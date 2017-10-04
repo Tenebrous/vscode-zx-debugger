@@ -12,12 +12,12 @@ namespace ZXDebug
     {
         Func<TKey, TValue> _factory;
 
-        public Cache() : base()
+        public Cache()
         {
             _factory = pKey => new TValue();
         }
 
-        public Cache( Func<TKey, TValue> pFactory ) : base()
+        public Cache( Func<TKey, TValue> pFactory )
         {
             _factory = pFactory;
         }

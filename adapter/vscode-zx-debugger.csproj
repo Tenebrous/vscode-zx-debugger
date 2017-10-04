@@ -53,7 +53,7 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="sourcemap\Address.cs" />
+    <Compile Include="sourcemap\AddressDetails.cs" />
     <Compile Include="sourcemap\Bank.cs" />
     <Compile Include="sourcemap\Banks.cs" />
     <Compile Include="sourcemap\File.cs" />

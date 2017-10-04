@@ -1,10 +1,7 @@
 using Spectrum;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
-using System.Text;
 using Newtonsoft.Json;
 using VSCode;
 using ZXDebug.SourceMapper;
@@ -120,12 +117,12 @@ namespace ZXDebug
 	    {
             // make sure all the things that use settings are wired up
 	        _settings.Disassembler = _machine.Disassembler.Settings;
+	        _settings.Format = Format.Settings;
 	    }
 
 	    static void Settings_OnDeserialized( VSCode.Settings pSettings )
 	    {
-            Format.HexPrefix = _settings.HexPrefix;
-	        Format.HexSuffix = _settings.HexSuffix;
+
         }
 
 
@@ -349,8 +346,7 @@ namespace ZXDebug
 	            var stackFrameId = i + 1;
                 var addr = _stackAddresses[i];
 
-	            Address symbolWithLabel = null;
-	            Address symbol = null;
+	            AddressDetails addressDetails = null;
 	            bool isCode = false;
 
 	            var symbolIcon = "";
@@ -358,7 +354,7 @@ namespace ZXDebug
 	            if( i == 0 )
 	            {
                     // always try to get symbol for PC
-	                GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
+                    addressDetails = GetAddressDetails( addr );
 	                isCode = true;
                 }
 	            else
@@ -368,51 +364,68 @@ namespace ZXDebug
                     if( _callerOpcode3.Contains( caller[0] ) )
 	                {
 	                    addr -= 3;
-	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
-                        symbolIcon = " ↑";
+	                    addressDetails = GetAddressDetails( addr );
 	                    isCode = true;
+	                    symbolIcon = " ↑";
 
-	                    // // we can get the original destination for the call here:
-	                    // var callDest = (ushort) ( caller[2] << 8 | caller[1] );
-	                    // var callDestSymbol = GetPreviousSymbol( callDest, ref disassemblyUpdated );
-	                    // if( callDestSymbol != null )
-	                    // {
-	                    //     if( _stackFrames.Count > 0 )
-	                    //         _stackFrames[_stackFrames.Count - 1].name = callDestSymbol + " -> " + _stackFrames[_stackFrames.Count - 1].name;
-	                    // }
-	                }
-	                else if( _callerOpcode3.Contains( caller[1] ) )
+                        // // we can get the original destination for the call here:
+                        // var callDest = (ushort) ( caller[2] << 8 | caller[1] );
+                        // var callDestSymbol = GetPreviousSymbol( callDest, ref disassemblyUpdated );
+                        // if( callDestSymbol != null )
+                        // {
+                        //     if( _stackFrames.Count > 0 )
+                        //         _stackFrames[_stackFrames.Count - 1].name = callDestSymbol + " -> " + _stackFrames[_stackFrames.Count - 1].name;
+                        // }
+                    }
+                    else if( _callerOpcode3.Contains( caller[1] ) )
 	                {
 	                    addr -= 2;
-	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
-	                    isCode = true;
+	                    addressDetails = GetAddressDetails( addr );
+                        isCode = true;
                     }
 	                else if( _callerOpcode1.Contains( caller[2] ) )
 	                {
 	                    addr -= 1;
-	                    GetSymbols( addr, out symbolWithLabel, out symbol, ref disassemblyUpdated );
-                        symbolIcon += " ↖";
+	                    addressDetails = GetAddressDetails( addr );
 	                    isCode = true;
+                        symbolIcon += " ↖";
                     }
 
-	                _stackAddresses[i] = addr;
+                    _stackAddresses[i] = addr;
 	            }
 
 	            var style = i == 0 ? "subtle" : "normal";
 
-	            var text = symbolWithLabel?.Labels[0].Name ?? addr.ToHex();
+	            var text = addressDetails?.Labels?[0].Name ?? addr.ToHex();
 
-	            if( symbol?.File != null )
-	            {
+                if( addressDetails?.Source != null )
+                {
+                    // got source 
+
                     _stackFrames.Add(
                         new StackFrame(
                             stackFrameId,
-                            RelativeLabelText( symbolWithLabel, symbol ) + " " + symbolIcon,
-                            new Source( 
+                            addressDetails.GetRelativeText() + " " + symbolIcon,
+                            new Source(
                                 null,
-	                            Path.GetFullPath( Path.Combine( _settings.ProjectFolder, symbol.File.Filename ) )
-                            ), 
-                            symbol.Line,
+                                Path.GetFullPath( Path.Combine( _settings.ProjectFolder, addressDetails.Source.File.Filename ) )
+                            ),
+                            addressDetails.Source.Line,
+                            0,
+                            style
+                        )
+                    );
+                }
+                else if( addressDetails != null )
+                {
+                    // no source, but probably labels
+
+                    _stackFrames.Add(
+                        new StackFrame(
+                            stackFrameId,
+                            addressDetails.GetRelativeText() + " " + symbolIcon,
+                            DisassemblySource,
+                            0,
                             0,
                             style
                         )
@@ -420,6 +433,8 @@ namespace ZXDebug
                 }
                 else if( isCode )
                 {
+                    // no labels, but it's code
+
                     _stackFrames.Add(
                         new StackFrame(
                             stackFrameId,
@@ -433,6 +448,8 @@ namespace ZXDebug
                 }
                 else
                 {
+                    // not code, just a raw value
+
                     _stackFrames.Add(
                         new StackFrame(
                             stackFrameId,
@@ -919,7 +936,7 @@ namespace ZXDebug
                 var fileOnly = Path.GetFileName( filename );
                 System.IO.File.WriteAllText(
                     Path.Combine( _tempFolder, fileOnly + ".address.json" ),
-                    JsonConvert.SerializeObject( map.AddressToSource, jsonSettings )
+                    JsonConvert.SerializeObject( map.Source, jsonSettings )
                 );
 
                 System.IO.File.WriteAllText(
@@ -980,49 +997,10 @@ namespace ZXDebug
             );
         }
 
-        static string RelativeLabelText( Address pLabelledSymbol, Address pExactSymbol )
+        static AddressDetails GetAddressDetails( ushort pAddress )
         {
-            string label = pLabelledSymbol?.Labels[0].Name ?? "";
-            string offset = "";
-
-            if( pLabelledSymbol != null && pExactSymbol != null )
-            {
-                if( pLabelledSymbol.Location == pExactSymbol.Location )
-                    ;
-                else if( pLabelledSymbol.File == null || pExactSymbol.File == null )
-                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
-                else if( pLabelledSymbol.File == pExactSymbol.File )
-                    offset = $"+{pExactSymbol.Line - pLabelledSymbol.Line}";
-                else
-                    offset = $"+{pExactSymbol.Location - pLabelledSymbol.Location}";
-            }
-
-            if( _settings.Stack.LabelPosition == Settings.StackSettings.LabelPositionEnum.Left )
-                return $"{label}{offset} {pExactSymbol.Location.ToHex()}";
-            else
-                return $"{pExactSymbol.Location.ToHex()} {label}{offset}";
-        }
-
-        static bool GetSymbols( ushort pAddress, out Address pLabelledSymbol, out Address pExactSymbol, ref bool pDisassemblyUpdated )
-        {
-            var sm = _machine.SourceMaps;
             var slot = _machine.Memory.GetSlot( pAddress );
-
-            //pExactSymbol = sm.GetLabels( slot.Bank.ID, pAddress )
-            //               ?? sm.GetLabels( BankID.Unpaged(), pAddress )
-            //               ?? sm.GetLabels( _machine.Memory.GetCurrentBank( pAddress ), pAddress );
-            pExactSymbol = null;
-
-            pLabelledSymbol = sm.FindRecentWithLabel( slot.Bank.ID, pAddress, 0x2000 )
-                              ?? sm.FindRecentWithLabel( BankID.Unpaged(), pAddress, 0x2000 )
-                              ?? sm.FindRecentWithLabel( _machine.Memory.GetCurrentBank( pAddress ), pAddress, 0x2000 );
-
-            //if( pAddress - label.Location <  )
-            if( pLabelledSymbol != null )
-                pDisassemblyUpdated |= _machine.UpdateDisassembly( pLabelledSymbol.Location );
-
-            //return pExactSymbol != null | pLabelledSymbol != null;
-            return pLabelledSymbol != null;
+            return _machine.GetAddressDetails( slot.Bank.ID, pAddress, 0x800 );
         }
 
 

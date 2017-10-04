@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 // ReSharper disable ClassNeverInstantiated.Global
 // ReSharper disable UnassignedField.Global
@@ -45,26 +43,11 @@ namespace ZXDebug
         public string[] SourceMaps;
         public string[] OpcodeTables;
         public bool     StopOnEntry;
-        public string   HexPrefix;
-        public string   HexSuffix;
 
         public string ExtensionPath;
 
-        public DisassemblerSettings Disassembler = new DisassemblerSettings();
-
-        public StackSettings Stack = new StackSettings();
-        public class StackSettings
-        {
-            [JsonConverter( typeof( StringEnumConverter ) )]
-            public enum LabelPositionEnum
-            {
-                Left,
-                Right
-            }
-
-            public LabelPositionEnum LabelPosition = LabelPositionEnum.Left;
-        }
-
+        public DisassemblerSettings Disassembler;
+        public Format.FormatSettings Format;
 
         public Settings()
         {

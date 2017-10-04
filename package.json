@@ -46,18 +46,18 @@
                     "type": "boolean",
                     "default": false
                 },
-                "zxdebug.hexPrefix": {
+                "zxdebug.format.hexPrefix": {
                     "description": "String to add before any hex number",
                     "type": "string",
                     "default": "$"
                 },
-                "zxdebug.hexSuffix": {
+                "zxdebug.format.hexSuffix": {
                     "description": "String to add after any hex number",
                     "type": "string",
                     "default": ""
                 },
-                "zxdebug.stack.labelPosition": {
-                    "description": "Where the label is shown in relation to the address in the stack",
+                "zxdebug.format.labelPosition": {
+                    "description": "Relative position of label to address when shown together",
                     "type": "string",
                     "default": "right",
                     "enum": [

@@ -305,13 +305,13 @@ namespace Spectrum
                 
                 prev = (ushort) ( line.Address + line.Instruction.Length );
 
-                var labels = Labels( pBank.ID, (ushort)(line.Address + pOffset) );
+                var labelledItem = GetLabels( pBank.ID, (ushort)(line.Address + pOffset) );
 
-                if( labels != null )
+                if( labelledItem != null )
                 {
                     var doneComment = false;
 
-                    foreach( var label in labels )
+                    foreach( var label in labelledItem.Labels )
                     {
                         _tempLabel.Append( ' ', 4 );
                         _tempLabel.Append( label.Name );
@@ -392,7 +392,7 @@ namespace Spectrum
                             break;
 
                         case Disassembler.Operand.TypeEnum.Index:
-                            offset = (int) op.Value;
+                            offset = op.Value;
                             sign = '+';
 
                             if( ( op.Value & 0x80 ) == 0x80 )
@@ -417,7 +417,7 @@ namespace Spectrum
                             }
 
                             var addr = (ushort) ( pOffset + pLine.Address + offset + pLine.Instruction.Length );
-                            labels = Labels( pBankID, addr );
+                            labels = GetLabels( pBankID, addr )?.Labels;
                             absOffset = Math.Abs( offset );
 
                             if( labels != null )
@@ -435,7 +435,7 @@ namespace Spectrum
 
                         case Disassembler.Operand.TypeEnum.DataAddr:
 
-                            labels = Labels( pBankID, op.Value );
+                            labels = GetLabels( pBankID, op.Value )?.Labels;
 
                             if( labels != null )
                             {
@@ -449,7 +449,7 @@ namespace Spectrum
 
                         case Disassembler.Operand.TypeEnum.CodeAddr:
 
-                            labels = Labels( pBankID, op.Value );
+                            labels = GetLabels( pBankID, op.Value )?.Labels;
 
                             if( labels != null )
                             {
@@ -481,18 +481,41 @@ namespace Spectrum
             return text;
         }
 
+        List<AddressDetails> _tempAddressDetails = new List<AddressDetails>();
+        public AddressDetails GetAddressDetails( BankID pBankID, ushort pAddress, ushort pMaxLabelDistance )
+        {
+            _tempAddressDetails.Clear();
+            _tempAddressDetails.Add( SourceMaps.GetAddressDetails( pBankID, pAddress, pMaxLabelDistance ) );
 
-        List<Label> Labels( BankID pBankID, ushort pAddress )
+            if( pBankID != BankID.Unpaged() )
+                _tempAddressDetails.Add( SourceMaps.GetAddressDetails( BankID.Unpaged(), pAddress, pMaxLabelDistance ) );
+
+            if( pBankID != Memory.GetCurrentBank( pAddress ) )
+                _tempAddressDetails.Add( SourceMaps.GetAddressDetails( Memory.GetCurrentBank( pAddress ), pAddress, pMaxLabelDistance ) );
+
+            for( int i = 1; i < _tempAddressDetails.Count; i++ )
+            {
+                if( _tempAddressDetails[0].Source == null && _tempAddressDetails[i].Source != null )
+                    _tempAddressDetails[0].Source = _tempAddressDetails[i].Source;
+
+                if( _tempAddressDetails[0].Labels == null && _tempAddressDetails[i].Labels != null )
+                {
+                    _tempAddressDetails[0].Labels = _tempAddressDetails[i].Labels;
+                    _tempAddressDetails[0].LabelledAddress = _tempAddressDetails[i].LabelledAddress;
+                    _tempAddressDetails[0].LabelledSource = _tempAddressDetails[i].LabelledSource;
+                }
+            }
+
+            return _tempAddressDetails[0];
+        }
+
+        public Maps.GetLabelsResult GetLabels( BankID pBankID, ushort pAddress )
         {
             return SourceMaps.GetLabels( pBankID, pAddress )
                 ?? SourceMaps.GetLabels( BankID.Unpaged(), pAddress )
                 ?? SourceMaps.GetLabels( Memory.GetCurrentBank( pAddress ), pAddress );
         }
 
-        //public void UpdateDisassembly( List<AssemblyLine> pList, string pFilename )
-        //{
-        //    // add later
-        //}
 
         DisasmBank GetDisasmBank( BankID pBankID )
         {

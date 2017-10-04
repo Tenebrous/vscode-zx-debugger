@@ -9,7 +9,7 @@ namespace ZXDebug.SourceMapper
 
         static File NewSource( string pFile )
         {
-            return new File() { Filename = pFile };
+            return new File( pFile );
         }
     }
 }

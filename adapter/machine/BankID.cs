@@ -127,11 +127,11 @@ namespace Spectrum
         }
 
 
-        public override bool Equals( Object obj )
+        public override bool Equals( object pOther )
         {
-            return obj is BankID && this == (BankID)obj;
+            return pOther is BankID && this == (BankID)pOther;
         }
-
+        
         public override int GetHashCode()
         {
             unchecked

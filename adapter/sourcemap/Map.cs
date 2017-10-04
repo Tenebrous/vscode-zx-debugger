@@ -6,10 +6,72 @@ using ZXDebug.utils;
 
 namespace ZXDebug.SourceMapper
 {
-    public class SourceLine
+    public class FileLine
     {
         public File File;
         public int Line;
+
+        public FileLine()
+        {
+        }
+
+        public FileLine( File pFile, int pLine )
+        {
+            File = pFile;
+            Line = pLine;
+        }
+
+        public override string ToString()
+        {
+            return $"{File}:{Line}";
+        }
+
+        public override bool Equals( object pOther )
+        {
+            if( object.ReferenceEquals( pOther, null ) )
+                return false;
+
+            if( object.ReferenceEquals( this, pOther ) )
+                return true;
+
+            if( GetType() != pOther.GetType() )
+                return false;
+
+            var other = (FileLine)pOther;
+
+            return File == other.File && Line == other.Line;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                // ReSharper disable NonReadonlyMemberInGetHashCode
+                int hash = 17;
+                hash = hash * 23 + File.GetHashCode();
+                hash = hash * 23 + Line.GetHashCode();
+                return hash;
+                // ReSharper restore NonReadonlyMemberInGetHashCode
+            }
+        }
+
+        public static bool operator ==( FileLine x, FileLine y )
+        {
+            if( object.ReferenceEquals( x, null ) )
+            {
+                if( object.ReferenceEquals( y, null ) )
+                    return true;
+
+                return false;
+            }
+
+            return x.Equals( y );
+        }
+
+        public static bool operator !=( FileLine x, FileLine y )
+        {
+            return !( x == y );
+        }
     }
 
     public class Label
@@ -17,6 +79,7 @@ namespace ZXDebug.SourceMapper
         public string Name;
         public string Comment;
     }
+
 
     /// <summary>
     /// Stores parsed information from a single memory map (e.g. .dbg or .map)
@@ -27,15 +90,15 @@ namespace ZXDebug.SourceMapper
         public string Filename;
         public Maps Maps;
 
-        public SpatialDictionary<BankID, ushort, SourceLine> AddressToSource = new SpatialDictionary<BankID, ushort, SourceLine>();
+        public SpatialDictionary<BankID, ushort, FileLine> Source = new SpatialDictionary<BankID, ushort, FileLine>();
         public SpatialDictionary<BankID, ushort, List<Label>> Labels = new SpatialDictionary<BankID, ushort, List<Label>>();
 
-        Regex regexDbg = new Regex(
+        Regex _regexDbg = new Regex(
                 @"(?i)^(?'bank'(ROM|RAM|BANK|DIV|ALL)(_)?(\d*)?) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)( *;(?'comment'.*?))?$",
                 RegexOptions.Compiled
             );
 
-        Regex regexMap = new Regex(
+        Regex _regexMap = new Regex(
                 @"(?i)^(?'label'.*?)\s*=\s*(\$(?'addr'[0-9a-fA-F]*))\s?;\s(?'type'addr)\s*,\s*(?'scope'.*?)\s*,\s*(?'def'.*?)\s*,\s*(?'module'.*?)\s*,\s*(?'bank'.*?)\s*,\s*(?'file'.*):(?'line'\d*).*?$",
                 RegexOptions.Compiled
             );
@@ -55,9 +118,9 @@ namespace ZXDebug.SourceMapper
             var ext = Path.GetExtension( pFilename )?.ToLower() ?? "";
 
             if( ext == ".dbg" )
-                Parse( pFilename, regexDbg );
+                Parse( pFilename, _regexDbg );
             else if( ext == ".map" )
-                Parse( pFilename, regexMap );
+                Parse( pFilename, _regexMap );
         }
 
 
@@ -105,13 +168,13 @@ namespace ZXDebug.SourceMapper
                         for( var i = 0; i < labelsGrp.Captures.Count; i++ )
                             _tempLabels.Add( new Label() { Name = labelsGrp.Captures[i].Value.Trim(), Comment = commentStr } );
 
-                        SaveData( bankStr, addressStr, fileStr, lineStr, _tempLabels );
+                        AddMapping( bankStr, addressStr, fileStr, lineStr, _tempLabels );
                     }
                 }
             }
         }
 
-        void SaveData( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<Label> pLabels )
+        void AddMapping( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<Label> pLabels )
         {
             var bank = new BankID( pBankStr );
             var address = Format.Parse( pAddressStr, pKnownHex : true );
@@ -129,8 +192,8 @@ namespace ZXDebug.SourceMapper
 
                 Maps.Files.TryAdd( normalisedFileStr, out var file );
 
-                if( !AddressToSource.TryAdd( bank, address, out var sym,
-                        ( pBank, pAddress ) => new SourceLine() { File = file, Line = line }
+                if( !Source.TryAdd( bank, address, out var sym,
+                        ( pBank, pAddress ) => new FileLine(file, line)
                     )
                 )
                 {

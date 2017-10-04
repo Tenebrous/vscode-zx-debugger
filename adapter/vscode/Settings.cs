@@ -15,7 +15,7 @@ namespace VSCode
             DeserializingEvent?.Invoke( this );
 
             // apply basic settings
-            JsonConvert.PopulateObject( pJSON, this, new JsonSerializerSettings() {});
+            JsonConvert.PopulateObject( pJSON, this, new JsonSerializerSettings() );
 
             var wrapper = new Wrapper() { workspaceConfiguration = this };
             JsonConvert.PopulateObject( pJSON, wrapper );

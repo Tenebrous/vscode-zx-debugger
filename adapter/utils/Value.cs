@@ -43,7 +43,7 @@ namespace ZXDebug
         {
             var value = new Value( this, pRefresher, pGet, pSet, pFormat )
             {
-                ID = this._all.Count + 1,
+                ID = _all.Count + 1,
                 Name = pName
             };
 

@@ -8,32 +8,74 @@ namespace ZXDebug.SourceMapper
     /// </summary>
     public class Maps : List<Map>
     {
-        public string SourceRoot;
-        public Files Files = new Files();
-        
-        public List<Label> GetLabels( BankID pBank, ushort pAddress )
+        public class GetLabelsResult
         {
-            foreach( var map in this )
-                if( map.Labels.TryGetValue( pBank, pAddress, out var pLabels ) )
-                    return pLabels;
-
-            return null;
+            public BankID Bank;
+            public ushort Address;
+            public List<Label> Labels;
         }
 
-        public Address FindRecentWithLabel( BankID pBank, ushort pAddress, ushort pMaxDistance = 0xFFFF )
+
+        public string SourceRoot;
+        public Files Files = new Files();
+
+
+        public GetLabelsResult GetLabels( BankID pBank, ushort pAddress, ushort pMaxDistance = 0 )
         {
-            Address result = null;
+            GetLabelsResult result = null;
+
             ushort highest = 0;
+            foreach( var map in this )
+            {
+                if( !map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var labels ) )
+                    continue;
+
+                if( actualAddress < highest || pAddress - actualAddress > pMaxDistance )
+                    continue;
+
+                highest = actualAddress;
+
+                result = new GetLabelsResult()
+                {
+                    Bank = pBank,
+                    Address = pAddress,
+                    Labels = labels
+                };
+            }
+
+            return result;
+        }
+
+        public AddressDetails GetAddressDetails( BankID pBank, ushort pAddress, ushort pMaxLabelDistance = 0 )
+        {
+            var result = new AddressDetails()
+            {
+                Bank = pBank,
+                Address = pAddress
+            };
+
+            ushort highestLabel = 0;
 
             foreach( var map in this )
-                if( map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var pLabels ) )
-                    if( actualAddress >= highest && (pAddress - actualAddress) < pMaxDistance )
-                        result = new Address()
-                        {
-                            BankID = pBank,
-                            Location = actualAddress,
-                            Labels = pLabels
-                        };
+            {
+                if( result.Source == null && map.Source.TryGetValue( pBank, pAddress, out var source ) )
+                    result.Source = source;
+
+                if( map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var labels ) )
+                {
+                    if( actualAddress >= highestLabel && pAddress - actualAddress <= pMaxLabelDistance )
+                    {
+                        highestLabel = actualAddress;
+                        result.Labels = labels;
+                        result.LabelledAddress = actualAddress;
+                    }
+
+                    if( actualAddress == pAddress )
+                        result.LabelledSource = result.Source;
+                    else
+                        map.Source.TryGetValue( pBank, actualAddress, out result.LabelledSource );
+                }
+            }
 
             return result;
         }

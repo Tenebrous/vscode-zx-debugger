@@ -31,7 +31,7 @@ namespace Spectrum
             if( PagingEnabled )
             {
                 slotSize = SlotSize;
-                slotIndex = (int) ( pAddress / SlotSize );
+                slotIndex = pAddress / SlotSize;
                 slotAddress = (ushort) ( slotIndex * SlotSize );
             }
             else

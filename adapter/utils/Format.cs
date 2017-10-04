@@ -1,13 +1,12 @@
 using System.Text;
 using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace ZXDebug
 {
     public static class Format
     {
-        public static string HexPrefix = "$";
-        public static string HexSuffix = "";
-
         public static string ToHex16( Value pValue )
         {
             return Convert.ToUInt16( pValue.Content ).ToHex();
@@ -58,8 +57,8 @@ namespace ZXDebug
                 {
                     updated = false;
 
-                    if( !string.IsNullOrWhiteSpace( HexPrefix ) )
-                        updated |= RemovePrefix( ref pValue, HexPrefix );
+                    if( !string.IsNullOrWhiteSpace( Settings.HexPrefix ) )
+                        updated |= RemovePrefix( ref pValue, Settings.HexPrefix );
 
                     updated |= RemovePrefix( ref pValue, "&h" );
                     updated |= RemovePrefix( ref pValue, "&H" );
@@ -69,8 +68,8 @@ namespace ZXDebug
                     updated |= RemovePrefix( ref pValue, "h" );
                     updated |= RemovePrefix( ref pValue, "H" );
 
-                    if( !string.IsNullOrWhiteSpace( HexSuffix ) )
-                        updated |= RemoveSuffix( ref pValue, HexSuffix );
+                    if( !string.IsNullOrWhiteSpace( Settings.HexSuffix ) )
+                        updated |= RemoveSuffix( ref pValue, Settings.HexSuffix );
 
                     updated |= RemoveSuffix( ref pValue, "h" );
                     updated |= RemoveSuffix( ref pValue, "H" );
@@ -153,12 +152,29 @@ namespace ZXDebug
 
         public static string ToHex( this byte pValue )
         {
-            return $"{HexPrefix}{pValue:X2}{HexSuffix}";
+            return $"{Settings.HexPrefix}{pValue:X2}{Settings.HexSuffix}";
         }
 
         public static string ToHex( this ushort pValue )
         {
-            return $"{HexPrefix}{pValue:X4}{HexSuffix}";
+            return $"{Settings.HexPrefix}{pValue:X4}{Settings.HexSuffix}";
         }
+
+
+        public class FormatSettings
+        {
+            public string HexPrefix = "$";
+            public string HexSuffix = "";
+
+            [JsonConverter( typeof( StringEnumConverter ) )]
+            public enum LabelPositionEnum
+            {
+                Left,
+                Right
+            }
+
+            public LabelPositionEnum LabelPosition = LabelPositionEnum.Left;
+        }
+        public static FormatSettings Settings = new FormatSettings();
     }
 }

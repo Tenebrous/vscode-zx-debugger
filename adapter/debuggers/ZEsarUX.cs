@@ -171,8 +171,8 @@ namespace ZEsarUX
 
         void SetSingleBreakpoint( Breakpoint pBreakpoint )
         {
-            var result = SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.Index+1} PC={pBreakpoint.Line.Address:X4}h") );
-            result = SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.Index+1), pRaiseErrors: false );
+            SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.Index+1} PC={pBreakpoint.Line.Address:X4}h") );
+            SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.Index+1), pRaiseErrors: false );
         }
 
         HashSet<int> _enabledBreakpoints = new HashSet<int>();
@@ -289,10 +289,8 @@ namespace ZEsarUX
             return pLength;
         }
 
-        Registers _registers;
         public override void RefreshRegisters( Registers pRegisters )
         {
-            _registers = pRegisters;
             ParseRegisters( pRegisters, SendAndReceiveSingle( "get-registers" ) );
         }
 
