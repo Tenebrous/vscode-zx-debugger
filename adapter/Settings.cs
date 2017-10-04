@@ -23,9 +23,12 @@ namespace ZXDebug
                 "next.json"
             ],
             "stopOnEntry": true,
-            "hexPrefix": "$",
-            "hexSuffix": "",
             "workspaceConfiguration": {
+                "format": {
+                    "hexPrefix": "$",
+                    "hexSuffix": "",
+                    "labelPosition": "right"
+                },
                 "disassembler": {
                     "blankLineBeforeLabel": false
                 }
