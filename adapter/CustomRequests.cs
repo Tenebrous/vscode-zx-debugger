@@ -13,6 +13,9 @@ namespace ZXDebug
         public delegate void GetSourceForDisassemblyHandler( Request pRequest, string pFile, int pLine );
         public event GetSourceForDisassemblyHandler GetSourceForDisassemblyEvent;
 
+        public delegate void SetNextStatementHandler( Request pRequest, string pFile, int pLine );
+        public event SetNextStatementHandler SetNextStatementEvent;
+
         public CustomRequests( Connection pVSCode )
         {
             pVSCode.CustomRequestEvent += VSCode_CustomRequest;
@@ -28,6 +31,10 @@ namespace ZXDebug
 
                 case "getSourceForDisassembly":
                     GetSourceForDisassemblyEvent?.Invoke( pRequest, (string)pRequest.arguments.file, (int)pRequest.arguments.line );
+                    break;
+
+                case "setNextStatement":
+                    SetNextStatementEvent?.Invoke( pRequest, (string)pRequest.arguments.file, (int)pRequest.arguments.line );
                     break;
             }
         }

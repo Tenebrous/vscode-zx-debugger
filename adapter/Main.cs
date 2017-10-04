@@ -33,55 +33,56 @@ namespace ZXDebug
 
 
             // wire the logging stuff up to VSCode's console output
-            Log.OnLog += Log_SendToVSCode;
-	        Log.MaxSeverityConsole = Log.Severity.Message;
-            Log.MaxSeverityLog = Log.Severity.Debug;
+            Log.OnLog                      += Log_SendToVSCode;
+	        Log.MaxSeverityConsole          = Log.Severity.Message;
+            Log.MaxSeverityLog              = Log.Severity.Debug;
 
 
             // settings
 	        _settings = new Settings();
-            _settings.DeserializingEvent += Settings_OnDeserializing;
-            _settings.DeserializedEvent  += Settings_OnDeserialized;
+            _settings.DeserializingEvent   += Settings_OnDeserializing;
+            _settings.DeserializedEvent    += Settings_OnDeserialized;
 
             
             // vscode events
             _vscode = new Connection();
-            _vscode.InitializeEvent += VSCode_OnInitialize;
-	        _vscode.DisconnectEvent += VSCode_OnDisconnect;
-	        _vscode.LaunchEvent += VSCode_OnLaunch;
-	        _vscode.AttachEvent += VSCode_OnAttach;
+            _vscode.InitializeEvent        += VSCode_OnInitialize;
+	        _vscode.DisconnectEvent        += VSCode_OnDisconnect;
+	        _vscode.LaunchEvent            += VSCode_OnLaunch;
+	        _vscode.AttachEvent            += VSCode_OnAttach;
 	        _vscode.ConfigurationDoneEvent += VSCode_OnConfigurationDone;
 
-	        _vscode.PauseEvent += VSCode_OnPause;
-	        _vscode.ContinueEvent += VSCode_OnContinue;
-	        _vscode.StepOverEvent += VSCode_OnStepOver;
-	        _vscode.StepInEvent += VSCode_OnStepIn;
-	        _vscode.StepOutEvent += VSCode_OnStepOut;
-
-	        _vscode.GetThreadsEvent += VSCode_OnGetThreads;
-	        _vscode.GetStackTraceEvent += VSCode_OnGetStackTrace;
-	        _vscode.GetScopesEvent += VSCode_OnGetScopes;
-
-	        _vscode.GetVariablesEvent += VSCode_OnGetVariables;
-	        _vscode.SetVariableEvent += VSCode_OnSetVariable;
-			_vscode.GetCompletionsEvent += VSCode_OnGetCompletions;
-	        _vscode.EvaluateEvent += VSCode_OnEvaluate;
-            _vscode.SetBreakpointsEvent += VSCode_OnSetBreakpoints;
+	        _vscode.PauseEvent             += VSCode_OnPause;
+	        _vscode.ContinueEvent          += VSCode_OnContinue;
+	        _vscode.StepOverEvent          += VSCode_OnStepOver;
+	        _vscode.StepInEvent            += VSCode_OnStepIn;
+	        _vscode.StepOutEvent           += VSCode_OnStepOut;
+   
+	        _vscode.GetThreadsEvent        += VSCode_OnGetThreads;
+	        _vscode.GetStackTraceEvent     += VSCode_OnGetStackTrace;
+	        _vscode.GetScopesEvent         += VSCode_OnGetScopes;
+   
+	        _vscode.GetVariablesEvent      += VSCode_OnGetVariables;
+	        _vscode.SetVariableEvent       += VSCode_OnSetVariable;
+			_vscode.GetCompletionsEvent    += VSCode_OnGetCompletions;
+	        _vscode.EvaluateEvent          += VSCode_OnEvaluate;
+            _vscode.SetBreakpointsEvent    += VSCode_OnSetBreakpoints;
 
 
             // handle custom events not part of the standard vscode protocol
             _customRequests = new CustomRequests(_vscode);
 	        _customRequests.GetDisassemblyForSourceEvent += VSCode_Custom_OnGetDisassemblyForSource;
+	        _customRequests.GetSourceForDisassemblyEvent += VSCode_Custom_OnGetSourceForDisassembly;
+	        _customRequests.SetNextStatementEvent        += VSCode_Custom_SetNextStatement;
 
+            
 
             // debugger events
-
             _debugger = new ZEsarUX.Connection();
             // _debugger.OnData += Z_OnData; 
 
 
             // machine events
-
             _machine = new Machine( _debugger );
 			_machine.OnPause += Machine_OnPause;
 			_machine.OnContinue += Machine_OnContinue;
@@ -113,7 +114,7 @@ namespace ZXDebug
         }
 
 
-	    static void Settings_OnDeserializing( VSCode.Settings pSettings )
+        static void Settings_OnDeserializing( VSCode.Settings pSettings )
 	    {
             // make sure all the things that use settings are wired up
 	        _settings.Disassembler = _machine.Disassembler.Settings;
@@ -468,7 +469,7 @@ namespace ZXDebug
 
 	        foreach( var frame in _stackFrames )
                 if( frame.source == DisassemblySource && frame.line == 0 )
-	                frame.line = _machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id-1] );
+	                frame.line = _machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id-1] )+1;
 
 	        _vscode.Send(
                 pRequest,
@@ -782,6 +783,21 @@ namespace ZXDebug
             
         }
 
+        static void VSCode_Custom_SetNextStatement( Request pRequest, string pFile, int pLine )
+        {
+            var line = _machine.GetLineFromDisassemblyFile( pLine );
+
+            if( line == null )
+            {
+                _vscode.Send( pRequest, pErrorMessage: "Invalid line" );
+                return;
+            }
+
+            _machine.Registers.Set( "PC", line.Address );
+
+            _vscode.Send( pRequest );
+        }
+
 
         // events from values/variables
 
@@ -1055,49 +1071,6 @@ namespace ZXDebug
         static Source DisassemblySource
         {
             get { return _disassemblySource = _disassemblySource ?? new Source( "asm", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
-        }
-
-        static Dictionary<ushort, int> _cumulativeHeatMap = new Dictionary<ushort, int>();
-        static void TestHeatMap()
-        {
-            var data = new Dictionary<int, int>();
-            var splitChar = new char[] { ' ' };
-
-            var results = _debugger.CustomCommand( "get-visualpc-dump" );
-
-            foreach( var result in results )
-            {
-                var split = result.Split( splitChar, StringSplitOptions.RemoveEmptyEntries );
-
-                ushort baseAddress = Format.Parse( split[0] );
-
-                for( int i = 1; i < split.Length; i++ )
-                {
-                    var address = (ushort)( baseAddress + i - 1 );
-
-                    int oldCount;
-                    int additional = Format.Parse( split[i], pKnownHex : true );
-
-                    _cumulativeHeatMap.TryGetValue( address, out oldCount );
-                    _cumulativeHeatMap[address] = oldCount + additional;
-                }
-            }
-
-            foreach( var heat in _cumulativeHeatMap )
-            {
-                try
-                {
-                    var line = _machine.GetLineOfAddressInDisassembly( heat.Key );
-                    if( line > 0 )
-                        data[line] = heat.Value;
-                }
-                catch
-                {
-                    // ignore
-                }
-            }
-
-            _vscode.Send( new Event( "showHeatMap", data ) );
         }
     }
 }

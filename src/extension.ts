@@ -13,6 +13,12 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
 	context.subscriptions.push(
+		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
+			args => setNextStatement(args)
+		)	
+    );
+    
+	context.subscriptions.push(
         vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
             if( e.event == 'setDisassemblyLine' ) {
                 setDisassemblyLine( e.body );
@@ -46,6 +52,18 @@ function startSession(config) {
     return { status: 'ok' };
 }
 
+function setNextStatement(args) {
+    
+    return vscode.debug.activeDebugSession.customRequest(
+        "setNextStatement",
+        { file: args.fsPath, line: vscode.window.activeTextEditor.selection.start.line }
+    ).then( reply => {
+        // ok
+    }, err => {
+        throw err;
+    });
+}
+
 var decorators=[];
 function setDisassemblyLine( data ) {
 
@@ -62,18 +80,11 @@ function setDisassemblyLine( data ) {
             var decorator = vscode.window.createTextEditorDecorationType(
             {
                 isWholeLine: true,
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                light: {
-                    borderColor: 'black'
-                },
-                dark: {
-                    borderColor: 'white'
-                }
+                backgroundColor: new vscode.ThemeColor('debugExceptionWidget.background')
             });
                 
-            var decRange = new vscode.Range(data.line-1,0,data.line-1,0);
-            var revealRange = new vscode.Range(data.line-3,0,data.line+2,0);
+            var decRange = new vscode.Range(data.line,0,data.line,0);
+            var revealRange = new vscode.Range(data.line-3,0,data.line+3,0);
             
             editor.setDecorations(
                 decorator,
@@ -82,7 +93,7 @@ function setDisassemblyLine( data ) {
 
             editor.revealRange( revealRange );
 
-            var pos = new vscode.Position(data.line-1, 0);
+            var pos = new vscode.Position(data.line, 0);
             editor.selection = new vscode.Selection(pos, pos);
 
             decorators.push( decorator );

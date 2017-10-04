@@ -60,6 +60,16 @@ namespace Spectrum
             _machine.Connection.SetRegister( this, pRegister, Format.Parse( pValue ) );
         }
 
+        public void Set( string pRegister, ushort pValue )
+        {
+            _machine.Connection.SetRegister( this, pRegister, pValue );
+        }
+
+        public void Set( string pRegister, byte pValue )
+        {
+            _machine.Connection.SetRegister( this, pRegister, pValue );
+        }
+
         public bool IsValidRegister( string pRegister )
         {
             try

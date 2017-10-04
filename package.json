@@ -158,7 +158,20 @@
                 "command": "extension.zxdebug.testCommand",
                 "title": "Test command",
                 "category": "ZX Debugger"
+            },
+            {
+                "command": "extension.zxdebug.setNextStatement",
+                "title": "Set Next Statement",
+                "category": "ZX Debugger"
             }
-        ]
+        ],
+        "menus": {
+            "editor/context": [
+                {
+                    "command": "extension.zxdebug.setNextStatement",
+                    "when": "resourceLangId == zx-debug-disasm && inDebugMode"
+                }
+            ]
+        }
     }
 }

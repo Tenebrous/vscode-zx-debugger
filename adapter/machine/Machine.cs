@@ -352,14 +352,13 @@ namespace Spectrum
                     }
                 }
 
-                pLineNumber++;
                 pStream.WriteLine( "      {0:X4} {1,-8} {2}",
                     line.Address + pOffset,
                     Format.ToHex( line.Instruction.Bytes ),
                     FormatInstruction( line, pBank.ID, pOffset )
                 );
 
-                line.FileLine = pLineNumber;
+                line.FileLine = pLineNumber++;
 
                 _linesToDisasm[pLineNumber] = line;
             }
