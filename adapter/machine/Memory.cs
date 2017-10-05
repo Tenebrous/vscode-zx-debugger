@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using ZXDebug;
 
 namespace Spectrum
 {
@@ -12,7 +14,7 @@ namespace Spectrum
         public ushort SlotSize = 0x4000;
 
         Dictionary<int, Slot> _slots = new Dictionary<int, Slot>();
-        Dictionary<BankID, Bank> _banks = new Dictionary<BankID, Bank>();
+        Cache<BankID, Bank> _banks = new Cache<BankID, Bank>( pID => new Bank() { ID = pID } );
 
         public List<Slot> Slots { get; } = new List<Slot>();
 
@@ -53,7 +55,7 @@ namespace Spectrum
             return slot;
         }
 
-        public BankID GetCurrentBank( ushort pAddress )
+        public BankID GetMappedBank( ushort pAddress )
         {
             return GetSlot( pAddress )?.Bank.ID ?? BankID.Unpaged();
         }
@@ -67,15 +69,12 @@ namespace Spectrum
         public void SetAddressBank( ushort pMin, ushort pMax, Bank pBank )
         {
             GetSlot( pMin ).Bank = pBank;
-            _banks[pBank.ID] = pBank;
+            pBank.LastAddress = pMin;
         }
 
         public Bank Bank( BankID pID )
         {
-            if( !_banks.TryGetValue( pID, out var result ) )
-                result = new Bank() { ID = pID };
-
-            return result;
+            return _banks[pID];
         }
 
         public int Get( ushort pAddress, int pLength, byte[] pBuffer )

@@ -112,12 +112,15 @@ namespace ZXDebug
 
                 if( !vsactive )
                 {
-                    System.Threading.Thread.Sleep( 150 );
-
                     if( _needVSCodeRefresh )
                     {
+                        System.Threading.Thread.Sleep( 150 );
                         _vscode.Refresh();
                         _needVSCodeRefresh = false;
+                    }
+                    else
+                    {
+                        System.Threading.Thread.Sleep( 1 );
                     }
                 }
             }
@@ -324,13 +327,8 @@ namespace ZXDebug
             _machine.Registers.Get();
 	        _machine.Memory.GetMapping();
 
-	        PrepopulateDisassemblyFile();
-
             // disassemble from current PC
 	        var disassemblyUpdated = _machine.UpdateDisassembly( _machine.Registers.PC );
-
-            // if current PC instruction is a jp/call etc, pre-disassemble the destination
-	        disassemblyUpdated |= _machine.PreloadDisassembly( _machine.Registers.PC );
 
 	        var stackBytes = new byte[20];
 	        var caller = new byte[4];
@@ -511,15 +509,18 @@ namespace ZXDebug
 
             _vscode.Send( pRequest, new ScopesResponseBody( scopes ) );
 
-            var disasmLine = _machine.GetLineOfAddressInDisassembly( addr );
-            if( disasmLine > 0 )
+            if( _stackFrames[pFrameID - 1].source != DisassemblySource )
             {
-                _vscode.Send(
-                    new Event(
-                        "setDisassemblyLine",
-                        new { line = disasmLine }
-                    )
-                );
+                var disasmLine = _machine.GetLineOfAddressInDisassembly( addr );
+                if( disasmLine > 0 )
+                {
+                    _vscode.Send(
+                        new Event(
+                            "setDisassemblyLine",
+                            new { line = disasmLine }
+                        )
+                    );
+                }
             }
         }
 
@@ -704,7 +705,7 @@ namespace ZXDebug
                         new VSCodeBreakpoint(
                             bp.Index,
                             true,
-                            bp.Line.Bank.ToString() + " " + bp.Line.Address.ToHex(),
+                            bp.Line.BankID.ToString() + " " + bp.Line.Offset.ToHex(),
                             DisassemblySource,
                             bp.Line.FileLine,
                             0,
@@ -798,6 +799,8 @@ namespace ZXDebug
 
         static void VSCode_Custom_SetNextStatement( Request pRequest, string pFile, int pLine )
         {
+            Log.Write( Log.Severity.Message, "Set " + pFile + ":" + pLine );
+
             var line = _machine.GetLineFromDisassemblyFile( pLine );
 
             if( line == null )
@@ -806,7 +809,11 @@ namespace ZXDebug
                 return;
             }
 
-            _machine.Registers.Set( "PC", line.Address );
+            var memBank = _machine.Memory.Bank( line.BankID );
+            if( !memBank.IsPagedIn )
+                throw new Exception("Cannot set PC to that address as it isn't currently paged in.");
+
+            _machine.Registers.Set( "PC", (ushort)( memBank.LastAddress + line.Offset) );
 
             _vscode.Send( pRequest );
 
@@ -1033,39 +1040,6 @@ namespace ZXDebug
             return _machine.GetAddressDetails( slot.Bank.ID, pAddress, 0x800 );
         }
 
-
-
-        static bool _prepopulatedDisassemblyFile = false;
-	    static void PrepopulateDisassemblyFile()
-	    {
-	        //if( _prepopulatedDisassemblyFile )
-	        //    return;
-
-	        //foreach( var f in _machine.SourceMaps )
-	        //{
-	        //    foreach( var bankkvp in f.Banks )
-	        //    {
-	        //        var bank = bankkvp.Value;
-
-            //        // todo: check bank is paged in
-
-	        //        foreach( var symbolkvp in bank.Symbols )
-	        //        {
-	        //            var symbol = symbolkvp.Value;
-
-	        //            if( symbol.File != null && symbol.Labels != null && symbol.Labels.Count > 0 )
-	        //            {
-	        //                //Log.Write( Log.Severity.Message, bankkvp.Key + " " + symbol.Address.ToHex() + " " + string.Join( " ", symbol.Labels ) + " " + symbol.File.Filename + ":" + symbol.Line );
-	        //                //_machine.UpdateDisassembly( s.Value.Address );
-	        //            }
-	        //        }
-	        //    }
-	        //}
-
-	        ////_machine.WriteDisassemblyFile( DisassemblyFile );
-
-	        //_prepopulatedDisassemblyFile = true;
-	    }
 
 	    static string _tempFolder;
 

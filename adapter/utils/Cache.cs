@@ -51,5 +51,20 @@ namespace ZXDebug
             pValue = result;
             return false;
         }
+
+        public new TValue this[ TKey pKey ]
+        {
+            get
+            {
+                if( !TryGetValue( pKey, out var result ) )
+                {
+                    result = _factory( pKey );
+                    base[pKey] = result;
+                }
+
+                return result;
+            }
+            set { base[pKey] = value; }
+        }
     } 
 }

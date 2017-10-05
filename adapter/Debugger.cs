@@ -207,8 +207,12 @@ namespace ZXDebug
     /// </summary>
     public class InstructionLine
     {
-        public BankID Bank;
-        public ushort Address;
+        public BankID BankID;
+
+        /// <summary>
+        /// Offset from start of bank
+        /// </summary>
+        public ushort Offset;
         public int FileLine;
         public Disassembler.Instruction Instruction;
         public Breakpoint Breakpoint;
