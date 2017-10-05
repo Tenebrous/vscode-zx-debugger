@@ -148,8 +148,10 @@ namespace ZEsarUX
         public override bool Continue()
         {
             _isRunning = true;
-            //Send( "exit-cpu-step" );
+
+            OnContinued();
             Send( "run" );
+
             return true;
         }
 
@@ -157,7 +159,10 @@ namespace ZEsarUX
         public override bool StepOver()
         {
             _isRunning = true;
+
+            OnContinued();
             Send( "cpu-step-over" );
+
             return true;
         }
 
@@ -165,7 +170,10 @@ namespace ZEsarUX
         public override bool Step()
         {
             _isRunning = true;
+
+            OnContinued();
             Send( "cpu-step" );
+
             return true;
         }
 

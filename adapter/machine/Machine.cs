@@ -12,8 +12,14 @@ namespace Spectrum
     {
         public Debugger Connection;
 
-        public Action OnPause;
-        public Action OnContinue;
+        public delegate void PausedHandler();
+        public event PausedHandler PausedEvent;
+
+        public delegate void ContinuedHandler();
+        public event ContinuedHandler ContinuedEvent;
+
+        public delegate void DisassemblyUpdatedHandler();
+        public event DisassemblyUpdatedHandler DisassemblyUpdatedEvent;
 
         public Registers Registers { get; }
         public Memory Memory { get; }
@@ -39,12 +45,12 @@ namespace Spectrum
 
         void Connection_OnPause()
         {
-            OnPause?.Invoke();
+            PausedEvent?.Invoke();
         }
 
         void Connection_OnContinue()
         {
-            OnContinue?.Invoke();
+            ContinuedEvent?.Invoke();
         }
 
 
@@ -68,19 +74,16 @@ namespace Spectrum
 
         public bool StepOver()
         {
-            OnContinue?.Invoke();
             return Connection.StepOver();
         }
 
         public bool Step()
         {
-            OnContinue?.Invoke();
             return Connection.Step();
         }
 
         public bool StepOut()
         {
-            OnContinue?.Invoke();
             return Connection.StepOut();
         }
 

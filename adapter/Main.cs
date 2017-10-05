@@ -26,8 +26,9 @@ namespace ZXDebug
 
 	    static Settings _settings;
 
-
-    	static void Main(string[] argv)
+        static bool _needVSCodeRefresh;
+        
+        static void Main(string[] argv)
 	    {
             // set up 
 
@@ -84,8 +85,9 @@ namespace ZXDebug
 
             // machine events
             _machine = new Machine( _debugger );
-			_machine.OnPause += Machine_OnPause;
-			_machine.OnContinue += Machine_OnContinue;
+			_machine.PausedEvent += Machine_OnPause;
+			_machine.ContinuedEvent += Machine_OnContinue;
+	        _machine.DisassemblyUpdatedEvent += Machine_OnDisassemblyUpdated;
 
 
             // tie all the values together
@@ -109,7 +111,15 @@ namespace ZXDebug
                 var dbgactive = _debugger.Process();
 
                 if( !vsactive )
-                    System.Threading.Thread.Sleep( 10 );
+                {
+                    System.Threading.Thread.Sleep( 150 );
+
+                    if( _needVSCodeRefresh )
+                    {
+                        _vscode.Refresh();
+                        _needVSCodeRefresh = false;
+                    }
+                }
             }
         }
 
@@ -142,7 +152,10 @@ namespace ZXDebug
 			_vscode.Continued( true );
 		}
 
-
+        static void Machine_OnDisassemblyUpdated()
+        {
+            _needVSCodeRefresh = true;
+        }
 
         /////////////////
         // vscode events
@@ -789,15 +802,16 @@ namespace ZXDebug
 
             if( line == null )
             {
-                _vscode.Send( pRequest, pErrorMessage: "Invalid line" );
+                _vscode.Send( pRequest, pErrorMessage : "Invalid line" );
                 return;
             }
 
             _machine.Registers.Set( "PC", line.Address );
 
             _vscode.Send( pRequest );
-        }
 
+            _vscode.Refresh();
+        }
 
         // events from values/variables
 

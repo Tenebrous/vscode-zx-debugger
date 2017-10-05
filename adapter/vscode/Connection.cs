@@ -413,5 +413,11 @@ namespace VSCode
 
             return data;
         }
+
+        public void Refresh()
+        {
+            Continued( true );
+            Stopped( 1, "step", "step" );
+        }
     }
 }
