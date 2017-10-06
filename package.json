@@ -20,10 +20,10 @@
         "spectrum"
     ],
     "activationEvents": [
-        "*"
+        "onDebug"
     ],
     "engines": {
-        "vscode": "^1.16.0"
+        "vscode": "^1.17.0"
     },
     "main": "./out/extension",
     "scripts": {
@@ -33,8 +33,8 @@
         "tslint": "tslint -c tslint.json src/extension.ts"
     },
     "devDependencies": {
-        "typescript": "^2.1.4",
-        "vscode": "^1.0.0",
+        "typescript": "^2.5.2",
+        "vscode": "^1.1.5",
         "@types/node": "*"
     },
     "contributes": {
@@ -83,7 +83,6 @@
                 "linux": {
                     "runtime": "mono"
                 },
-                "startSessionCommand": "extension.zxdebug.startSession",
                 "configurationAttributes": {
                     "attach": {
                         "properties": {
@@ -116,22 +115,7 @@
                             }
                         }
                     }
-                },
-                "initialConfigurations": [
-                    {
-                        "type": "zxdebug",
-                        "name": "ZX Debugger",
-                        "request": "attach",
-                        "projectFolder": "${workspaceRoot}",
-                        "sourceMaps": [
-                            "48k_rom.dbg"
-                        ],
-                        "opcodeTables": [
-                            "z80.tbl"
-                        ],
-                        "stopOnEntry": true
-                    }
-                ]
+                }
             }
         ],
         "languages": [

@@ -263,6 +263,7 @@ namespace ZXDebug
 
 	    static void VSCode_OnAttach( Request pRequest, string pJSONSettings )
 	    {
+	        Log.Write( Log.Severity.Message, pJSONSettings );
             Initialise( pJSONSettings );
 
 	        SaveDebug();

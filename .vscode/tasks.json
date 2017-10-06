@@ -8,12 +8,11 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "build extension",
             "type": "typescript",
-            "tsconfig": "tsconfig.json",
-            "problemMatcher": [
-                "$tsc"
-            ]
+            "identifier": "build extension",
+            "label": "build extension",
+            "tsconfig": "src\\tsconfig.json",
+            "problemMatcher": [ "$tsc" ]
         },
         {
             "taskName": "build all",

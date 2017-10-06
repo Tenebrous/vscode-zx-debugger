@@ -1,16 +1,15 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as fs     from 'fs';
-import * as path   from 'path';
 
-export function activate(context: vscode.ExtensionContext) {
+export function activate( context: vscode.ExtensionContext ) {
 
-	context.subscriptions.push(
-		vscode.commands.registerCommand('extension.zxdebug.startSession',
-			config => startSession(config)
-		)	
-    );
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider(
+            'zxdebug',
+            new ZXDebugConfigurationProvider()
+        )
+    )
 
 	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
@@ -41,22 +40,19 @@ export function activate(context: vscode.ExtensionContext) {
     );
 }
 
-function startSession(config) {
-
-    // provide all the workspace config items to the adapter by
-    // adding them to the launch/attach config it already gets
-    config.workspaceConfiguration = vscode.workspace.getConfiguration('zxdebug');
-
-    vscode.commands.executeCommand('vscode.startDebug', config);
-
-    return { status: 'ok' };
-}
-
-function setNextStatement(args) {
+function setNextStatement( args ) : Thenable<any> {
     
+    if( vscode.debug.activeDebugSession === undefined 
+     || vscode.window.activeTextEditor === undefined
+     || args === undefined )
+        return Promise.resolve(null);
+
     return vscode.debug.activeDebugSession.customRequest(
         "setNextStatement",
-        { file: args.fsPath, line: vscode.window.activeTextEditor.selection.start.line }
+        { 
+            file: args.fsPath, 
+            line: vscode.window.activeTextEditor.selection.start.line 
+        }
     ).then( reply => {
         // ok
     }, err => {
@@ -64,8 +60,8 @@ function setNextStatement(args) {
     });
 }
 
-var decorators=[];
-function setDisassemblyLine( data ) {
+var decorators : vscode.TextEditorDecorationType[] = [];
+function setDisassemblyLine( args ) {
 
     decorators.forEach(decorator => {
         decorator.dispose();
@@ -83,8 +79,8 @@ function setDisassemblyLine( data ) {
                 backgroundColor: new vscode.ThemeColor('debugExceptionWidget.background')
             });
                 
-            var decRange = new vscode.Range(data.line,0,data.line,0);
-            var revealRange = new vscode.Range(data.line-3,0,data.line+3,0);
+            var decRange = new vscode.Range(args.line,0,args.line,0);
+            var revealRange = new vscode.Range(args.line-3,0,args.line+3,0);
             
             editor.setDecorations(
                 decorator,
@@ -93,7 +89,7 @@ function setDisassemblyLine( data ) {
 
             editor.revealRange( revealRange );
 
-            var pos = new vscode.Position(data.line, 0);
+            var pos = new vscode.Position(args.line, 0);
             editor.selection = new vscode.Selection(pos, pos);
 
             decorators.push( decorator );
@@ -106,8 +102,11 @@ class DefinitionProvider implements vscode.DefinitionProvider {
     provideDefinition(
         document: vscode.TextDocument,
         position: vscode.Position,
-        token: vscode.CancellationToken): Thenable<vscode.Location>
+        token: vscode.CancellationToken) : vscode.ProviderResult<vscode.Definition>
     {
+        if( vscode.debug.activeDebugSession === undefined )
+            return undefined;
+       
         let request = "getDisassemblyForSource";
         
         if( document.fileName.endsWith( ".zdis" ) )
@@ -142,3 +141,47 @@ class HoverProvider implements vscode.HoverProvider {
 
     }
 }
+
+class ZXDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+    
+      /**
+       * returns initial debug configurations.
+       */
+      provideDebugConfigurations(
+          folder: vscode.WorkspaceFolder | undefined, 
+          token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
+    
+        const config = {
+            "type": "zxdebug",
+            "name": "ZX Debugger",
+            "request": "attach",
+            "projectFolder": "${workspaceRoot}",
+            "sourceMaps": [
+                "48k_rom.dbg"
+            ],
+            "opcodeTables": [
+                "z80.tbl"
+            ],
+            "stopOnEntry": true
+        }
+        
+        return [ config ];
+      }
+    
+      /**
+       * "massage" launch configuration before starting the session.
+       */
+      resolveDebugConfiguration(
+          folder: vscode.WorkspaceFolder | undefined, 
+          config: vscode.DebugConfiguration, 
+          token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+
+        console.log( config );
+        
+        config.workspaceConfiguration = vscode.workspace.getConfiguration('zxdebug');
+
+        console.log( config );
+        
+        return config;
+      }
+    }
