@@ -12,11 +12,16 @@
             "identifier": "build extension",
             "label": "build extension",
             "tsconfig": "src\\tsconfig.json",
-            "problemMatcher": [ "$tsc" ]
+            "problemMatcher": [
+                "$tsc"
+            ]
         },
         {
             "taskName": "build all",
-            "dependsOn": ["build dotnet", "build extension"],
+            "dependsOn": [
+                "build dotnet",
+                "build extension"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -27,7 +32,10 @@
             "taskName": "publish",
             "command": "vsce publish patch",
             "type": "shell",
-            "dependsOn": ["build dotnet", "build extension"],
+            "dependsOn": [
+                "build dotnet",
+                "build extension"
+            ],
             "problemMatcher": []
         }
     ]
