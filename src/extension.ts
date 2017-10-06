@@ -2,42 +2,35 @@
 
 import * as vscode from 'vscode';
 
-export function activate( context: vscode.ExtensionContext ) {
-
+export function activate( context: vscode.ExtensionContext ) 
+{
     context.subscriptions.push(
+        
         vscode.debug.registerDebugConfigurationProvider(
             'zxdebug',
             new ZXDebugConfigurationProvider()
-        )
-    )
+        ),
 
-	context.subscriptions.push(
 		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
-			args => setNextStatement(args)
-		)	
-    );
-    
-	context.subscriptions.push(
+            args => setNextStatement(args)
+        ),
+
         vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
             if( e.event == 'setDisassemblyLine' ) {
                 setDisassemblyLine( e.body );
             }
-        })
-    );
+        }),
 
-	context.subscriptions.push(
-            vscode.languages.registerHoverProvider(
+        vscode.languages.registerHoverProvider(
             '*',
             new HoverProvider()
-        )
-    );
+        ),
 
-    context.subscriptions.push(
         vscode.languages.registerDefinitionProvider(
             '*',
             new DefinitionProvider()
         )
-    );
+    )
 }
 
 function setNextStatement( args ) : Thenable<any> {
@@ -176,11 +169,7 @@ class ZXDebugConfigurationProvider implements vscode.DebugConfigurationProvider 
           config: vscode.DebugConfiguration, 
           token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
 
-        console.log( config );
-        
         config.workspaceConfiguration = vscode.workspace.getConfiguration('zxdebug');
-
-        console.log( config );
         
         return config;
       }
