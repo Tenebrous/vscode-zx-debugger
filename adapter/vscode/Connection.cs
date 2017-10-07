@@ -302,7 +302,7 @@ namespace VSCode
                             new EvaluateResponseBody(
                                 resultEval
                             )
-	            		);
+                        );
 
                         break;
 

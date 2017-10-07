@@ -5,6 +5,7 @@ namespace Spectrum
     public class Breakpoint
     {
         public int Index;
-        public InstructionLine Line;
+        public Bank Bank;
+        public Machine.DisasmLine Line;
     }
 }

@@ -47,7 +47,7 @@ namespace ZXDebug
 
         public static ushort Parse( string pValue, bool pKnownHex = false )
         {
-	        ushort result = 0;
+            ushort result = 0;
             var isHex = pKnownHex;
 
             try
@@ -80,9 +80,9 @@ namespace ZXDebug
                 result =  isHex ? Convert.ToUInt16( pValue, 16 ) : ushort.Parse( pValue );
             }
             catch( Exception e )
-	        {
-	            Log.Write( Log.Severity.Error, $"Can\'t parse \'{pValue}\': {e}" );
-	        }
+            {
+                Log.Write( Log.Severity.Error, $"Can\'t parse \'{pValue}\': {e}" );
+            }
 
             return result;
         }
@@ -93,25 +93,25 @@ namespace ZXDebug
             return (byte)(val - ( val <= 57 ? 48 : 55 ));
         }
 
-	    static StringBuilder _tempHexToBin = new StringBuilder();
+        static StringBuilder _tempHexToBin = new StringBuilder();
         public static string HexToBin( string pHex, int pSplit )
         {
-	        _tempHexToBin.Clear();
+            _tempHexToBin.Clear();
 
-	        var count = 0;
-	        for( var i = 0; i < pHex.Length; i += 2 )
-	        {
-	            var part = Convert.ToByte( pHex.Substring( i, 2 ), 16 );
-	            var binary = Convert.ToString( part, 2 ).PadLeft( 8, '0' );
+            var count = 0;
+            for( var i = 0; i < pHex.Length; i += 2 )
+            {
+                var part = Convert.ToByte( pHex.Substring( i, 2 ), 16 );
+                var binary = Convert.ToString( part, 2 ).PadLeft( 8, '0' );
 
 
-	            foreach( var ch in binary )
-	            {
-	                _tempHexToBin.Append( ch );
+                foreach( var ch in binary )
+                {
+                    _tempHexToBin.Append( ch );
 
-	                if( ++count % pSplit == 0 )
-	                    _tempHexToBin.Append( ' ' );
-	            }
+                    if( ++count % pSplit == 0 )
+                        _tempHexToBin.Append( ' ' );
+                }
             }
 
             return _tempHexToBin.ToString().Trim();

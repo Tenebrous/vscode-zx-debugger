@@ -45,9 +45,9 @@ namespace VSCode
     }
 
     /*
-	 * subclasses of ResponseBody are serialized as the body of a response.
-	 * Don't change their instance variables since that will break the debug protocol.
-	 */
+     * subclasses of ResponseBody are serialized as the body of a response.
+     * Don't change their instance variables since that will break the debug protocol.
+     */
     public class ResponseBody
     {
         // empty

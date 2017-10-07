@@ -11,15 +11,15 @@ export function activate( context: vscode.ExtensionContext )
             new ZXDebugConfigurationProvider()
         ),
 
-		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
-            args => setNextStatement(args)
-        ),
-
         vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
             if( e.event == 'setDisassemblyLine' ) {
                 setDisassemblyLine( e.body );
             }
         }),
+        
+		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
+            args => setNextStatement(args)
+        ),
 
         vscode.languages.registerHoverProvider(
             '*',
@@ -44,7 +44,7 @@ function setNextStatement( args ) : Thenable<any> {
         "setNextStatement",
         { 
             file: args.fsPath, 
-            line: vscode.window.activeTextEditor.selection.start.line 
+            line: vscode.window.activeTextEditor.selection.start.line
         }
     ).then( reply => {
         // ok
@@ -81,9 +81,7 @@ function setDisassemblyLine( args ) {
             );
 
             editor.revealRange( revealRange );
-
-            var pos = new vscode.Position(args.line, 0);
-            editor.selection = new vscode.Selection(pos, pos);
+            editor.selection = new vscode.Selection(args.line,0, args.line, 99999);
 
             decorators.push( decorator );
         }
@@ -100,14 +98,16 @@ class DefinitionProvider implements vscode.DefinitionProvider {
         if( vscode.debug.activeDebugSession === undefined )
             return undefined;
        
-        let request = "getDisassemblyForSource";
-        
-        if( document.fileName.endsWith( ".zdis" ) )
-            request = "getSourceFromDisassembly";
+        let request = "getDefinition";
         
         return vscode.debug.activeDebugSession.customRequest(
             request,
-            { file: document.fileName, line: position.line }
+            { 
+                file: document.fileName, 
+                line: position.line,
+                col: position.character,
+                word: document.getText( document.getWordRangeAtPosition(position) )
+            }
         ).then( reply => {
             return new vscode.Location(
                 vscode.Uri.file( reply.file ),

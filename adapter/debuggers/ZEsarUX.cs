@@ -179,8 +179,8 @@ namespace ZEsarUX
 
         void SetSingleBreakpoint( Breakpoint pBreakpoint )
         {
-            // todo: fix this, offset should be added to bank's address
-            SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.Index+1} PC={pBreakpoint.Line.Offset:X4}h") );
+            var addr = pBreakpoint.Bank.LastAddress + pBreakpoint.Line.Offset;
+            SendAndReceiveSingle( string.Format($"set-breakpoint {pBreakpoint.Index+1} PC={addr:X4}h") );
             SendAndReceiveSingle( "enable-breakpoint " + (pBreakpoint.Index+1), pRaiseErrors: false );
         }
 

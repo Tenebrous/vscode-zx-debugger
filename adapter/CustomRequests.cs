@@ -7,11 +7,8 @@ namespace ZXDebug
     /// </summary>
     class CustomRequests
     {
-        public delegate void GetDisassemblyForSourceHandler( Request pRequest, string pFile, int pLine );
-        public event GetDisassemblyForSourceHandler GetDisassemblyForSourceEvent;
-
-        public delegate void GetSourceForDisassemblyHandler( Request pRequest, string pFile, int pLine );
-        public event GetSourceForDisassemblyHandler GetSourceForDisassemblyEvent;
+        public delegate void GetDefinitionHandler( Request pRequest, string pFile, int pLine, string pText );
+        public event GetDefinitionHandler GetDefinitionEvent;
 
         public delegate void SetNextStatementHandler( Request pRequest, string pFile, int pLine );
         public event SetNextStatementHandler SetNextStatementEvent;
@@ -25,16 +22,21 @@ namespace ZXDebug
         {
             switch( pRequest.command )
             {
-                case "getDisassemblyForSource":
-                    GetDisassemblyForSourceEvent?.Invoke( pRequest, (string)pRequest.arguments.file, (int)pRequest.arguments.line );
-                    break;
-
-                case "getSourceForDisassembly":
-                    GetSourceForDisassemblyEvent?.Invoke( pRequest, (string)pRequest.arguments.file, (int)pRequest.arguments.line );
+                case "getDefinition":
+                    GetDefinitionEvent?.Invoke( 
+                        pRequest, 
+                        (string)pRequest.arguments.file, 
+                        (int)pRequest.arguments.line,
+                        (string)pRequest.arguments.text
+                    );
                     break;
 
                 case "setNextStatement":
-                    SetNextStatementEvent?.Invoke( pRequest, (string)pRequest.arguments.file, (int)pRequest.arguments.line );
+                    SetNextStatementEvent?.Invoke( 
+                        pRequest, 
+                        (string)pRequest.arguments.file, 
+                        (int)pRequest.arguments.line 
+                    );
                     break;
             }
         }

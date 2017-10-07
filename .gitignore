@@ -7,3 +7,4 @@ packages/
 *.DotSettings.user
 .vscode/settings.json
 opcodes/*.json
+*.csproj.user

@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using ZXDebug;
 
 namespace Spectrum
 {
@@ -25,12 +24,17 @@ namespace Spectrum
             return id;
         }
 
-        public Breakpoint Add( InstructionLine pLine )
+        public Breakpoint Add( Machine.DisasmLine pLine )
         {
             if( pLine.Breakpoint != null )
                 return pLine.Breakpoint;
 
-            var bp = new Breakpoint() { Index = GetFreeID(), Line = pLine };
+            var bp = new Breakpoint()
+            {
+                Index = GetFreeID(),
+                Bank = _machine.Memory.Bank( pLine.Bank.ID ),
+                Line = pLine
+            };
 
             if( _machine.Connection.SetBreakpoint( this, bp ) )
             {
@@ -41,7 +45,7 @@ namespace Spectrum
             return bp;
         }
 
-        public void Remove( InstructionLine pLine )
+        public void Remove( Machine.DisasmLine pLine )
         {
             if( pLine.Breakpoint == null )
                 return;

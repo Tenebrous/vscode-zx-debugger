@@ -30,13 +30,13 @@ namespace Spectrum
 
         public Machine( Debugger pConnection )
         {
-            Connection = pConnection;
-            Registers = new Registers(this);
-            Memory    = new Memory(this);
-            Stack     = new Stack(this);
+            Connection  = pConnection;
+            Registers   = new Registers(this);
+            Memory      = new Memory(this);
+            Stack       = new Stack(this);
             Breakpoints = new Breakpoints(this);
 
-            Connection.PausedEvent += Connection_OnPause;
+            Connection.PausedEvent    += Connection_OnPause;
             Connection.ContinuedEvent += Connection_OnContinue;
         }
 
@@ -93,16 +93,32 @@ namespace Spectrum
         }
 
 
-
-        class DisasmBank
+        public class DisasmBank
         {
             public BankID ID;
-            public Dictionary<ushort, InstructionLine> Lines = new Dictionary<ushort, InstructionLine>();
-            public List<InstructionLine> SortedLines = new List<InstructionLine>();
+            public Dictionary<ushort, DisasmLine> Lines = new Dictionary<ushort, DisasmLine>();
+            public List<DisasmLine> SortedLines = new List<DisasmLine>();
         }
 
+        /// <summary>
+        /// A disassembled instruction
+        /// </summary>
+        public class DisasmLine
+        {
+            public DisasmBank Bank;
+
+            /// <summary>
+            /// Offset from start of bank
+            /// </summary>
+            public ushort Offset;
+            public int FileLine;
+            public Disassembler.Instruction Instruction;
+            public Breakpoint Breakpoint;
+        }
+
+
         Dictionary<BankID, DisasmBank> _disasmBanks = new Dictionary<BankID, DisasmBank>();
-        List<InstructionLine> _tempDisasm = new List<InstructionLine>();
+        List<DisasmLine> _tempDisasm = new List<DisasmLine>();
         string _disassemblyMemoryMap = "";
 
         Stack<DisasmRequest> _disasmAddresses = new Stack<DisasmRequest>();
@@ -158,9 +174,9 @@ namespace Spectrum
 
                 while( ( instruction = Disassembler.Disassemble( _tempBytes, index ) ) != null && _tempDisasm.Count < 30 )
                 {
-                    var il = new InstructionLine()
+                    var il = new DisasmLine()
                     {
-                        BankID = minBank.ID,
+                        Bank = minBank,
                         Offset = (ushort) ( pAddress + index ),
                         Instruction = instruction
                     };
@@ -230,21 +246,21 @@ namespace Spectrum
             return false;
         }
 
-        private void PreloadDisassembly( InstructionLine pInstruction, Stack<DisasmRequest> pAddressStack, int pDepth )
+        private void PreloadDisassembly( DisasmLine pDisasm, Stack<DisasmRequest> pAddressStack, int pDepth )
         {
-            if( pInstruction.Instruction.Operands == null )
+            if( pDisasm.Instruction.Operands == null )
                 return;
 
-            foreach( var op in pInstruction.Instruction.Operands )
+            foreach( var op in pDisasm.Instruction.Operands )
             {
                 if( op.Type == Disassembler.Operand.TypeEnum.CodeAddr )
                     pAddressStack.Push( new DisasmRequest( pDepth, op.Value ) );
                 else if( op.Type == Disassembler.Operand.TypeEnum.CodeRel )
-                    pAddressStack.Push( new DisasmRequest( pDepth, (ushort)(pInstruction.Offset + (sbyte)op.Value ) ) );
+                    pAddressStack.Push( new DisasmRequest( pDepth, (ushort)(pDisasm.Offset + (sbyte)op.Value ) ) );
             }
         }
 
-        Dictionary<int, InstructionLine> _linesToDisasm = new Dictionary<int, InstructionLine>();
+        Dictionary<int, DisasmLine> _linesToDisasm = new Dictionary<int, DisasmLine>();
         HashSet<BankID> _tempBankDone = new HashSet<BankID>();
         public void WriteDisassemblyFile( string pFilename )
         {
@@ -404,7 +420,7 @@ namespace Spectrum
             }
         }
 
-        string FormatInstruction( InstructionLine pLine, BankID pBankID, ushort pOffset )
+        string FormatInstruction( DisasmLine pLine, BankID pBankID, ushort pOffset )
         {
             var instruction = pLine.Instruction;
 
@@ -611,7 +627,7 @@ namespace Spectrum
             return false;
         }
 
-        public InstructionLine GetLineFromDisassemblyFile( int pLineNumber )
+        public DisasmLine GetLineFromDisassemblyFile( int pLineNumber )
         {
             if( _linesToDisasm.TryGetValue( pLineNumber, out var result ) )
                 return result;
