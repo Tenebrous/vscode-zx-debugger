@@ -6,10 +6,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Spectrum;
 using ZXDebug;
+using Convert = ZXDebug.Convert;
 
 namespace ZEsarUX
 {
-    public class Connection : ZXDebug.Debugger
+    public class Connection : ZXDebug.Device
     {
         TcpClient _client;
         NetworkStream _stream;
@@ -58,7 +59,7 @@ namespace ZEsarUX
             catch( Exception e )
             {
                 Log.Write( Log.Severity.Error, "zesarux: connection error: " + e );
-                return false;
+                throw new Exception( "Cannot connect to ZEsarUX", e );
             }
 
             return _connected;
@@ -89,8 +90,6 @@ namespace ZEsarUX
                     if( num > count ) count = num;
                 }
             }
-
-            Log.Write( Log.Severity.Message, "zesarux: max breakpoints " + count );
 
             Meta.MaxBreakpoints = count;
         }
@@ -186,13 +185,13 @@ namespace ZEsarUX
 
         HashSet<int> _enabledBreakpoints = new HashSet<int>();
 
-        public override bool SetBreakpoints( Breakpoints pBreakpoints )
+        public override bool SetBreakpoints( Breakpoints breakpoints )
         {
             // remove those no longer set
             foreach( var current in _enabledBreakpoints )
             {
                 var remove = true;
-                foreach( var wanted in pBreakpoints )
+                foreach( var wanted in breakpoints )
                 {
                     if( wanted.Index == current )
                     {
@@ -205,7 +204,7 @@ namespace ZEsarUX
                     SendAndReceiveSingle( "disable-breakpoint " + (current+1) );
             }
 
-            foreach( var b in pBreakpoints )
+            foreach( var b in breakpoints )
             {
                 _enabledBreakpoints.Add( b.Index );
                 SetSingleBreakpoint( b );
@@ -214,17 +213,17 @@ namespace ZEsarUX
             return true;
         }
 
-        public override bool SetBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        public override bool SetBreakpoint( Breakpoints breakpoints, Breakpoint breakpoint )
         {
             return true;
         }
 
-        public override bool RemoveBreakpoints( Breakpoints pBreakpoints )
+        public override bool RemoveBreakpoints( Breakpoints breakpoints )
         {
             return true;
         }
         
-        public override bool RemoveBreakpoint( Breakpoints pBreakpoints, Breakpoint pBreakpoint )
+        public override bool RemoveBreakpoint( Breakpoints breakpoints, Breakpoint breakpoint )
         {
             return true;
         }
@@ -246,7 +245,7 @@ namespace ZEsarUX
         }
 
 
-        public override void RefreshMemoryPages( Memory pMemory )
+        public override void RefreshMemoryPages( Memory memory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
             // RO1 RA5 RA2 RA7 SCR5 PEN
@@ -254,59 +253,59 @@ namespace ZEsarUX
             if( string.IsNullOrWhiteSpace( pages ) )
             {
                 // no mapping info, so probably 16k/48k etc
-                pMemory.PagingEnabled = false;
-                var bank = pMemory.Bank( BankID.Unpaged() );
-                pMemory.SetAddressBank( 0x0000, 0xFFFF, bank );
+                memory.PagingEnabled = false;
+                var bank = memory.Bank( BankID.Unpaged() );
+                memory.SetAddressBank( 0x0000, 0xFFFF, bank );
                 return;
             }
 
             var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
 
-            ushort slotSize = pMemory.SlotSize;
+            ushort slotSize = memory.SlotSize;
             ushort slotPos = 0;
 
-            pMemory.PagingEnabled = true;
+            memory.PagingEnabled = true;
 
             foreach( var part in split )
             {
                 if( part == "PEN" )
-                    pMemory.PagingEnabled = true;
+                    memory.PagingEnabled = true;
                 else if( part == "PDI" )
-                    pMemory.PagingEnabled = false;
+                    memory.PagingEnabled = false;
                 else if( part.StartsWith( "RO" ) )
                 {
-                    var bank = pMemory.Bank( BankID.ROM( int.Parse( part.Substring( 2 ) ) ) );
-                    pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
+                    var bank = memory.Bank( BankID.ROM( int.Parse( part.Substring( 2 ) ) ) );
+                    memory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
-                    var bank = pMemory.Bank( BankID.Bank( int.Parse( part.Substring( 2 ) ) ) );
-                    pMemory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
+                    var bank = memory.Bank( BankID.Bank( int.Parse( part.Substring( 2 ) ) ) );
+                    memory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
                     slotPos++;
                 }
             }
         }
 
-        public override int ReadMemory( ushort pAddress, byte[] pBuffer, int pLength )
+        public override int ReadMemory( ushort address, byte[] bytes, int start, int length )
         {
-            var memory = SendAndReceiveSingle( "read-memory " + pAddress + " " + pLength );
+            var memory = SendAndReceiveSingle( "read-memory " + address + " " + length );
 
-            for( var i = 0; i < pLength; i++ )
-                pBuffer[i] = (byte)((Format.FromHex( memory[i*2] ) << 4) | Format.FromHex( memory[i * 2 + 1] ));
+            for( var i = 0; i < length; i++ )
+                bytes[i+start] = (byte)( ( Convert.FromHex( memory[i * 2] ) << 4 ) | Convert.FromHex( memory[i * 2 + 1] ) );
 
-            return pLength;
+            return length;
         }
 
-        public override void RefreshRegisters( Registers pRegisters )
+        public override void RefreshRegisters( Registers registers )
         {
-            ParseRegisters( pRegisters, SendAndReceiveSingle( "get-registers" ) );
+            ParseRegisters( registers, SendAndReceiveSingle( "get-registers" ) );
         }
 
-        public override void SetRegister( Registers pRegisters, string pRegister, ushort pValue )
+        public override void SetRegister( Registers registers, string register, ushort value )
         {
-            var result = SendAndReceiveSingle( "set-register " + pRegister + "=" + pValue );
-            ParseRegisters( pRegisters, result );
+            var result = SendAndReceiveSingle( "set-register " + register + "=" + value );
+            ParseRegisters( registers, result );
         }
 
         // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
@@ -319,7 +318,7 @@ namespace ZEsarUX
             {
                 try
                 {
-                    pRegisters[match.Groups["register"].Value] = Format.Parse( match.Groups["value"].Value, pKnownHex: true );
+                    pRegisters[match.Groups["register"].Value] = Convert.Parse( match.Groups["value"].Value, isHex: true );
                 }
                 catch
                 {
@@ -390,9 +389,9 @@ namespace ZEsarUX
             return result.Count > 0;
         }
 
-        public override List<string> CustomCommand( string pCommand, List<string> pResults = null )
+        public override List<string> CustomCommand( string cmd, List<string> results = null )
         {
-            var result = SendAndReceive( pCommand, pResults );
+            var result = SendAndReceive( cmd, results );
             return result;
         }
 

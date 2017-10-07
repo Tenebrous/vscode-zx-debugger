@@ -6,20 +6,21 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Newtonsoft.Json;
 using ZXDebug;
+using Convert = ZXDebug.Convert;
 
 namespace VSCode
 {
     public class Connection
     {
-        public delegate void EventHandler( Request pRequest );
+        public delegate void EventHandler( Request request );
 
-        public delegate void InitialiseHandler( Request pRequest, Capabilities pResult );
+        public delegate void InitialiseHandler( Request request, Capabilities result );
         public event InitialiseHandler  InitializeEvent;
 
-        public delegate void LaunchHandler( Request pRequest, string pJSON );
+        public delegate void LaunchHandler( Request request, string json );
         public event LaunchHandler LaunchEvent;
 
-        public delegate void AttachHandler( Request pRequest, string pJSON );
+        public delegate void AttachHandler( Request request, string json );
         public event AttachHandler AttachEvent;
 
         public event EventHandler DisconnectEvent;
@@ -30,18 +31,18 @@ namespace VSCode
         public event EventHandler StepOutEvent;
         public event EventHandler GetStackTraceEvent;
 
-        public delegate void GetVariablesHandler( Request pRequest, int pReference, List<Variable> pResult );
+        public delegate void GetVariablesHandler( Request request, int reference, List<Variable> results );
         public event GetVariablesHandler GetVariablesEvent;
 
-        public delegate void SetVariablesHandler( Request pRequest, Variable pVariable );
+        public delegate void SetVariablesHandler( Request request, Variable variable );
         public event SetVariablesHandler SetVariableEvent;
 
         public event EventHandler GetThreadsEvent;
 
-        public delegate void GetCompletionsHandler( Request pRequest, int pFrameID, string pText, int pColumn, int pLine );
+        public delegate void GetCompletionsHandler( Request request, int frameId, int line, int column, string text );
         public event GetCompletionsHandler GetCompletionsEvent;
 
-        public delegate void GetScopesHandler( Request pRequest, int pFrameID );
+        public delegate void GetScopesHandler( Request request, int frameId );
         public event GetScopesHandler GetScopesEvent;
 
         public event EventHandler GetSourceEvent;
@@ -49,10 +50,10 @@ namespace VSCode
         public event EventHandler ConfigurationDoneEvent;
         public event EventHandler SetBreakpointsEvent;
         
-        public delegate void EvaluateHandler( Request pRequest, int pFrameID, string pContext, string pExpression, bool pHex, ref string pResult );
+        public delegate void EvaluateHandler( Request request, int frameId, string context, string expression, bool wantHex, ref string result );
         public event EvaluateHandler EvaluateEvent;
 
-        public delegate void CustomRequestHandler( Request pRequest );
+        public delegate void CustomRequestHandler( Request request );
         public event CustomRequestHandler CustomRequestEvent;
 
 
@@ -128,7 +129,7 @@ namespace VSCode
                 if( !match.Success || match.Groups.Count != 2 )
                     break;
 
-                var size = Convert.ToInt32( match.Groups[1].ToString() );
+                var size = System.Convert.ToInt32( match.Groups[1].ToString() );
                 var end = match.Index + match.Length;
 
                 if( data.Length < end + size )
@@ -142,19 +143,19 @@ namespace VSCode
             }
         }
 
-        void ProcessMessage( string pMessage )
+        void ProcessMessage( string msg )
         {
-            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + pMessage );
+            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + msg );
 
             Request request;
 
             try
             {
-                request = JsonConvert.DeserializeObject<Request>( pMessage );
+                request = JsonConvert.DeserializeObject<Request>( msg );
             }
             catch( Exception e )
             {
-                Log.Write( Log.Severity.Error, "The following message caused an error: [" + pMessage.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
+                Log.Write( Log.Severity.Error, "The following message caused an error: [" + msg.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
                 Log.Write( Log.Severity.Error, e.ToString() );
                 return;
             }
@@ -181,124 +182,124 @@ namespace VSCode
             Send( new InitializedEvent() );
         }
 
-        public void Stopped( int pThread, string pReason, string pDescription )
+        public void Stopped( int threadId, string reason, string description )
         {
-            Send( new StoppedEvent( pThread, pReason, pDescription ) );
+            Send( new StoppedEvent( threadId, reason, description ) );
         }
 
-        public void Continued( bool pAllThreads )
+        public void Continued( bool allThreads )
         {
-            Send( new ContinuedEvent( pAllThreads ) );
+            Send( new ContinuedEvent( allThreads ) );
         }
 
 
         static List<Variable> _tempVariables = new List<Variable>();
 
-        void HandleMessage( string pCommand, dynamic pArgs, Request pRequest )
+        void HandleMessage( string msg, dynamic args, Request request )
         {
-            Log.Write( Log.Severity.Verbose, "vscode: (in) [" + pCommand + "]" );
+            Log.Write( Log.Severity.Verbose, "vscode: (in) [" + msg + "]" );
 
-            pArgs = pArgs ?? new { };
+            args = args ?? new { };
 
             try
             {
 
-                switch( pCommand )
+                switch( msg )
                 {
                     case "initialize":
                         var cap = new Capabilities();
-                        InitializeEvent?.Invoke( pRequest, cap );
-                        Send( pRequest, cap );
+                        InitializeEvent?.Invoke( request, cap );
+                        Send( request, cap );
                         Initialized();
                         break;
 
                     case "configurationDone":
-                        ConfigurationDoneEvent?.Invoke(pRequest);
+                        ConfigurationDoneEvent?.Invoke(request);
                         break;
 
                     case "launch":
-                        LaunchEvent?.Invoke( pRequest, JsonConvert.SerializeObject( pArgs ) );
+                        LaunchEvent?.Invoke( request, JsonConvert.SerializeObject( args ) );
                         break;
 
                     case "attach":
-                        AttachEvent?.Invoke( pRequest, JsonConvert.SerializeObject( pArgs ) );
+                        AttachEvent?.Invoke( request, JsonConvert.SerializeObject( args ) );
                         break;
 
                     case "disconnect":
-                        DisconnectEvent?.Invoke( pRequest );
+                        DisconnectEvent?.Invoke( request );
                         break;
 
                     case "next":
-                        StepOverEvent?.Invoke( pRequest );
+                        StepOverEvent?.Invoke( request );
                         break;
 
                     case "continue":
-                        ContinueEvent?.Invoke( pRequest );
+                        ContinueEvent?.Invoke( request );
                         break;
 
                     case "stepIn":
-                        StepInEvent?.Invoke( pRequest );
+                        StepInEvent?.Invoke( request );
                         break;
 
                     case "stepOut":
-                        StepOutEvent?.Invoke( pRequest );
+                        StepOutEvent?.Invoke( request );
                         break;
 
                     case "pause":
-                        PauseEvent?.Invoke( pRequest );
+                        PauseEvent?.Invoke( request );
                         break;
 
                     case "threads":
-                        GetThreadsEvent?.Invoke( pRequest );
+                        GetThreadsEvent?.Invoke( request );
                         break;
 
                     case "scopes":
-                        GetScopesEvent?.Invoke( pRequest, (int)pArgs.frameId );
+                        GetScopesEvent?.Invoke( request, (int)args.frameId );
                         break;
 
                     case "stackTrace":
-                        GetStackTraceEvent?.Invoke( pRequest );
+                        GetStackTraceEvent?.Invoke( request );
                         break;
 
                     case "variables":
                         _tempVariables.Clear();
-                        GetVariablesEvent?.Invoke( pRequest, (int)pArgs.variablesReference, _tempVariables );
-                        Send( pRequest, new VariablesResponseBody( _tempVariables ) );
+                        GetVariablesEvent?.Invoke( request, (int)args.variablesReference, _tempVariables );
+                        Send( request, new VariablesResponseBody( _tempVariables ) );
                         break;
 
                     case "setVariable":
 
-                        var variable = new Variable( (string)pArgs.name, (string)pArgs.value, "", (int)pArgs.variablesReference );
+                        var variable = new Variable( (string)args.name, (string)args.value, "", (int)args.variablesReference );
                     
                         SetVariableEvent?.Invoke( 
-                            pRequest, variable
+                            request, variable
                         );
 
                         Send(
-                            pRequest,
+                            request,
                             new SetVariableResponseBody( variable.value, variable.variablesReference )
                         );
 
                         break;
 
                     case "loadedSources":
-                        GetLoadedSourcesEvent?.Invoke( pRequest );
+                        GetLoadedSourcesEvent?.Invoke( request );
                         break;
 
                     case "source":
-                        GetSourceEvent?.Invoke( pRequest );
+                        GetSourceEvent?.Invoke( request );
                         break;
 
                     case "evaluate":
 
                         string resultEval = "";
                         EvaluateEvent?.Invoke(
-                             pRequest, (int)pArgs.frameId, (string)pArgs.context, (string)pArgs.expression, (bool)(pArgs.format?.hex ?? false),
+                             request, (int)args.frameId, (string)args.context, (string)args.expression, (bool)(args.format?.hex ?? false),
                              ref resultEval
                         );
 
                         Send(
-                            pRequest, 
+                            request, 
                             new EvaluateResponseBody(
                                 resultEval
                             )
@@ -308,13 +309,13 @@ namespace VSCode
 
                     case "completions":
                         GetCompletionsEvent?.Invoke( 
-                            pRequest, (int)pArgs.frameId, (string)pArgs.text, (int)pArgs.column, (int)pArgs.line 
+                            request, (int)args.frameId, (int)args.line, (int)args.column, (string )args.text
                         );
                         break;
 
 
                     case "setBreakpoints":
-                        SetBreakpointsEvent?.Invoke( pRequest );
+                        SetBreakpointsEvent?.Invoke( request );
                         break;
 
 
@@ -333,12 +334,12 @@ namespace VSCode
 
                     default:
 
-                        CustomRequestEvent?.Invoke( pRequest );
+                        CustomRequestEvent?.Invoke( request );
 
-                        if( !pRequest.responded )
+                        if( !request.responded )
                             Log.Write( 
                                 Log.Severity.Error,
-                                pMessage: string.Format( "vscode: request not handled: '{0}' [{1}]", pCommand, Format.Encode(pRequest.arguments.ToString()) )
+                                string.Format( "vscode: request not handled: '{0}' [{1}]", msg, Convert.Encode(request.arguments.ToString()) )
                             );
 
                         break;
@@ -348,43 +349,43 @@ namespace VSCode
             {
                 Log.Write(  
                     Log.Severity.Error,
-                    $"vscode: error during request '{Format.Encode( pRequest.arguments.ToString() )}' [{pCommand}] (exception: {e.Message})\n{e}"
+                    $"vscode: error during request '{Convert.Encode( request.arguments.ToString() )}' [{msg}] (exception: {e.Message})\n{e}"
                 );
 
-                Send( new Response( pRequest, pErrorMessage: e.Message ) );
+                Send( new Response( request, errorMsg: e.Message ) );
             }
         }
 
 
         // send response to request
-        public void Send( Request pRequest, ResponseBody pResponse = null, string pErrorMessage = null )
+        public void Send( Request request, ResponseBody response = null, string errorMsg = null )
         {
-            var message = new Response( pRequest, pResponse, pErrorMessage );
+            var message = new Response( request, response, errorMsg );
 
             Log.Write( Log.Severity.Debug, "vscode: (out) response " +
-                        pRequest.command
-                        + (pResponse == null ? "" : " response:" + pResponse)
-                        + (pErrorMessage == null ? "" : " error:'" + pErrorMessage + "'")
+                        request.command
+                        + (response == null ? "" : " response:" + response)
+                        + (errorMsg == null ? "" : " error:'" + errorMsg + "'")
                      );
 
-            pRequest.responded = true;
+            request.responded = true;
             Send( message );
         }
 
         // send event
-        public void Send(Event pEvent)
+        public void Send(Event evt)
         {
-            Log.Write( Log.Severity.Debug, "vscode: (out) event " + pEvent.eventType );
+            Log.Write( Log.Severity.Debug, "vscode: (out) event " + evt.eventType );
 
-            Send((ProtocolMessage)pEvent);
+            Send((ProtocolMessage)evt);
         }
 
         int _sequenceNumber = 1;
-        void Send( ProtocolMessage pMessage)
+        void Send( ProtocolMessage msg)
         {
-            pMessage.seq = _sequenceNumber++;
+            msg.seq = _sequenceNumber++;
 
-            var data = ConvertToBytes( pMessage );
+            var data = ConvertToBytes( msg );
             try
             {
                 _output.Write( data, 0, data.Length );
@@ -397,9 +398,9 @@ namespace VSCode
             }
         }
 
-        static byte[] ConvertToBytes( ProtocolMessage pMessage )
+        static byte[] ConvertToBytes( ProtocolMessage msg )
         {
-            var asJson = JsonConvert.SerializeObject( pMessage );
+            var asJson = JsonConvert.SerializeObject( msg );
             var jsonBytes = Encoding.UTF8.GetBytes(asJson);
 
             var header = $"Content-Length: {jsonBytes.Length}\r\n\r\n";

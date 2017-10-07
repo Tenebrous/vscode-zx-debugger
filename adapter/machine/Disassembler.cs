@@ -29,11 +29,11 @@ namespace ZXDebug
         /// <summary>
         /// Load a new layer file and add to the end of the list
         /// </summary>
-        /// <param name="pFilename"></param>
-        public void AddLayer( string pFilename )
+        /// <param name="filename"></param>
+        public void AddLayer( string filename )
         {
-            var layer = new OpcodeTables { Filename = pFilename };
-            layer.Read( pFilename );
+            var layer = new OpcodeTables { Filename = filename };
+            layer.Read( filename );
             _layers.Add( layer );
         }
 
@@ -43,13 +43,13 @@ namespace ZXDebug
         /// <summary>
         /// Disassemble one instruction from the provided bytes starting from the indicated position
         /// </summary>
-        /// <param name="pBytes">Bytes to be disassembled</param>
-        /// <param name="pStart">Starting position</param>
+        /// <param name="bytes">Bytes to be disassembled</param>
+        /// <param name="start">Starting position</param>
         /// <returns>A new Op representing the instruction, or null if not valid</returns>
-        public Instruction Disassemble( byte[] pBytes, int pStart )
+        public Instruction Disassemble( byte[] bytes, int start )
         {
 
-            var stream = new MemoryStream( pBytes, pStart, pBytes.Length - pStart );
+            var stream = new MemoryStream( bytes, start, bytes.Length - start );
 
             // decipher instruction
 
@@ -63,13 +63,13 @@ namespace ZXDebug
             GetOperands( instruction, stream );
 
             instruction.Length = (int)stream.Position;
-            instruction.Bytes = pBytes.Extract( pStart, instruction.Length );
+            instruction.Bytes = bytes.Extract( start, instruction.Length );
 
             return instruction;
         }
 
         Stack<byte> _tempOpcodeList = new Stack<byte>();
-        Instruction GetInstruction( MemoryStream pStream )
+        Instruction GetInstruction( MemoryStream stream )
         {
             _tempByteQueue.Clear();
             var tableName = "start";
@@ -78,7 +78,7 @@ namespace ZXDebug
 
             _tempOpcodeList.Clear();
 
-            while( ( current = pStream.ReadByte() ) > -1 )
+            while( ( current = stream.ReadByte() ) > -1 )
             {
                 var currentByte = (byte) current;
                 _tempOpcodeList.Push(currentByte);
@@ -128,7 +128,7 @@ namespace ZXDebug
                         //
                         // the data byte we save will be used later
 
-                        var saveByte = pStream.ReadByte();
+                        var saveByte = stream.ReadByte();
 
                         if( saveByte == -1 )
                         {
@@ -152,7 +152,7 @@ namespace ZXDebug
                         if( _tempOpcodeList.Count > 0 ) db = _tempOpcodeList.Pop();
 
                         instruction = new Instruction { Text = "db " + db.ToHex() };
-                        pStream.Position = pStream.Position - 1;
+                        stream.Position = stream.Position - 1;
 
                         break;
                     }
@@ -173,19 +173,19 @@ namespace ZXDebug
             return instruction;
         }
 
-        void GetOperands( Instruction pInstruction, MemoryStream pStream )
+        void GetOperands( Instruction instruction, MemoryStream stream )
         {
             var operands = 0;
 
-            var start = pInstruction.Text.IndexOf( '{' );
+            var start = instruction.Text.IndexOf( '{' );
             while( start > -1 )
             {
-                var end = pInstruction.Text.IndexOf( '}', start );
+                var end = instruction.Text.IndexOf( '}', start );
 
                 if( end == -1 )
                     break;
 
-                var specifier = pInstruction.Text.Substring( start + 1, end - start - 1 );
+                var specifier = instruction.Text.Substring( start + 1, end - start - 1 );
                 var type = Operand.TypeEnum.Unknown;
                 var length = 0;
                 var lo = 0;
@@ -202,24 +202,24 @@ namespace ZXDebug
                 }
 
                 if( length > 0 )
-                    lo = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : pStream.ReadByte();
+                    lo = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : stream.ReadByte();
 
                 if( length > 1 )
-                    hi = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : pStream.ReadByte();
+                    hi = _tempByteQueue.Count > 0 ? _tempByteQueue.Dequeue() : stream.ReadByte();
 
                 if( lo == -1 || hi == -1 )
                 {
-                    Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {" + specifier + "} in instruction '" + pInstruction.Text + "'" );
+                    Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {" + specifier + "} in instruction '" + instruction.Text + "'" );
                     return;
                 }
 
                 _tempOperands[operands++] = new Operand( type, hi << 8 | lo );
 
-                start = pInstruction.Text.IndexOf( '{', end );
+                start = instruction.Text.IndexOf( '{', end );
             }
 
             if( operands > 0 )
-                pInstruction.Operands = _tempOperands.Extract( 0, operands );
+                instruction.Operands = _tempOperands.Extract( 0, operands );
         }
 
         /// <summary>
@@ -235,19 +235,19 @@ namespace ZXDebug
             /// <summary>
             /// Read a new set of opcode tables from the provided filename
             /// </summary>
-            /// <param name="pFilename"></param>
-            public void Read( string pFilename )
+            /// <param name="filename"></param>
+            public void Read( string filename )
             {
-                if( Path.GetExtension( pFilename ).ToLower() == ".json" )
+                if( Path.GetExtension( filename ).ToLower() == ".json" )
                 { 
-                    JsonConvert.PopulateObject( File.ReadAllText( pFilename ), this );
+                    JsonConvert.PopulateObject( File.ReadAllText( filename ), this );
                     return;
                 }
 
                 OpcodeTable table = null;
                 var lowNibble = new byte[0];
 
-                using( var file = new StreamReader( pFilename ) )
+                using( var file = new StreamReader( filename ) )
                 {
                     string line;
                     while( ( line = file.ReadLine() ) != null )
@@ -276,11 +276,11 @@ namespace ZXDebug
                                 // first row, list of low nibbles
                                 lowNibble = new byte[row.Length];
                                 for( var i = 1; i < row.Length; i++ )
-                                    lowNibble[i] = Convert.ToByte( row[i].Trim(), 16 );
+                                    lowNibble[i] = System.Convert.ToByte( row[i].Trim(), 16 );
                             }
                             else
                             {
-                                var highNibble = Convert.ToByte( row[0].Trim(), 16 );
+                                var highNibble = System.Convert.ToByte( row[0].Trim(), 16 );
 
                                 for( var i = 1; i < row.Length; i++ )
                                 {
@@ -300,7 +300,7 @@ namespace ZXDebug
 
                 // save as .json for later use
                 File.WriteAllText( 
-                    Path.ChangeExtension( pFilename, "json" ), 
+                    Path.ChangeExtension( filename, "json" ), 
                     JsonConvert.SerializeObject( 
                         this, 
                         Formatting.Indented
@@ -334,16 +334,16 @@ namespace ZXDebug
             public TypeEnum Type;
             public ushort Value;
 
-            public Operand( TypeEnum pType, ushort pValue )
+            public Operand( TypeEnum type, ushort value )
             {
-                Type = pType;
-                Value = pValue;
+                Type = type;
+                Value = value;
             }
 
-            public Operand( TypeEnum pType, int pValue )
+            public Operand( TypeEnum type, int value )
             {
-                Type = pType;
-                Value = (ushort)pValue;
+                Type = type;
+                Value = (ushort)value;
             }
         }
 

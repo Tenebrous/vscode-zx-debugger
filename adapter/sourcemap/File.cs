@@ -8,9 +8,9 @@ namespace ZXDebug.SourceMapper
         {
         }
 
-        public File( string pFilename )
+        public File( string filename )
         {
-            Filename = pFilename;
+            Filename = filename;
         }
 
         public override string ToString()
@@ -18,9 +18,9 @@ namespace ZXDebug.SourceMapper
             return Filename;
         }
 
-        public override bool Equals( object pOther )
+        public override bool Equals( object other )
         {
-            return pOther is File && this == (File)pOther;
+            return other is File && this == (File)other;
         }
 
         public override int GetHashCode()
@@ -33,14 +33,14 @@ namespace ZXDebug.SourceMapper
             }
         }
 
-        public static bool operator ==( File x, File y )
+        public static bool operator ==( File left, File right )
         {
-            return x.Filename == y.Filename;
+            return left.Filename == right.Filename;
         }
 
-        public static bool operator !=( File x, File y )
+        public static bool operator !=( File left, File right )
         {
-            return !( x == y );
+            return !( left == right );
         }
     }
 }

@@ -8,10 +8,10 @@ namespace ZXDebug.SourceMapper
         public BankID      Bank;
 
         public ushort      Address;
-        public FileLine  Source;
+        public FileLine    Source;
 
         public ushort      LabelledAddress;
-        public FileLine  LabelledSource;
+        public FileLine    LabelledSource;
         public List<Label> Labels;
 
         public string GetRelativeText()
@@ -31,7 +31,7 @@ namespace ZXDebug.SourceMapper
                 offset = $"+{Address - LabelledAddress}";
             }
 
-            if( Format.Settings.LabelPosition == Format.FormatSettings.LabelPositionEnum.Left )
+            if( Convert.Settings.LabelPosition == Convert.FormatSettings.LabelPositionEnum.Left )
                 return $"{text}{offset} {Address.ToHex()}";
             else
                 return $"{Address.ToHex()} {text}{offset}";

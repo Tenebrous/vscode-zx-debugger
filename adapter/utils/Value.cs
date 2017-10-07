@@ -25,26 +25,26 @@ namespace ZXDebug
             _childrenByName = new Dictionary<string, Value>( StringComparer.InvariantCultureIgnoreCase );
         }
 
-        Value( Value pParent, ValueRefresher pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormatter = null )
+        Value( Value parent, ValueRefresher refresher = null, ValueGetter getter = null, ValueSetter setter = null, Value.ValueFormatter formatter = null )
         {
-            Parent = pParent;
-            _all = pParent._all;
-            _allByName = pParent._allByName;
+            Parent = parent;
+            _all = parent._all;
+            _allByName = parent._allByName;
             _children = new Dictionary<int, Value>();
             _childrenByName = new Dictionary<string, Value>();
 
-            Getter = pGet;
-            Setter = pSet;
-            Formatter = pFormatter;
-            Refresher = pRefresher;
+            Getter = getter;
+            Setter = setter;
+            Formatter = formatter;
+            Refresher = refresher;
         }
 
-        public Value Create( string pName, ValueRefresher pRefresher = null, ValueGetter pGet = null, ValueSetter pSet = null, Value.ValueFormatter pFormat = null )
+        public Value Create( string name, ValueRefresher refresher = null, ValueGetter getter = null, ValueSetter setter = null, Value.ValueFormatter formatter = null )
         {
-            var value = new Value( this, pRefresher, pGet, pSet, pFormat )
+            var value = new Value( this, refresher, getter, setter, formatter )
             {
                 ID = _all.Count + 1,
-                Name = pName
+                Name = name
             };
 
             _all[value.ID] = value;
@@ -58,58 +58,52 @@ namespace ZXDebug
             return value;
         }
 
-        public Value All( int pID )
+        public Value All( int id )
         {
-            Value result;
-            _all.TryGetValue( pID, out result );
+            _all.TryGetValue( id, out var result );
             return result;
         }
 
-        public bool HasAllByName( string pName )
+        public bool HasAllByName( string name )
         {
-            return _allByName.ContainsKey( pName );
+            return _allByName.ContainsKey( name );
         }
-        public Value AllByName( string pName )
+        public Value AllByName( string name )
         {
-            Value result;
-
-            if( !_allByName.TryGetValue( pName, out result ) )
-                result = Create( pName );
-
-            return result;
-        }
-
-        public Value Child( int pID )
-        {
-            Value result;
-            _children.TryGetValue( pID, out result );
-            return result;
-        }
-
-        public bool HasChildByName( string pName )
-        {
-            return _allByName.ContainsKey( pName );
-        }
-        public Value ChildByName( string pName )
-        {
-            Value result;
-
-            if( !_childrenByName.TryGetValue( pName, out result ) )
-                result = Create( pName );
+            if( !_allByName.TryGetValue( name, out var result ) )
+                result = Create( name );
 
             return result;
         }
 
-        public delegate string ValueGetter( Value pValue );
+        public Value Child( int id )
+        {
+            _children.TryGetValue( id, out var result );
+            return result;
+        }
+
+        public bool HasChildByName( string name )
+        {
+            return _allByName.ContainsKey( name );
+        }
+        public Value ChildByName( string name )
+        {
+            if( !_childrenByName.TryGetValue( name, out var result ) )
+                result = Create( name );
+
+            return result;
+        }
+
+        public delegate string ValueGetter( Value value );
         public ValueGetter Getter { get; set; }
 
-        public delegate void ValueSetter( Value pValue, string pNew );
+        public delegate void ValueSetter( Value value, string newContent );
         public ValueSetter Setter { get; set; }
 
-        public delegate void ValueRefresher( Value pValue );
+        public delegate void ValueRefresher( Value value );
         public ValueRefresher Refresher { get; set; }
 
-        public delegate string ValueFormatter( Value pValue );
+        public delegate string ValueFormatter( Value value );
         public ValueFormatter Formatter { get; set; }
 
         bool _doingRefresh;

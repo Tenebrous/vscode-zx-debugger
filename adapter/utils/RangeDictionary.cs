@@ -19,43 +19,43 @@ namespace ZXDebug
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pIndex"></param>
-        /// <param name="pValue"></param>
+        /// <param name="index"></param>
+        /// <param name="foundValue"></param>
         /// <returns>true if created, false if already existed</returns>
-        public bool TryAdd( TIndex pIndex, out TValue pValue )
+        public bool TryAdd( TIndex index, out TValue foundValue )
         {
-            if( TryGetValue( pIndex, out var result ) )
+            if( TryGetValue( index, out var result ) )
             {
-                pValue = result;
+                foundValue = result;
                 return false;
             }
 
             result = new TValue();
-            Add( pIndex, result );
-            pValue = result;
+            Add( index, result );
+            foundValue = result;
             return true;
         }
 
-        public bool TryAdd( TIndex pIndex, out Range<TIndex> pRange, out TValue pValue )
+        public bool TryAdd( TIndex index, out Range<TIndex> foundRange, out TValue foundValue )
         {
-            if( TryGetValue( pIndex, out pRange, out pValue ) )
+            if( TryGetValue( index, out foundRange, out foundValue ) )
                 return false;
 
-            pValue = new TValue();
-            pRange = Add( pIndex, pValue );
+            foundValue = new TValue();
+            foundRange = Add( index, foundValue );
             return true;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pIndex"></param>
-        /// <param name="pMode">
+        /// <param name="index"></param>
+        /// <param name="mode">
         /// 0 = only return the range that contains the index
         /// -1 = if containing range not found, return next lower
         /// 1 = if containing range not found, return next higher</param>
         /// <returns></returns>
-        int Find( TIndex pIndex, int pMode )
+        int Find( TIndex index, int mode )
         {
             int lower = 0;
             int upper = _ranges.Count - 1;
@@ -64,8 +64,8 @@ namespace ZXDebug
             {
                 int middle = lower + ( upper - lower ) / 2;
 
-                var lowerCompare = pIndex.CompareTo( _ranges[middle].LowerKey );
-                var upperCompare = pIndex.CompareTo( _ranges[middle].UpperKey );
+                var lowerCompare = index.CompareTo( _ranges[middle].LowerKey );
+                var upperCompare = index.CompareTo( _ranges[middle].UpperKey );
 
                 if( lowerCompare >= 0 && upperCompare <= 0 )
                     return middle;
@@ -76,10 +76,10 @@ namespace ZXDebug
                     lower = middle + 1;
             }
 
-            if( pMode == 1 && lower < _ranges.Count )
+            if( mode == 1 && lower < _ranges.Count )
                 return lower;
 
-            if( pMode == -1 && upper >= 0 )
+            if( mode == -1 && upper >= 0 )
                 return upper;
 
             return -1;
@@ -88,23 +88,23 @@ namespace ZXDebug
         /// <summary>
         /// Find the range which contains the specified key and return the range & value
         /// </summary>
-        /// <param name="pIndex">Key to look up</param>
-        /// <param name="pRange">Range to be returned</param>
-        /// <param name="pValue">Value to be returned</param>
+        /// <param name="index">Key to look up</param>
+        /// <param name="foundRange">Range to be returned</param>
+        /// <param name="foundValue">Value to be returned</param>
         /// <returns>true if the item was found, false if not</returns>
-        public bool TryGetValue( TIndex pIndex, out Range<TIndex> pRange, out TValue pValue )
+        public bool TryGetValue( TIndex index, out Range<TIndex> foundRange, out TValue foundValue )
         {
-            var index = Find( pIndex, 0 );
+            var pos = Find( index, 0 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pRange = null;
-                pValue = default( TValue );
+                foundRange = null;
+                foundValue = default( TValue );
                 return false;
             }
 
-            pRange = _ranges[index];
-            pValue = this[pRange];
+            foundRange = _ranges[pos];
+            foundValue = this[foundRange];
 
             return true;
         }
@@ -112,20 +112,20 @@ namespace ZXDebug
         /// <summary>
         /// Find the range which contains the specified key and return the value
         /// </summary>
-        /// <param name="pIndex">Key to look up</param>
-        /// <param name="pValue">Value to be returned</param>
+        /// <param name="index">Key to look up</param>
+        /// <param name="foundValue">Value to be returned</param>
         /// <returns>true if the item was found, false if not</returns>
-        public bool TryGetValue( TIndex pIndex, out TValue pValue )
+        public bool TryGetValue( TIndex index, out TValue foundValue )
         {
-            var index = Find( pIndex, 0 );
+            var pos = Find( index, 0 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pValue = default( TValue );
+                foundValue = default( TValue );
                 return false;
             }
 
-            pValue = this[_ranges[index]];
+            foundValue = this[_ranges[pos]];
 
             return true;
         }
@@ -134,23 +134,23 @@ namespace ZXDebug
         /// Find the range which contains the specified key, or the range immediately preceding the position the key would be in, 
         /// and and return the range and value
         /// </summary>
-        /// <param name="pKey">Key to look up</param>
-        /// <param name="pRange">Range to be returned</param>
-        /// <param name="pValue">Value to be returned</param>
+        /// <param name="index">Key to look up</param>
+        /// <param name="foundRange">Range to be returned</param>
+        /// <param name="foundValue">Value to be returned</param>
         /// <returns>true if a suitable range was found, false if not</returns>
-        public bool TryGetValueOrBelow( TIndex pKey, out Range<TIndex> pRange, out TValue pValue )
+        public bool TryGetValueOrBelow( TIndex index, out Range<TIndex> foundRange, out TValue foundValue )
         {
-            var index = Find( pKey, -1 );
+            var pos = Find( index, -1 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pRange = null;
-                pValue = default( TValue );
+                foundRange = null;
+                foundValue = default( TValue );
                 return false;
             }
 
-            pRange = _ranges[index];
-            pValue = this[pRange];
+            foundRange = _ranges[pos];
+            foundValue = this[foundRange];
 
             return true;
         }
@@ -159,23 +159,23 @@ namespace ZXDebug
         /// Find the range which contains the specified key, or the range immediately following the position the key would be in, 
         /// and and return the range and value
         /// </summary>
-        /// <param name="pKey">Key to look up</param>
-        /// <param name="pRange">Range to be returned</param>
-        /// <param name="pValue">Value to be returned</param>
+        /// <param name="index">Key to look up</param>
+        /// <param name="foundRange">Range to be returned</param>
+        /// <param name="foundValue">Value to be returned</param>
         /// <returns>true if a suitable range was found, false if not</returns>
-        public bool TryGetValueOrAbove( TIndex pKey, out Range<TIndex> pRange, out TValue pValue )
+        public bool TryGetValueOrAbove( TIndex index, out Range<TIndex> foundRange, out TValue foundValue )
         {
-            var index = Find( pKey, 1 );
+            var pos = Find( index, 1 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pRange = null;
-                pValue = default( TValue );
+                foundRange = null;
+                foundValue = default( TValue );
                 return false;
             }
 
-            pRange = _ranges[index];
-            pValue = this[pRange];
+            foundRange = _ranges[pos];
+            foundValue = this[foundRange];
 
             return true;
         }
@@ -183,54 +183,54 @@ namespace ZXDebug
         /// <summary>
         /// Add a new item to the dictionary at the specified position
         /// </summary>
-        /// <param name="pKey">Start and end of new range</param>
-        /// <param name="pValue">Value associated with range</param>
+        /// <param name="index">Start and end of new range</param>
+        /// <param name="value">Value associated with range</param>
         /// <returns>Range of new value</returns>
-        public Range<TIndex> Add( TIndex pKey, TValue pValue )
+        public Range<TIndex> Add( TIndex index, TValue value )
         {
-            var range = new Range<TIndex>( pKey, pKey );
-            this[range] = pValue;
+            var range = new Range<TIndex>( index, index );
+            this[range] = value;
             return range;
         }
 
         /// <summary>
         /// Add a new item to the dictionary covering the specified range
         /// </summary>
-        /// <param name="pLower">Start of new range</param>
-        /// <param name="pUpper">End of new range</param>
-        /// <param name="pValue">Value associated with range</param>
+        /// <param name="lower">Start of new range</param>
+        /// <param name="upper">End of new range</param>
+        /// <param name="value">Value associated with range</param>
         /// <returns>Range of new value</returns>
-        public Range<TIndex> Add( TIndex pLower, TIndex pUpper, TValue pValue )
+        public Range<TIndex> Add( TIndex lower, TIndex upper, TValue value )
         {
-            var range = new Range<TIndex>( pLower, pUpper );
-            this[range] = pValue;
+            var range = new Range<TIndex>( lower, upper );
+            this[range] = value;
             return range;
         }
 
         /// <summary>
         /// Update the specified range to include a new position
         /// </summary>
-        /// <param name="pRange">Existing range to update</param>
-        /// <param name="pInclude">New position to include</param>
+        /// <param name="range">Existing range to update</param>
+        /// <param name="index">New position to include</param>
         /// <returns></returns>
-        public Range<TIndex> Extend( Range<TIndex> pRange, TIndex pInclude )
+        public Range<TIndex> Extend( Range<TIndex> range, TIndex index )
         {
-            TryGetValue( pRange, out var entry );
+            TryGetValue( range, out var entry );
 
-            var compareLower = pRange.LowerKey.CompareTo( pInclude );
-            var compareUpper = pRange.UpperKey.CompareTo( pInclude );
+            var compareLower = range.LowerKey.CompareTo( index );
+            var compareUpper = range.UpperKey.CompareTo( index );
 
             if( compareLower <= 0 || compareUpper >= 0 )
-                return pRange;
+                return range;
 
-            Remove( pRange );
+            Remove( range );
 
-            var newLower = compareLower > 0 ? pInclude : pRange.LowerKey;
-            var newUpper = compareUpper < 0 ? pInclude : pRange.UpperKey;
+            var newLower = compareLower > 0 ? index : range.LowerKey;
+            var newUpper = compareUpper < 0 ? index : range.UpperKey;
 
-            var range = new Range<TIndex>( newLower, newUpper );
-            Add( range, entry );
-            return pRange;
+            var newRange = new Range<TIndex>( newLower, newUpper );
+            Add( newRange, entry );
+            return range;
         }
     }
 

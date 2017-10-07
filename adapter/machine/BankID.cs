@@ -29,25 +29,25 @@ namespace Spectrum
         /// <summary>
         /// Create a new memory bank of the provided type & id
         /// </summary>
-        /// <param name="pType"></param>
-        /// <param name="pNumber"></param>
-        public BankID( TypeEnum pType, int pNumber = 0 )
+        /// <param name="type"></param>
+        /// <param name="number"></param>
+        public BankID( TypeEnum type, int number = 0 )
         {
-            Type = pType;
-            Number = pNumber;
+            Type = type;
+            Number = number;
         }
 
         static Regex _parseBank = new Regex( @"(?'type'BANK|DIV)_(?'number'\d*)(_(?'part'L|H))?" );
         /// <summary>
         /// Create a BankID by parsing the provided string into a bank type & number
         /// </summary>
-        /// <param name="pBank"></param>
-        public BankID( string pBank )
+        /// <param name="bank"></param>
+        public BankID( string bank )
         {
             Type = TypeEnum.All;
             Number = 0;
 
-            var match = _parseBank.Match( pBank );
+            var match = _parseBank.Match( bank );
             if( match.Success )
             {
                 Number = int.Parse( match.Groups["number"].Value );
@@ -67,20 +67,20 @@ namespace Spectrum
         /// <summary>
         /// Create a BankID from the textual bank type & number
         /// </summary>
-        /// <param name="pType"></param>
-        /// <param name="pNumber"></param>
-        public BankID( string pType, int pNumber )
+        /// <param name="type"></param>
+        /// <param name="number"></param>
+        public BankID( string type, int number )
         {
             Type = TypeEnum.All;
 
-            if( string.Compare( pType, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
+            if( string.Compare( type, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.ROM;
-            else if( string.Compare( pType, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
+            else if( string.Compare( type, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.Bank;
-            else if( string.Compare( pType, "DIV", StringComparison.OrdinalIgnoreCase ) == 0 )
+            else if( string.Compare( type, "DIV", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.Div;
 
-            Number = pNumber;
+            Number = number;
         }
 
         public override string ToString()
@@ -100,21 +100,21 @@ namespace Spectrum
         /// <summary>
         /// Create a BankID for the specified ROM number
         /// </summary>
-        /// <param name="pID">ROM number</param>
+        /// <param name="number">ROM number</param>
         /// <returns></returns>
-        public static BankID ROM( int pID )
+        public static BankID ROM( int number )
         {
-            return new BankID( BankID.TypeEnum.ROM, pID );
+            return new BankID( BankID.TypeEnum.ROM, number );
         }
 
         /// <summary>
         /// Create a BankID for the specified BANK number
         /// </summary>
-        /// <param name="pID">BANK number</param>
+        /// <param name="number">BANK number</param>
         /// <returns></returns>
-        public static BankID Bank( int pID )
+        public static BankID Bank( int number )
         {
-            return new BankID( BankID.TypeEnum.Bank, pID );
+            return new BankID( BankID.TypeEnum.Bank, number );
         }
 
         /// <summary>
@@ -127,9 +127,9 @@ namespace Spectrum
         }
 
 
-        public override bool Equals( object pOther )
+        public override bool Equals( object other )
         {
-            return pOther is BankID && this == (BankID)pOther;
+            return other is BankID && this == (BankID)other;
         }
         
         public override int GetHashCode()
@@ -143,14 +143,14 @@ namespace Spectrum
             }
         }
 
-        public static bool operator ==( BankID x, BankID y )
+        public static bool operator ==( BankID left, BankID right )
         {
-            return x.Type == y.Type && x.Number == y.Number;
+            return left.Type == right.Type && left.Number == right.Number;
         }
 
-        public static bool operator !=( BankID x, BankID y )
+        public static bool operator !=( BankID left, BankID right )
         {
-            return !( x == y );
+            return !( left == right );
         }
     }
 }

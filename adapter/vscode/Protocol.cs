@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿#pragma warning disable IDE1006 // Naming Styles
+
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -61,20 +63,20 @@ namespace VSCode
         public string command { get; }
         public ResponseBody body { get; private set; }
 
-        public Response( Request pRequest, ResponseBody pResponse = null, string pErrorMessage = null ) : base( "response" )
+        public Response( Request request, ResponseBody response = null, string errorMsg = null ) : base( "response" )
         {
             success = true;
-            request_seq = pRequest.seq;
-            command = pRequest.command;
+            request_seq = request.seq;
+            command = request.command;
 
-            if( pResponse != null )
-                body = pResponse;
+            if( response != null )
+                body = response;
 
-            if( pErrorMessage == null )
+            if( errorMsg == null )
                 return;
 
             success = false;
-            message = pErrorMessage;
+            message = errorMsg;
         }
     }
 
@@ -318,7 +320,7 @@ namespace VSCode
 
     public class LoadedSourceEvent : Event
     {
-        public LoadedSourceEvent( string pReason, Source pSource ) : base( "loadedSource", new { reason = pReason, source = pSource } ) { }
+        public LoadedSourceEvent( string reasonStr, Source src ) : base( "loadedSource", new { reason = reasonStr, source = src } ) { }
     }
 
     // ---- Response -------------------------------------------------------------------------

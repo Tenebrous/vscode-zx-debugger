@@ -5,9 +5,9 @@ namespace Spectrum
     public class Stack : List<ushort>
     {
         Machine _machine;
-        public Stack( Machine pMachine )
+        public Stack( Machine machine )
         {
-            _machine = pMachine;
+            _machine = machine;
         }
     }
 }

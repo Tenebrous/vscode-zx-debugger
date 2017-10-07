@@ -24,74 +24,74 @@ namespace ZXDebug.utils
             _factory = null;
         }
 
-        public SpatialDictionary( Func<TPartition, TKey, TValue> pFactory )
+        public SpatialDictionary( Func<TPartition, TKey, TValue> factory )
         {
-            _factory = pFactory;
+            _factory = factory;
         }
 
         /// <summary>
         /// Attempt to add a new item to the dictionary
         /// </summary>
-        /// <param name="pPartition"></param>
-        /// <param name="pKey"></param>
-        /// <param name="pValue"></param>
-        /// <param name="pFactory"></param>
+        /// <param name="partition"></param>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="factory"></param>
         /// <returns>true if created, false if already existed</returns>
-        public bool TryAdd( TPartition pPartition, TKey pKey, out TValue pValue, Func<TPartition, TKey, TValue> pFactory = null )
+        public bool TryAdd( TPartition partition, TKey key, out TValue value, Func<TPartition, TKey, TValue> factory = null )
         {
-            if( !_data.TryGetValue( pPartition, out var spatial ) )
+            if( !_data.TryGetValue( partition, out var spatial ) )
             {
-                spatial = new SpatialDictionary<TKey, TValue>( SubFactory( pPartition, pFactory ) );
-                _data[pPartition] = spatial;
+                spatial = new SpatialDictionary<TKey, TValue>( SubFactory( partition, factory ) );
+                _data[partition] = spatial;
             }
 
-            return spatial.TryAdd( pKey, out pValue, SubFactory(pPartition, pFactory) );
+            return spatial.TryAdd( key, out value, SubFactory(partition, factory) );
         }
 
-        Func<TKey, TValue> SubFactory( TPartition pPartition, Func<TPartition, TKey, TValue> pFactory )
+        Func<TKey, TValue> SubFactory( TPartition partition, Func<TPartition, TKey, TValue> factory )
         {
-            if( pFactory != null )
-                return pKey => pFactory( pPartition, pKey );
+            if( factory != null )
+                return pKey => factory( partition, pKey );
 
             if( _factory != null )
-                return pKey => _factory( pPartition, pKey );
+                return pKey => _factory( partition, pKey );
 
             return null;
         }
 
-        public bool TryGetValue( TPartition pPartition, TKey pKey, out TValue pValue )
+        public bool TryGetValue( TPartition partition, TKey key, out TValue value )
         {
-            if( !_data.TryGetValue( pPartition, out var spatial ) )
+            if( !_data.TryGetValue( partition, out var spatial ) )
             {
-                pValue = default( TValue );
+                value = default( TValue );
                 return false;
             }
 
-            return spatial.TryGetValue( pKey, out pValue );
+            return spatial.TryGetValue( key, out value );
         }
 
-        public bool TryGetValueOrBelow( TPartition pPartition, TKey pKey, out TKey pFoundIndex, out TValue pValue )
+        public bool TryGetValueOrBelow( TPartition partition, TKey index, out TKey foundIndex, out TValue foundValue )
         {
-            if( !_data.TryGetValue( pPartition, out var spatial ) )
+            if( !_data.TryGetValue( partition, out var spatial ) )
             {
-                pValue = default( TValue );
-                pFoundIndex = default( TKey );
+                foundValue = default( TValue );
+                foundIndex = default( TKey );
                 return false;
             }
 
-            return spatial.TryGetValueOrBelow( pKey, out pFoundIndex, out pValue );
+            return spatial.TryGetValueOrBelow( index, out foundIndex, out foundValue );
         }
 
-        public bool TryGetValueOrAbove( TPartition pPartition, TKey pKey, out TKey pFoundIndex, out TValue pValue )
+        public bool TryGetValueOrAbove( TPartition partition, TKey index, out TKey foundIndex, out TValue foundValue )
         {
-            if( !_data.TryGetValue( pPartition, out var spatial ) )
+            if( !_data.TryGetValue( partition, out var spatial ) )
             {
-                pValue = default( TValue );
-                pFoundIndex = default( TKey );
+                foundValue = default( TValue );
+                foundIndex = default( TKey );
                 return false;
             }
 
-            return spatial.TryGetValueOrAbove( pKey, out pFoundIndex, out pValue );
+            return spatial.TryGetValueOrAbove( index, out foundIndex, out foundValue );
         }
 
         public IEnumerator<KeyValuePair<TPartition, SpatialDictionary<TKey, TValue>>> GetEnumerator()

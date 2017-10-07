@@ -23,44 +23,44 @@ namespace ZXDebug
             _factory = pKey => new TValue();
         }
 
-        public SpatialDictionary( Func<TKey, TValue> pFactory )
+        public SpatialDictionary( Func<TKey, TValue> factory )
         {
             _indices = Keys;
             _values = Values;
-            _factory = pFactory ?? ( pKey => new TValue() );
+            _factory = factory ?? ( pKey => new TValue() );
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pKey"></param>
-        /// <param name="pValue"></param>
-        /// <param name="pFactory"></param>
+        /// <param name="index"></param>
+        /// <param name="foundValue"></param>
+        /// <param name="factory"></param>
         /// <returns>true if created, false if already existed</returns>
-        public bool TryAdd( TKey pKey, out TValue pValue, Func<TKey, TValue> pFactory = null )
+        public bool TryAdd( TKey index, out TValue foundValue, Func<TKey, TValue> factory = null )
         {
-            if( TryGetValue( pKey, out var result ) )
+            if( TryGetValue( index, out var result ) )
             {
-                pValue = result;
+                foundValue = result;
                 return false;
             }
 
-            result = (pFactory ?? _factory)(pKey);
-            Add( pKey, result );
-            pValue = result;
+            result = (factory ?? _factory)(index);
+            Add( index, result );
+            foundValue = result;
             return true;
         }
         
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pKey"></param>
-        /// <param name="pMode">
+        /// <param name="index"></param>
+        /// <param name="mode">
         /// 0 = only return the exact entry
         /// -1 = if key not found, return next lower
         /// 1 = if key not found, return next higher</param>
         /// <returns></returns>
-        int Find( TKey pKey, int pMode )
+        int Find( TKey index, int mode )
         {
             int lower = 0;
             int upper = _indices.Count - 1;
@@ -69,8 +69,8 @@ namespace ZXDebug
             {
                 int middle = lower + ( upper - lower ) / 2;
 
-                var lowerCompare = pKey.CompareTo( _indices[middle] );
-                var upperCompare = pKey.CompareTo( _indices[middle] );
+                var lowerCompare = index.CompareTo( _indices[middle] );
+                var upperCompare = index.CompareTo( _indices[middle] );
 
                 if( lowerCompare >= 0 && upperCompare <= 0 )
                     return middle;
@@ -81,10 +81,10 @@ namespace ZXDebug
                     lower = middle + 1;
             }
 
-            if( pMode == 1 && lower < _indices.Count )
+            if( mode == 1 && lower < _indices.Count )
                 return lower;
 
-            if( pMode == -1 && upper >= 0 )
+            if( mode == -1 && upper >= 0 )
                 return upper;
 
             return -1;
@@ -95,23 +95,23 @@ namespace ZXDebug
         /// Find the item at the specified index, or immediately preceding it
         /// and return both the found index and value
         /// </summary>
-        /// <param name="pKey">Key to find</param>
-        /// <param name="pFoundIndex">Key that was found</param>
-        /// <param name="pValue">Value that was found</param>
+        /// <param name="index">Key to find</param>
+        /// <param name="foundIndex">Key that was found</param>
+        /// <param name="foundValue">Value that was found</param>
         /// <returns>true if a suitable item was found</returns>
-        public bool TryGetValueOrBelow( TKey pKey, out TKey pFoundIndex, out TValue pValue )
+        public bool TryGetValueOrBelow( TKey index, out TKey foundIndex, out TValue foundValue )
         {
-            var index = Find( pKey, -1 );
+            var pos = Find( index, -1 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pFoundIndex = default( TKey );
-                pValue = default( TValue );
+                foundIndex = default( TKey );
+                foundValue = default( TValue );
                 return false;
             }
 
-            pFoundIndex = _indices[index];
-            pValue = _values[index];
+            foundIndex = _indices[pos];
+            foundValue = _values[pos];
 
             return true;
         }
@@ -120,23 +120,23 @@ namespace ZXDebug
         /// Find the item at the specified key, or immediately following it
         /// and return both the found index and value
         /// </summary>
-        /// <param name="pKey">Key to find</param>
-        /// <param name="pFoundIndex">Key that was found</param>
-        /// <param name="pValue">Value that was found</param>
+        /// <param name="index">Key to find</param>
+        /// <param name="foundIndex">Key that was found</param>
+        /// <param name="foundValue">Value that was found</param>
         /// <returns>true if a suitable item was found</returns>
-        public bool TryGetValueOrAbove( TKey pKey, out TKey pFoundIndex, out TValue pValue )
+        public bool TryGetValueOrAbove( TKey index, out TKey foundIndex, out TValue foundValue )
         {
-            var index = Find( pKey, 1 );
+            var pos = Find( index, 1 );
 
-            if( index == -1 )
+            if( pos == -1 )
             {
-                pFoundIndex = default( TKey );
-                pValue = default( TValue );
+                foundIndex = default( TKey );
+                foundValue = default( TValue );
                 return false;
             }
 
-            pFoundIndex = _indices[index];
-            pValue = _values[index];
+            foundIndex = _indices[pos];
+            foundValue = _values[pos];
 
             return true;
         }

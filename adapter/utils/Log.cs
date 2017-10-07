@@ -18,17 +18,17 @@ public static class Log
     public static string Filename;
 
     static bool _inLog;
-    public static void Write( Severity pSeverity, string pMessage )
+    public static void Write( Severity severity, string message )
     {
         if( _inLog ) return;
 
-        if( pSeverity <= MaxSeverityLog )
-            File.AppendAllText( Filename, pSeverity + ": " + pMessage + "\r\n" );
+        if( severity <= MaxSeverityLog )
+            File.AppendAllText( Filename, severity + ": " + message + "\r\n" );
 
-        if( pSeverity > MaxSeverityConsole ) return;
+        if( severity > MaxSeverityConsole ) return;
 
         _inLog = true;
-        OnLog?.Invoke( pSeverity, pMessage );
+        OnLog?.Invoke( severity, message );
         _inLog = false;
     }
 

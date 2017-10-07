@@ -20,25 +20,25 @@ namespace ZXDebug.SourceMapper
         public Files Files = new Files();
 
 
-        public GetLabelsResult GetLabels( BankID pBank, ushort pAddress, ushort pMaxDistance = 0 )
+        public GetLabelsResult GetLabels( BankID bankId, ushort address, ushort maxDistance = 0 )
         {
             GetLabelsResult result = null;
 
             ushort highest = 0;
             foreach( var map in this )
             {
-                if( !map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var labels ) )
+                if( !map.Labels.TryGetValueOrBelow( bankId, address, out var actualAddress, out var labels ) )
                     continue;
 
-                if( actualAddress < highest || pAddress - actualAddress > pMaxDistance )
+                if( actualAddress < highest || address - actualAddress > maxDistance )
                     continue;
 
                 highest = actualAddress;
 
                 result = new GetLabelsResult()
                 {
-                    Bank = pBank,
-                    Address = pAddress,
+                    Bank = bankId,
+                    Address = address,
                     Labels = labels
                 };
             }
@@ -46,43 +46,43 @@ namespace ZXDebug.SourceMapper
             return result;
         }
 
-        public AddressDetails GetAddressDetails( BankID pBank, ushort pAddress, ushort pMaxLabelDistance = 0 )
+        public AddressDetails GetAddressDetails( BankID bankId, ushort address, ushort maxDistance = 0 )
         {
             var result = new AddressDetails()
             {
-                Bank = pBank,
-                Address = pAddress
+                Bank = bankId,
+                Address = address
             };
 
             ushort highestLabel = 0;
 
             foreach( var map in this )
             {
-                if( result.Source == null && map.Source.TryGetValue( pBank, pAddress, out var source ) )
+                if( result.Source == null && map.Source.TryGetValue( bankId, address, out var source ) )
                     result.Source = source;
 
-                if( map.Labels.TryGetValueOrBelow( pBank, pAddress, out var actualAddress, out var labels ) )
+                if( map.Labels.TryGetValueOrBelow( bankId, address, out var actualAddress, out var labels ) )
                 {
-                    if( actualAddress >= highestLabel && pAddress - actualAddress <= pMaxLabelDistance )
+                    if( actualAddress >= highestLabel && address - actualAddress <= maxDistance )
                     {
                         highestLabel = actualAddress;
                         result.Labels = labels;
                         result.LabelledAddress = actualAddress;
                     }
 
-                    if( actualAddress == pAddress )
+                    if( actualAddress == address )
                         result.LabelledSource = result.Source;
                     else
-                        map.Source.TryGetValue( pBank, actualAddress, out result.LabelledSource );
+                        map.Source.TryGetValue( bankId, actualAddress, out result.LabelledSource );
                 }
             }
 
             return result;
         }
 
-        public Map Add( string pFilename )
+        public Map Add( string filename )
         {
-            var map = new Map( this, SourceRoot, pFilename );
+            var map = new Map( this, SourceRoot, filename );
             base.Add( map );
 
             return map;

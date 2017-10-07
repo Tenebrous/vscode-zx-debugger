@@ -7,9 +7,9 @@ namespace ZXDebug.SourceMapper
         // case-insensitive filenames? probably ok for now
         public Files() : base( NewSource, StringComparer.OrdinalIgnoreCase ) { }
 
-        static File NewSource( string pFile )
+        static File NewSource( string filename )
         {
-            return new File( pFile );
+            return new File( filename );
         }
     }
 }

@@ -9,9 +9,9 @@ namespace Spectrum
 
         Dictionary<int, Breakpoint> _breakpoints = new Dictionary<int, Breakpoint>();
 
-        public Breakpoints( Machine pMachine )
+        public Breakpoints( Machine machine )
         {
-            _machine = pMachine;
+            _machine = machine;
         }
 
         int GetFreeID()
@@ -24,45 +24,45 @@ namespace Spectrum
             return id;
         }
 
-        public Breakpoint Add( Machine.DisasmLine pLine )
+        public Breakpoint Add( Machine.DisasmLine disasmLine )
         {
-            if( pLine.Breakpoint != null )
-                return pLine.Breakpoint;
+            if( disasmLine.Breakpoint != null )
+                return disasmLine.Breakpoint;
 
             var bp = new Breakpoint()
             {
                 Index = GetFreeID(),
-                Bank = _machine.Memory.Bank( pLine.Bank.ID ),
-                Line = pLine
+                Bank = _machine.Memory.Bank( disasmLine.Bank.ID ),
+                Line = disasmLine
             };
 
             if( _machine.Connection.SetBreakpoint( this, bp ) )
             {
                 _breakpoints.Add( bp.Index, bp );
-                pLine.Breakpoint = bp;
+                disasmLine.Breakpoint = bp;
             }
 
             return bp;
         }
 
-        public void Remove( Machine.DisasmLine pLine )
+        public void Remove( Machine.DisasmLine disasmLine )
         {
-            if( pLine.Breakpoint == null )
+            if( disasmLine.Breakpoint == null )
                 return;
 
-            _machine.Connection.RemoveBreakpoint( this, pLine.Breakpoint );
+            _machine.Connection.RemoveBreakpoint( this, disasmLine.Breakpoint );
 
-            _breakpoints.Remove( pLine.Breakpoint.Index );
+            _breakpoints.Remove( disasmLine.Breakpoint.Index );
         }
 
-        public void Remove( Breakpoint pBreakpoint )
+        public void Remove( Breakpoint breakpoint )
         {
-            _machine.Connection.RemoveBreakpoint( this, pBreakpoint );
+            _machine.Connection.RemoveBreakpoint( this, breakpoint );
 
-            _breakpoints.Remove( pBreakpoint.Index );
+            _breakpoints.Remove( breakpoint.Index );
             
-            pBreakpoint.Line.Breakpoint = null;
-            pBreakpoint.Line = null;
+            breakpoint.Line.Breakpoint = null;
+            breakpoint.Line = null;
         }
 
         public void Clear()

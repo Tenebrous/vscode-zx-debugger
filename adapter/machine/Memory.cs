@@ -19,12 +19,12 @@ namespace Spectrum
         public List<Slot> Slots { get; } = new List<Slot>();
 
         Machine _machine;
-        public Memory( Machine pMachine )
+        public Memory( Machine machine )
         {
-            _machine = pMachine;
+            _machine = machine;
         }
 
-        public Slot GetSlot( ushort pAddress )
+        public Slot GetSlot( ushort address )
         {
             int slotIndex;
             ushort slotAddress;
@@ -33,7 +33,7 @@ namespace Spectrum
             if( PagingEnabled )
             {
                 slotSize = SlotSize;
-                slotIndex = pAddress / SlotSize;
+                slotIndex = address / SlotSize;
                 slotAddress = (ushort) ( slotIndex * SlotSize );
             }
             else
@@ -55,9 +55,9 @@ namespace Spectrum
             return slot;
         }
 
-        public BankID GetMappedBank( ushort pAddress )
+        public BankID GetMappedBank( ushort address )
         {
-            return GetSlot( pAddress )?.Bank.ID ?? BankID.Unpaged();
+            return GetSlot( address )?.Bank.ID ?? BankID.Unpaged();
         }
 
         public void ClearMemoryMap()
@@ -66,10 +66,10 @@ namespace Spectrum
             //_banks.Clear();
         }
 
-        public void SetAddressBank( ushort pMin, ushort pMax, Bank pBank )
+        public void SetAddressBank( ushort min, ushort max, Bank bank )
         {
-            GetSlot( pMin ).Bank = pBank;
-            pBank.LastAddress = pMin;
+            GetSlot( min ).Bank = bank;
+            bank.LastAddress = min;
         }
 
         public Bank Bank( BankID pID )
@@ -77,9 +77,9 @@ namespace Spectrum
             return _banks[pID];
         }
 
-        public int Get( ushort pAddress, int pLength, byte[] pBuffer )
+        public int Get( ushort address, byte[] bytes, int start, int length )
         {
-            return _machine.Connection.ReadMemory( pAddress, pBuffer, pLength );
+            return _machine.Connection.ReadMemory( address, bytes, start, length );
         }
 
         public void GetMapping()

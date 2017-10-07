@@ -17,54 +17,54 @@ namespace ZXDebug
             _factory = pKey => new TValue();
         }
 
-        public Cache( Func<TKey, TValue> pFactory )
+        public Cache( Func<TKey, TValue> factory )
         {
-            _factory = pFactory;
+            _factory = factory;
         }
 
-        public Cache( IEqualityComparer<TKey> pCompare ) : base( pCompare )
+        public Cache( IEqualityComparer<TKey> comparer ) : base( comparer )
         {
             _factory = pKey => new TValue();
         }
 
-        public Cache( Func<TKey, TValue> pFactory, IEqualityComparer<TKey> pCompare = null ) : base( pCompare )
+        public Cache( Func<TKey, TValue> factory, IEqualityComparer<TKey> comparer = null ) : base( comparer )
         {
-            _factory = pFactory;
+            _factory = factory;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="pIndex"></param>
-        /// <param name="pValue"></param>
+        /// <param name="index"></param>
+        /// <param name="value"></param>
         /// <returns>true if created, false if already existed</returns>
-        public bool TryAdd( TKey pIndex, out TValue pValue )
+        public bool TryAdd( TKey index, out TValue value )
         {
-            if( TryGetValue( pIndex, out var result ) )
+            if( TryGetValue( index, out var result ) )
             {
-                pValue = result;
+                value = result;
                 return true;
             }
 
-            result = _factory(pIndex);
-            Add( pIndex, result );
-            pValue = result;
+            result = _factory(index);
+            Add( index, result );
+            value = result;
             return false;
         }
 
-        public new TValue this[ TKey pKey ]
+        public new TValue this[ TKey index ]
         {
             get
             {
-                if( !TryGetValue( pKey, out var result ) )
+                if( !TryGetValue( index, out var result ) )
                 {
-                    result = _factory( pKey );
-                    base[pKey] = result;
+                    result = _factory( index );
+                    base[index] = result;
                 }
 
                 return result;
             }
-            set { base[pKey] = value; }
+            set { base[index] = value; }
         }
     } 
 }

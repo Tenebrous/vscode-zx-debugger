@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ZXDebug;
+using Convert = ZXDebug.Convert;
 
 namespace Spectrum
 {
@@ -36,9 +37,9 @@ namespace Spectrum
         public byte   R;
 
         Machine _machine;
-        public Registers( Machine pMachine )
+        public Registers( Machine machine )
         {
-            _machine = pMachine;
+            _machine = machine;
         }
 
         /// <summary>
@@ -53,28 +54,28 @@ namespace Spectrum
         /// <summary>
         /// Send a register update to the device
         /// </summary>
-        /// <param name="pRegister"></param>
-        /// <param name="pValue"></param>
-        public void Set( string pRegister, string pValue )
+        /// <param name="register"></param>
+        /// <param name="value"></param>
+        public void Set( string register, string value )
         {
-            _machine.Connection.SetRegister( this, pRegister, Format.Parse( pValue ) );
+            _machine.Connection.SetRegister( this, register, Convert.Parse( value ) );
         }
 
-        public void Set( string pRegister, ushort pValue )
+        public void Set( string register, ushort value )
         {
-            _machine.Connection.SetRegister( this, pRegister, pValue );
+            _machine.Connection.SetRegister( this, register, value );
         }
 
-        public void Set( string pRegister, byte pValue )
+        public void Set( string register, byte value )
         {
-            _machine.Connection.SetRegister( this, pRegister, pValue );
+            _machine.Connection.SetRegister( this, register, value );
         }
 
-        public bool IsValidRegister( string pRegister )
+        public bool IsValidRegister( string register )
         {
             try
             {
-                var x = this[pRegister];
+                var x = this[register];
                 return true;
             }
             catch
@@ -88,21 +89,21 @@ namespace Spectrum
             "PC", "SP", "AF", "BC", "DE", "HL",  "AF'", "BC'", "DE'", "HL'", "IX", "IY"
         };
 
-        public int Size( string pRegister )
+        public int Size( string register )
         {
-            return _wordRegs.Contains( pRegister.ToUpper() ) ? 2 : 1;
+            return _wordRegs.Contains( register.ToUpper() ) ? 2 : 1;
         }
 
         /// <summary>
         /// Get/Set the buffered value of the selected register
         /// </summary>
-        /// <param name="pRegister"></param>
+        /// <param name="register"></param>
         /// <returns></returns>
-        public ushort this[string pRegister]
+        public ushort this[string register]
         {
             get
             {
-                switch( pRegister.ToUpper() )
+                switch( register.ToUpper() )
                 {
                     //
                     case "A":   return (ushort) A;
@@ -155,13 +156,13 @@ namespace Spectrum
                     case "R":   return (ushort) R;
 
                     default:
-                        throw new Exception( "Unknown register '" + pRegister + "'" );
+                        throw new Exception( "Unknown register '" + register + "'" );
                 }
             }
 
             set
             {
-                switch( pRegister.ToUpper() )
+                switch( register.ToUpper() )
                 {
                     //
                     case "A":   A     = (byte)value;          return;
@@ -218,7 +219,7 @@ namespace Spectrum
                     case "R":   R     = (byte)value;          return;
 
                     default:
-                        throw new Exception( "Unknown register '" + pRegister + "'" );
+                        throw new Exception( "Unknown register '" + register + "'" );
                 }
             }
         }

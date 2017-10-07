@@ -7,53 +7,38 @@ namespace ZXDebug
     /// </summary>
     class CustomRequests
     {
-        public delegate void GetDefinitionHandler( Request pRequest, string pFile, int pLine, string pText );
+        public delegate void GetDefinitionHandler( Request request, string file, int line, string text );
         public event GetDefinitionHandler GetDefinitionEvent;
 
-        public delegate void SetNextStatementHandler( Request pRequest, string pFile, int pLine );
+        public delegate void SetNextStatementHandler( Request request, string file, int line );
         public event SetNextStatementHandler SetNextStatementEvent;
 
-        public CustomRequests( Connection pVSCode )
+        public CustomRequests( Connection vscode )
         {
-            pVSCode.CustomRequestEvent += VSCode_CustomRequest;
+            vscode.CustomRequestEvent += VSCode_CustomRequest;
         }
 
-        void VSCode_CustomRequest( Request pRequest )
+        void VSCode_CustomRequest( Request request )
         {
-            switch( pRequest.command )
+            switch( request.command )
             {
                 case "getDefinition":
                     GetDefinitionEvent?.Invoke( 
-                        pRequest, 
-                        (string)pRequest.arguments.file, 
-                        (int)pRequest.arguments.line,
-                        (string)pRequest.arguments.text
+                        request, 
+                        (string)request.arguments.file, 
+                        (int)request.arguments.line,
+                        (string)request.arguments.text
                     );
                     break;
 
                 case "setNextStatement":
                     SetNextStatementEvent?.Invoke( 
-                        pRequest, 
-                        (string)pRequest.arguments.file, 
-                        (int)pRequest.arguments.line 
+                        request, 
+                        (string)request.arguments.file, 
+                        (int)request.arguments.line 
                     );
                     break;
             }
-        }
-    }
-
-
-    public class GetDisassemblyForSourceResponseBody : ResponseBody
-    {
-        public string file;
-        public int startLine;
-        public int endLine;
-
-        public GetDisassemblyForSourceResponseBody( string pFile, int pStartLine, int pEndLine )
-        {
-            file = pFile;
-            startLine = pStartLine;
-            endLine = pEndLine;
         }
     }
 }

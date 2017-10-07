@@ -10,15 +10,15 @@ namespace VSCode
         public delegate void DeserializedHandler( Settings pSettings );
         public event DeserializedHandler DeserializedEvent;
 
-        public virtual void FromJSON( string pJSON )
+        public virtual void FromJSON( string json )
         {
             DeserializingEvent?.Invoke( this );
 
             // apply basic settings
-            JsonConvert.PopulateObject( pJSON, this, new JsonSerializerSettings() );
+            JsonConvert.PopulateObject( json, this, new JsonSerializerSettings() );
 
             var wrapper = new Wrapper() { workspaceConfiguration = this };
-            JsonConvert.PopulateObject( pJSON, wrapper );
+            JsonConvert.PopulateObject( json, wrapper );
 
             DeserializedEvent?.Invoke( this );
         }

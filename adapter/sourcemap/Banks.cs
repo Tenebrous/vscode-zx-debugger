@@ -6,9 +6,9 @@ namespace ZXDebug.SourceMapper
     {
         public Banks() : base( NewBank ) { }
 
-        static Bank NewBank( BankID pBank )
+        static Bank NewBank( BankID bankId )
         {
-            return new Bank() { ID = pBank };
+            return new Bank() { ID = bankId };
         }
     }
 }

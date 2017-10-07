@@ -15,10 +15,10 @@ namespace ZXDebug.SourceMapper
         {
         }
 
-        public FileLine( File pFile, int pLine )
+        public FileLine( File file, int line )
         {
-            File = pFile;
-            Line = pLine;
+            File = file;
+            Line = line;
         }
 
         public override string ToString()
@@ -26,20 +26,20 @@ namespace ZXDebug.SourceMapper
             return $"{File}:{Line}";
         }
 
-        public override bool Equals( object pOther )
+        public override bool Equals( object other )
         {
-            if( object.ReferenceEquals( pOther, null ) )
+            if( object.ReferenceEquals( other, null ) )
                 return false;
 
-            if( object.ReferenceEquals( this, pOther ) )
+            if( object.ReferenceEquals( this, other ) )
                 return true;
 
-            if( GetType() != pOther.GetType() )
+            if( GetType() != other.GetType() )
                 return false;
 
-            var other = (FileLine)pOther;
+            var cast = (FileLine)other;
 
-            return File == other.File && Line == other.Line;
+            return File == cast.File && Line == cast.Line;
         }
 
         public override int GetHashCode()
@@ -55,22 +55,22 @@ namespace ZXDebug.SourceMapper
             }
         }
 
-        public static bool operator ==( FileLine x, FileLine y )
+        public static bool operator ==( FileLine left, FileLine right )
         {
-            if( object.ReferenceEquals( x, null ) )
+            if( object.ReferenceEquals( left, null ) )
             {
-                if( object.ReferenceEquals( y, null ) )
+                if( object.ReferenceEquals( right, null ) )
                     return true;
 
                 return false;
             }
 
-            return x.Equals( y );
+            return left.Equals( right );
         }
 
-        public static bool operator !=( FileLine x, FileLine y )
+        public static bool operator !=( FileLine left, FileLine right )
         {
-            return !( x == y );
+            return !( left == right );
         }
     }
 
@@ -106,34 +106,34 @@ namespace ZXDebug.SourceMapper
         /// <summary>
         /// Create a new map from the referenced file
         /// </summary>
-        /// <param name="pParent">Mapper</param>
-        /// <param name="pSourceRoot">Root folder for relative source paths</param>
-        /// <param name="pFilename">File to read</param>
-        public Map( Maps pParent, string pSourceRoot, string pFilename )
+        /// <param name="parent">Mapper</param>
+        /// <param name="sourceRoot">Root folder for relative source paths</param>
+        /// <param name="filename">File to read</param>
+        public Map( Maps parent, string sourceRoot, string filename )
         {
-            Maps = pParent;
-            SourceRoot = pSourceRoot;
-            Filename = pFilename;
+            Maps = parent;
+            SourceRoot = sourceRoot;
+            Filename = filename;
 
-            var ext = Path.GetExtension( pFilename )?.ToLower() ?? "";
+            var ext = Path.GetExtension( filename )?.ToLower() ?? "";
 
             if( ext == ".dbg" )
-                Parse( pFilename, _regexDbg );
+                Parse( filename, _regexDbg );
             else if( ext == ".map" )
-                Parse( pFilename, _regexMap );
+                Parse( filename, _regexMap );
         }
 
 
         List<Label> _tempLabels = new List<Label>();
-        void Parse( string pFilename, Regex pRegex )
+        void Parse( string filename, Regex regex )
         {
-            using( var reader = new StreamReader( pFilename ) )
+            using( var reader = new StreamReader( filename ) )
             {
                 string text;
 
                 while( ( text = reader.ReadLine() ) != null )
                 {
-                    var matches = pRegex.Matches( text );
+                    var matches = regex.Matches( text );
 
                     foreach( Match match in matches )
                     {
@@ -174,21 +174,21 @@ namespace ZXDebug.SourceMapper
             }
         }
 
-        void AddMapping( string pBankStr, string pAddressStr, string pFileStr, string pLineStr, List<Label> pLabels )
+        void AddMapping( string bankStr, string addressStr, string fileStr, string lineStr, List<Label> labelList )
         {
-            var bank = new BankID( pBankStr );
-            var address = Format.Parse( pAddressStr, pKnownHex : true );
+            var bank = new BankID( bankStr );
+            var address = Convert.Parse( addressStr, isHex : true );
 
-            if( pLabels != null && pLabels.Count > 0 )
+            if( labelList != null && labelList.Count > 0 )
             {
                 Labels.TryAdd( bank, address, out var labels );
-                labels.AddRange( pLabels );
+                labels.AddRange( labelList );
             }
 
-            if( !string.IsNullOrWhiteSpace( pFileStr ) )
+            if( !string.IsNullOrWhiteSpace( fileStr ) )
             {
-                var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, pFileStr ) );
-                var line = int.Parse( pLineStr );
+                var normalisedFileStr = Path.GetFullPath( Path.Combine( SourceRoot, fileStr ) );
+                var line = int.Parse( lineStr );
 
                 Maps.Files.TryAdd( normalisedFileStr, out var file );
 

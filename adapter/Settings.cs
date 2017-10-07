@@ -50,7 +50,7 @@ namespace ZXDebug
         public string ExtensionPath;
 
         public DisassemblerSettings Disassembler;
-        public Format.FormatSettings Format;
+        public Convert.FormatSettings Format;
 
         public Settings()
         {
