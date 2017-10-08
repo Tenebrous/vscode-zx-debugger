@@ -8,7 +8,7 @@ namespace ZXDebug
     /// <summary>
     /// Abstraction of interface to a Spectrum debugger
     /// </summary>
-    public abstract class Device
+    public abstract class MachineConnection
     {
         public delegate void PausedHandler();
         public event PausedHandler PausedEvent;

@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using VSCode;
 using ZXDebug.SourceMapper;
+using StackFrame = VSCode.StackFrame;
 
 namespace ZXDebug
 {
     public class HandleVSCode
     {
-        public Session Session;
+        Session _session;
 
         public HandleVSCode( Session session )
         {
-            Session = session;
+            _session = session;
         }
 
         bool _linesStartAt1;
@@ -24,31 +26,31 @@ namespace ZXDebug
 
             
             // vscode events
-            Session.VSCode.InitializeEvent        += Initialize;
-            Session.VSCode.DisconnectEvent        += Disconnect;
-            Session.VSCode.LaunchEvent            += Launch;
-            Session.VSCode.AttachEvent            += Attach;
-            Session.VSCode.ConfigurationDoneEvent += ConfigurationDone;
+            _session.VSCode.InitializeEvent        += Initialize;
+            _session.VSCode.DisconnectEvent        += Disconnect;
+            _session.VSCode.LaunchEvent            += Launch;
+            _session.VSCode.AttachEvent            += Attach;
+            _session.VSCode.ConfigurationDoneEvent += ConfigurationDone;
 
-            Session.VSCode.PauseEvent             += Pause;
-            Session.VSCode.ContinueEvent          += Continue;
-            Session.VSCode.StepOverEvent          += StepOver;
-            Session.VSCode.StepInEvent            += StepIn;
-            Session.VSCode.StepOutEvent           += StepOut;
+            _session.VSCode.PauseEvent             += Pause;
+            _session.VSCode.ContinueEvent          += Continue;
+            _session.VSCode.StepOverEvent          += StepOver;
+            _session.VSCode.StepInEvent            += StepIn;
+            _session.VSCode.StepOutEvent           += StepOut;
    
-            Session.VSCode.GetThreadsEvent        += GetThreads;
-            Session.VSCode.GetStackTraceEvent     += GetStackTrace;
-            Session.VSCode.GetScopesEvent         += GetScopes;
+            _session.VSCode.GetThreadsEvent        += GetThreads;
+            _session.VSCode.GetStackTraceEvent     += GetStackTrace;
+            _session.VSCode.GetScopesEvent         += GetScopes;
    
-            Session.VSCode.GetVariablesEvent      += GetVariables;
-            Session.VSCode.SetVariableEvent       += SetVariable;
-            Session.VSCode.GetCompletionsEvent    += GetCompletions;
-            Session.VSCode.EvaluateEvent          += Evaluate;
-            Session.VSCode.SetBreakpointsEvent    += SetBreakpoints;
+            _session.VSCode.GetVariablesEvent      += GetVariables;
+            _session.VSCode.SetVariableEvent       += SetVariable;
+            _session.VSCode.GetCompletionsEvent    += GetCompletions;
+            _session.VSCode.EvaluateEvent          += Evaluate;
+            _session.VSCode.SetBreakpointsEvent    += SetBreakpoints;
 
 
             // handle custom events not part of the standard vscode protocol
-            var custom = new CustomRequests( Session.VSCode );
+            var custom = new CustomRequests( _session.VSCode );
             custom.GetDefinitionEvent    += CustomGetDefinition;
             custom.SetNextStatementEvent += CustomSetNextStatement;
         }
@@ -64,29 +66,29 @@ namespace ZXDebug
 
         void Continue( Request request )
         {
-            Session.Machine.Continue();
+            _session.Machine.Continue();
         }
 
         void Pause( Request request )
         {
-            Session.Machine.Pause();
+            _session.Machine.Pause();
         }
 
         byte[] _tempMemStepOver = new byte[1];
         void StepOver( Request request )
         {
-            Session.VSCode.Send( request );
+            _session.VSCode.Send( request );
 
-            if( Session.Device.Meta.CanStepOverSensibly )
+            if( _session.MachineConnection.Meta.CanStepOverSensibly )
             {
                 // debugger is well-behaved when it comes to stepping over jr,jp and ret
-                Session.Machine.StepOver();
+                _session.Machine.StepOver();
                 return;
             }
 
             // deal with debuggers that don't deal with jr,jp and ret propertly when stepping over
 
-            var b = Session.Machine.Memory.Get( Session.Machine.Registers.PC, _tempMemStepOver, 0, 1 );
+            var b = _session.Machine.Memory.Get( _session.Machine.Registers.PC, _tempMemStepOver, 0, 1 );
 
             switch( _tempMemStepOver[0] )
             {
@@ -118,53 +120,57 @@ namespace ZXDebug
                 case 0xF8: // RET M
 
                     Log.Write( Log.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
-                    Session.Machine.Step();
+                    _session.Machine.Step();
                     return;
 
                 default:
                     break;
             }
 
-            Session.Machine.StepOver();
+            _session.Machine.StepOver();
         }
 
         void StepIn( Request request )
         {
-            Session.VSCode.Send( request );
-            Session.Machine.Step();
+            _session.VSCode.Send( request );
+            _session.Machine.Step();
         }
 
         void StepOut( Request request )
         {
-            if( Session.Device.Meta.CanStepOut )
+            if( _session.MachineConnection.Meta.CanStepOut )
             {
-                Session.VSCode.Send( request );
-                Session.Machine.StepOut();
+                _session.VSCode.Send( request );
+                _session.Machine.StepOut();
             }
             else
-                Session.VSCode.Send( request, errorMsg: "Step Out is not supported" );
+                _session.VSCode.Send( request, errorMsg: "Step Out is not supported" );
         }
 
         void Launch( Request request, string json )
         {
             Initialise( json );
-            SaveDebug();
 
-            Session.Machine.Start();
+            _session.Machine.Start();
 
-            if( Session.Settings.StopOnEntry )
-                Session.Machine.Pause();
+            if( _session.Settings.StopOnEntry )
+                _session.Machine.Pause();
         }
 
         void Attach( Request request, string json )
         {
             Initialise( json );
-            SaveDebug();
 
-            Session.Machine.Start();
+            _session.Machine.Start();
 
-            if( Session.Settings.StopOnEntry )
-                Session.Machine.Pause();
+            if( _session.Settings.StopOnEntry )
+                _session.Machine.Pause();
+        }
+
+        void Initialise( string json )
+        {
+            Debugger.Break();
+            _session.Settings.FromJSON( json );
         }
 
         void ConfigurationDone( Request request )
@@ -173,7 +179,7 @@ namespace ZXDebug
 
         void GetThreads( Request request )
         {
-            Session.VSCode.Send(
+            _session.VSCode.Send(
                 request,
                 new ThreadsResponseBody(
                     new List<Thread>()
@@ -198,11 +204,11 @@ namespace ZXDebug
         List<StackFrame> _stackFrames = new List<StackFrame>();
         void GetStackTrace( Request request )
         {
-            Session.Machine.Registers.Get();
-            Session.Machine.Memory.GetMapping();
+            _session.Machine.Registers.Get();
+            _session.Machine.Memory.GetMapping();
 
             // disassemble from current PC
-            var disassemblyUpdated = Session.Machine.UpdateDisassembly( Session.Machine.Registers.PC );
+            var disassemblyUpdated = _session.Machine.UpdateDisassembly( _session.Machine.Registers.PC );
 
             var stackBytes = new byte[20];
             var caller = new byte[4];
@@ -211,14 +217,14 @@ namespace ZXDebug
             _stackFrames.Clear();
 
             // add current PC as an entry to the stack frame
-            _stackAddresses.Add( Session.Machine.Registers.PC );
+            _stackAddresses.Add( _session.Machine.Registers.PC );
 
             // get stack pos and limit how many bytes we read if we would go higher than 0xFFFF
-            var stackPos = Session.Machine.Registers.SP;
+            var stackPos = _session.Machine.Registers.SP;
             var maxBytes = Math.Min( 20, 0xFFFF - stackPos );
 
             // read bytes from SP onwards for analysis of the addresses
-            var bytes = Session.Machine.Memory.Get( Session.Machine.Registers.SP, stackBytes, 0, maxBytes );
+            var bytes = _session.Machine.Memory.Get( _session.Machine.Registers.SP, stackBytes, 0, maxBytes );
 
             // turn the bytes into ushorts
             for( var i = 0; i < bytes; i += 2 )
@@ -240,17 +246,17 @@ namespace ZXDebug
                 if( i == 0 )
                 {
                     // always try to get symbol for PC
-                    addressDetails = Session.Machine.GetAddressDetails( addr );
+                    addressDetails = _session.Machine.GetAddressDetails( addr );
                     isCode = true;
                 }
                 else
                 {
-                    Session.Machine.Memory.Get( (ushort)( addr - 3 ), caller, 0, 3 );
+                    _session.Machine.Memory.Get( (ushort)( addr - 3 ), caller, 0, 3 );
 
                     if( _callerOpcode3.Contains( caller[0] ) )
                     {
                         addr -= 3;
-                        addressDetails = Session.Machine.GetAddressDetails( addr );
+                        addressDetails = _session.Machine.GetAddressDetails( addr );
                         isCode = true;
                         symbolIcon = " ↑";
 
@@ -266,13 +272,13 @@ namespace ZXDebug
                     else if( _callerOpcode3.Contains( caller[1] ) )
                     {
                         addr -= 2;
-                        addressDetails = Session.Machine.GetAddressDetails( addr );
+                        addressDetails = _session.Machine.GetAddressDetails( addr );
                         isCode = true;
                     }
                     else if( _callerOpcode1.Contains( caller[2] ) )
                     {
                         addr -= 1;
-                        addressDetails = Session.Machine.GetAddressDetails( addr );
+                        addressDetails = _session.Machine.GetAddressDetails( addr );
                         isCode = true;
                         symbolIcon += " ↖";
                     }
@@ -294,7 +300,7 @@ namespace ZXDebug
                             addressDetails.GetRelativeText() + " " + symbolIcon,
                             new Source(
                                 null,
-                                Path.GetFullPath( Path.Combine( Session.Settings.ProjectFolder, addressDetails.Source.File.Filename ) )
+                                Path.GetFullPath( Path.Combine( _session.Settings.ProjectFolder, addressDetails.Source.File.Filename ) )
                             ),
                             addressDetails.Source.Line,
                             0,
@@ -350,13 +356,13 @@ namespace ZXDebug
             }
 
             if( disassemblyUpdated )
-                Session.Machine.WriteDisassemblyFile( DisassemblyFile );
+                _session.Machine.WriteDisassemblyFile( DisassemblyFile );
 
             foreach( var frame in _stackFrames )
                 if( frame.source == DisassemblySource && frame.line == 0 )
-                    frame.line = Session.Machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id - 1] ) + 1;
+                    frame.line = _session.Machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id - 1] ) + 1;
 
-            Session.VSCode.Send(
+            _session.VSCode.Send(
                 request,
                 new StackTraceResponseBody(
                     _stackFrames
@@ -367,11 +373,11 @@ namespace ZXDebug
         void GetScopes( Request request, int frameId )
         {
             var addr = _stackAddresses[frameId - 1];
-            Session.Machine.UpdateDisassembly( addr, DisassemblyFile );
+            _session.Machine.UpdateDisassembly( addr, DisassemblyFile );
 
             var scopes = new List<Scope>();
 
-            foreach( var value in _rootValues.Children )
+            foreach( var value in _session.Values.Children )
             {
                 scopes.Add(
                     new Scope(
@@ -381,14 +387,14 @@ namespace ZXDebug
                 );
             }
 
-            Session.VSCode.Send( request, new ScopesResponseBody( scopes ) );
+            _session.VSCode.Send( request, new ScopesResponseBody( scopes ) );
 
             if( _stackFrames[frameId - 1].source != DisassemblySource )
             {
-                var disasmLine = Session.Machine.GetLineOfAddressInDisassembly( addr );
+                var disasmLine = _session.Machine.GetLineOfAddressInDisassembly( addr );
                 if( disasmLine > 0 )
                 {
-                    Session.VSCode.Send(
+                    _session.VSCode.Send(
                         new Event(
                             "setDisassemblyLine",
                             new { line = disasmLine }
@@ -419,7 +425,7 @@ namespace ZXDebug
 
         string VSCode_OnEvaluate_REPL( Request request, string expression )
         {
-            return string.Join( "\n", Session.Device.CustomCommand( expression ) );
+            return string.Join( "\n", _session.MachineConnection.CustomCommand( expression ) );
         }
 
         char[] _varSplitChar = new[] { ' ', ',' };
@@ -451,9 +457,9 @@ namespace ZXDebug
                         text = text.Substring( 1, text.Length - 2 ).Trim();
                     }
 
-                    if( Session.Machine.Registers.IsValidRegister( text ) )
+                    if( _session.Machine.Registers.IsValidRegister( text ) )
                     {
-                        address = Session.Machine.Registers[text];
+                        address = _session.Machine.Registers[text];
                         length = 2;
                         gotLength = true;
                         isRegister = true;
@@ -468,7 +474,7 @@ namespace ZXDebug
                                 _tempVar[0] = (byte)( address >> 8 );
                             }
 
-                            length = Session.Machine.Registers.Size( text );
+                            length = _session.Machine.Registers.Size( text );
                             gotLength = true;
                             gotData = true;
                         }
@@ -496,7 +502,7 @@ namespace ZXDebug
 
             if( gotAddress && gotLength && !gotData )
             {
-                Session.Machine.Memory.Get( address, _tempVar, 0, length );
+                _session.Machine.Memory.Get( address, _tempVar, 0, length );
             }
 
             result = Convert.ToHex( _tempVar, length );
@@ -507,9 +513,22 @@ namespace ZXDebug
             return result;
         }
 
+        Variable CreateVariableForValue( ValueTree value )
+        {
+            value.Refresh();
+
+            return new Variable(
+                value.Name,
+                value.Formatted,
+                "value",
+                value.Children.Count == 0 ? -1 : value.ID,
+                new VariablePresentationHint( "data" )
+            );
+        }
+
         void GetVariables( Request request, int reference, List<Variable> results )
         {
-            var value = _rootValues.All( reference );
+            var value = _session.Values.All( reference );
 
             if( value == null )
                 return;
@@ -523,16 +542,16 @@ namespace ZXDebug
 
         void SetVariable( Request request, Variable variable )
         {
-            var value = _rootValues.AllByName( variable.name );
+            var value = _session.Values.AllByName( variable.name );
             value.Setter?.Invoke( value, variable.value );
         }
 
 
         void Disconnect( Request request )
         {
-            Session.Machine.Stop();
-            Session.VSCode.Stop();
-            _running = false;
+            _session.Machine.Stop();
+            _session.VSCode.Stop();
+            _session.Running = false;
         }
 
 
@@ -545,13 +564,13 @@ namespace ZXDebug
             if( sourceName != DisassemblySource.name )
                 return;
 
-            var max = Session.Device.Meta.MaxBreakpoints;
+            var max = _session.MachineConnection.Meta.MaxBreakpoints;
 
             _tempBreakpointsResponse.Clear();
 
             // record old ones
             _tempBreakpoints.Clear();
-            foreach( var b in Session.Machine.Breakpoints )
+            foreach( var b in _session.Machine.Breakpoints )
                 _tempBreakpoints.Add( b );
 
             // set new ones
@@ -561,11 +580,11 @@ namespace ZXDebug
                 int lineNumber = breakpoint.line;
                 Spectrum.Breakpoint bp = null;
 
-                var line = Session.Machine.GetLineFromDisassemblyFile( LineFromVSCode( lineNumber ) );
+                var line = _session.Machine.GetLineFromDisassemblyFile( LineFromVSCode( lineNumber ) );
 
                 if( line != null )
                 {
-                    bp = Session.Machine.Breakpoints.Add( line );
+                    bp = _session.Machine.Breakpoints.Add( line );
                     _tempBreakpoints.Remove( bp );
                 }
 
@@ -604,14 +623,14 @@ namespace ZXDebug
 
             // remove those no longer set
             foreach( var b in _tempBreakpoints )
-                Session.Machine.Breakpoints.Remove( b );
+                _session.Machine.Breakpoints.Remove( b );
 
 
             // respond to vscode 
 
-            Session.Machine.Breakpoints.Commit();
+            _session.Machine.Breakpoints.Commit();
 
-            Session.VSCode.Send(
+            _session.VSCode.Send(
                 request,
                 new SetBreakpointsResponseBody( _tempBreakpointsResponse )
             );
@@ -679,29 +698,29 @@ namespace ZXDebug
         {
             // note: line numbers are always 0-based and ignore _linesStartAt1
 
-            var disasmLine = Session.Machine.GetLineFromDisassemblyFile( line );
+            var disasmLine = _session.Machine.GetLineFromDisassemblyFile( line );
 
             if( disasmLine == null )
             {
-                Session.VSCode.Send( request, errorMsg: "Invalid line" );
+                _session.VSCode.Send( request, errorMsg: "Invalid line" );
                 return;
             }
 
-            var memBank = Session.Machine.Memory.Bank( disasmLine.Bank.ID );
+            var memBank = _session.Machine.Memory.Bank( disasmLine.Bank.ID );
             if( !memBank.IsPagedIn )
                 throw new Exception( "Cannot set PC to that address as it isn't currently paged in." );
 
-            Session.Machine.Registers.Set( "PC", (ushort)( memBank.LastAddress + disasmLine.Offset ) );
+            _session.Machine.Registers.Set( "PC", (ushort)( memBank.LastAddress + disasmLine.Offset ) );
 
-            Session.VSCode.Send( request );
+            _session.VSCode.Send( request );
 
-            Session.VSCode.Refresh();
+            _session.VSCode.Refresh();
         }
 
         public void SendLog( Log.Severity severity, string msg )
         {
             var type = severity == Log.Severity.Error ? OutputEvent.OutputEventType.stderr : OutputEvent.OutputEventType.stdout;
-            Session.VSCode?.Send( new OutputEvent( type, msg + "\n" ) );
+            _session.VSCode?.Send( new OutputEvent( type, msg + "\n" ) );
         }
 
         int LineFromVSCode( int line )
@@ -712,5 +731,26 @@ namespace ZXDebug
         {
             return _linesStartAt1 ? line : line + 1;
         }
+
+
+        string _disassemblyFile;
+        string DisassemblyFile
+        {
+            get { return _disassemblyFile = _disassemblyFile ?? Path.Combine( _session.Settings.TempFolder, "disasm.zdis" ); }
+        }
+
+        Source _stackSource;
+        Source StackSource
+        {
+            get { return _stackSource = _stackSource ?? new Source( "#", "", 0, Source.SourcePresentationHintEnum.deemphasize ); }
+        }
+
+        Source _disassemblySource;
+        Source DisassemblySource
+        {
+            get { return _disassemblySource = _disassemblySource ?? new Source( " ", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
+        }
+
+
     }
 }

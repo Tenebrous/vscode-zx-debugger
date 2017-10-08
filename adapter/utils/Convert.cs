@@ -7,12 +7,12 @@ namespace ZXDebug
 {
     public static class Convert
     {
-        public static string ToHex16( Value value )
+        public static string ToHex16( ValueTree value )
         {
             return System.Convert.ToUInt16( value.Content ).ToHex();
         }
 
-        public static string ToHex8( Value value )
+        public static string ToHex8( ValueTree value )
         {
             return System.Convert.ToByte( value.Content ).ToHex();
         }

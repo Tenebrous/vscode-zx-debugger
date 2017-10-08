@@ -42,24 +42,31 @@ namespace ZXDebug
 
     public class Settings : VSCode.Settings
     {
+        // from json
         public string   ProjectFolder;
         public string[] SourceMaps;
         public string[] OpcodeTables;
         public bool     StopOnEntry;
 
-        public string ExtensionPath;
-
+        // links to other class's settings, filled in when deserializing json from vscode
         public DisassemblerSettings Disassembler;
         public Convert.FormatSettings Format;
 
+
+        // derived from above
+        public string   ExtensionPath;
+        public string   TempFolder;
+
         public Settings()
         {
-            // fill in defaults if required
+            Format = Convert.Settings;
+
+            DeserializedEvent += SettingsUpdated;
         }
 
-        public override void Validate()
+        void SettingsUpdated( VSCode.Settings pSettings )
         {
-            // check cwd
+            // check some settings
 
             if( string.IsNullOrWhiteSpace( ProjectFolder ) )
                 throw new Exception( "Property 'projectFolder' is missing or empty." );
@@ -67,6 +74,12 @@ namespace ZXDebug
             if( !Directory.Exists( ProjectFolder ) )
                 throw new Exception( "Property 'projectFolder' refers to a folder that could not be found." );
 
+
+            // get temp folder
+
+            TempFolder = Path.Combine( ProjectFolder, ".zxdbg" );
+            Directory.CreateDirectory( TempFolder );
+            
 
             // get extension path for additional files
 
@@ -77,6 +90,27 @@ namespace ZXDebug
                 path = path.Parent;
 
             ExtensionPath = path.FullName;
+        }
+
+        
+        public string Locate( string filename, string extFolder )
+        {
+            if( File.Exists( filename ) )
+                return filename;
+
+            var path = Path.Combine( ProjectFolder, filename );
+            if( File.Exists( path ) )
+                return path;
+
+            path = Path.Combine( ExtensionPath, filename );
+            if( File.Exists( path ) )
+                return path;
+
+            path = Path.Combine( ExtensionPath, extFolder, filename );
+            if( File.Exists( path ) )
+                return path;
+
+            throw new FileNotFoundException( "Can't find file", filename );
         }
     }
 }

@@ -22,10 +22,6 @@ namespace VSCode
 
             DeserializedEvent?.Invoke( this );
         }
-
-        public virtual void Validate()
-        {
-        }
     }
 
     class Wrapper

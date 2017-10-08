@@ -12,7 +12,7 @@ namespace Spectrum
 {
     public class Machine
     {
-        public Device Connection;
+        public MachineConnection Connection;
 
         public delegate void PausedHandler();
         public event PausedHandler PausedEvent;
@@ -29,7 +29,7 @@ namespace Spectrum
         public Disassembler Disassembler { get; } = new Disassembler();
         public Breakpoints Breakpoints { get; }
 
-        public Machine( Device connection )
+        public Machine( MachineConnection connection )
         {
             Connection  = connection;
             Registers   = new Registers(this);

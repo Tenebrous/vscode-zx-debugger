@@ -23,7 +23,7 @@ public static class Log
         if( _inLog ) return;
 
         if( severity <= MaxSeverityLog )
-            File.AppendAllText( Filename, severity + ": " + message + "\r\n" );
+            File.AppendAllText( Filename, (int)severity + ": " + message + "\r\n" );
 
         if( severity > MaxSeverityConsole ) return;
 

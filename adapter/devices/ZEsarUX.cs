@@ -10,7 +10,7 @@ using Convert = ZXDebug.Convert;
 
 namespace ZEsarUX
 {
-    public class Connection : ZXDebug.Device
+    public class Connection : MachineConnection
     {
         TcpClient _client;
         NetworkStream _stream;

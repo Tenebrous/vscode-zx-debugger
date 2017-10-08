@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Newtonsoft.Json;
-using ZXDebug;
 using Convert = ZXDebug.Convert;
 
 namespace VSCode
@@ -56,7 +55,6 @@ namespace VSCode
         public delegate void CustomRequestHandler( Request request );
         public event CustomRequestHandler CustomRequestEvent;
 
-
         Stream _output;
         StringBuilder _inputBuffer = new StringBuilder();
 
@@ -70,6 +68,14 @@ namespace VSCode
 
             _inputThread = new System.Threading.Thread( ReadThread );
             _inputThread.Start( Console.OpenStandardInput() );
+        }
+
+
+        bool _needRefresh;
+        public bool NeedRefresh
+        {
+            get { return _needRefresh; }
+            set { _needRefresh = value; }
         }
 
         byte[] _tempReadBuffer = new byte[4096];

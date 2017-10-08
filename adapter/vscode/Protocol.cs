@@ -460,7 +460,7 @@ namespace VSCode
         public int variablesReference { get; }
         public SetVariableResponseBody( string value, int reference )
         {
-            this.value = value;;
+            this.value = value;
             this.variablesReference = reference;
         }
     }
