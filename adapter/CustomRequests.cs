@@ -7,8 +7,11 @@ namespace ZXDebug
     /// </summary>
     class CustomRequests
     {
-        public delegate void GetDefinitionHandler( Request request, string file, int line, string text );
+        public delegate void GetDefinitionHandler( Request request, string file, int line, int column, string text, string symbol );
         public event GetDefinitionHandler GetDefinitionEvent;
+
+        public delegate void GetHoverHandler( Request request, string file, int line, int column, string text, string symbol );
+        public event GetHoverHandler GetHoverEvent;
 
         public delegate void SetNextStatementHandler( Request request, string file, int line );
         public event SetNextStatementHandler SetNextStatementEvent;
@@ -23,11 +26,24 @@ namespace ZXDebug
             switch( request.command )
             {
                 case "getDefinition":
-                    GetDefinitionEvent?.Invoke( 
-                        request, 
-                        (string)request.arguments.file, 
-                        (int)request.arguments.line,
-                        (string)request.arguments.text
+                    GetDefinitionEvent?.Invoke(
+                        request,
+                        (string) request.arguments.file,
+                        (int)    request.arguments.line,
+                        (int)    request.arguments.column,
+                        (string) request.arguments.text,
+                        (string) request.arguments.symbol
+                    );
+                    break;
+
+                case "getHover":
+                    GetHoverEvent?.Invoke(
+                        request,
+                        (string) request.arguments.file,
+                        (int)    request.arguments.line,
+                        (int)    request.arguments.column,
+                        (string) request.arguments.text,
+                        (string) request.arguments.symbol
                     );
                     break;
 

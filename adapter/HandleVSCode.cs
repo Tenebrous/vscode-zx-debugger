@@ -51,10 +51,10 @@ namespace ZXDebug
 
             // handle custom events not part of the standard vscode protocol
             var custom = new CustomRequests( _session.VSCode );
-            custom.GetDefinitionEvent    += CustomGetDefinition;
-            custom.SetNextStatementEvent += CustomSetNextStatement;
+            custom.GetDefinitionEvent    += Custom_GetDefinition;
+            custom.GetHoverEvent         += Custom_GetHoverEvent;
+            custom.SetNextStatementEvent += Custom_SetNextStatement;
         }
-
 
         void Initialize( Request request, VSCode.Capabilities capabilities )
         {
@@ -62,6 +62,10 @@ namespace ZXDebug
 
             capabilities.supportsConfigurationDoneRequest = true;
             capabilities.supportsCompletionsRequest = true;
+
+            // enabling this will cause vscode to do an Evaluate request instead of
+            // going through the normal hover process
+            // capabilities.supportsEvaluateForHovers = true;
         }
 
         void Continue( Request request )
@@ -290,10 +294,11 @@ namespace ZXDebug
 
                 var text = addressDetails?.Labels?[0].Name ?? addr.ToHex();
 
-                if( addressDetails?.Source != null )
+                // no stepping through source at the moment
+                if( addressDetails?.Source != null && 1 == 0 )
                 {
                     // got source 
-
+                    
                     _stackFrames.Add(
                         new StackFrame(
                             stackFrameId,
@@ -637,11 +642,14 @@ namespace ZXDebug
         }
 
 
-        void CustomGetDefinition( Request request, string file, int line, string text )
+        void Custom_GetDefinition( Request request, string file, int line, int column, string text, string symbol )
         {
             // note: line numbers are always 0-based and ignore _linesStartAt1
 
-            Log.Write( Log.Severity.Message, "GetDef: " + file + ", " + line + ", [" + text + "]" );
+            Log.Write( 
+                Log.Severity.Message, 
+                $"GetDef: {file}:{line}:{column} [{symbol}] [{line}]"
+            );
 
             // disasm file example:
             // 11      C00D C207C0   jp nz, s1_inner_loop          ; $C007
@@ -694,7 +702,16 @@ namespace ZXDebug
             //}
         }
 
-        void CustomSetNextStatement( Request request, string file, int line )
+        void Custom_GetHoverEvent( Request request, string file, int line, int column, string text, string symbol )
+        {
+            Log.Write(
+                Log.Severity.Message,
+                $"GetHover: {file}:{line}:{column} [{symbol}] [{line}]"
+            );
+        }
+
+
+        void Custom_SetNextStatement( Request request, string file, int line )
         {
             // note: line numbers are always 0-based and ignore _linesStartAt1
 

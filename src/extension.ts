@@ -16,6 +16,15 @@ export function activate( context: vscode.ExtensionContext )
                 setDisassemblyLine( e.body );
             }
         }),
+
+        // vscode.window.onDidChangeVisibleTextEditors( e => {
+        //     vscode.window.visibleTextEditors.forEach(element => {
+        //         if( element.document.fileName.endsWith("disasm.zdis") )
+        //             element.viewColumn = vscode.ViewColumn.One;
+        //         else if( element.viewColumn == vscode.ViewColumn.One)
+        //             element.viewColumn = vscode.ViewColumn.Two;
+        //     });
+        // }),
         
 		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
             args => setNextStatement(args)
@@ -98,15 +107,17 @@ class DefinitionProvider implements vscode.DefinitionProvider {
         if( vscode.debug.activeDebugSession === undefined )
             return undefined;
        
-        let request = "getDefinition";
+        let wordRange = document.getWordRangeAtPosition(position);
+        let lineRange = new vscode.Range( position.line, 0, position.line, 9999 );
         
         return vscode.debug.activeDebugSession.customRequest(
-            request,
+            "getDefinition",
             { 
-                file: document.fileName, 
-                line: position.line,
-                col: position.character,
-                word: document.getText( document.getWordRangeAtPosition(position) )
+                file:   document.fileName, 
+                line:   position.line,
+                column: position.character,
+                text:   document.getText( lineRange ),
+                symbol: document.getText( wordRange ),
             }
         ).then( reply => {
             return new vscode.Location(
@@ -128,9 +139,28 @@ class HoverProvider implements vscode.HoverProvider {
         position: vscode.Position, 
         token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
         
-            // console.log( document.fileName + " " + position.line + " " );
-            //return new vscode.Hover("hello");
+        if( vscode.debug.activeDebugSession === undefined )
             return undefined;
+       
+        let wordRange = document.getWordRangeAtPosition(position);
+        let lineRange = new vscode.Range( position.line, 0, position.line, 9999 );
+        
+        return vscode.debug.activeDebugSession.customRequest(
+            "getHover",
+            { 
+                file:   document.fileName, 
+                line:   position.line,
+                column: position.character,
+                text:   document.getText( lineRange ),
+                symbol: document.getText( wordRange ),
+            }
+        ).then( reply => {
+            return new vscode.Hover(
+                new vscode.MarkdownString( "hello" )
+            );
+        }, err => {
+            throw err;
+        });
 
     }
 }
