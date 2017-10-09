@@ -62,10 +62,7 @@ namespace ZXDebug
 
             capabilities.supportsConfigurationDoneRequest = true;
             capabilities.supportsCompletionsRequest = true;
-
-            // enabling this will cause vscode to do an Evaluate request instead of
-            // going through the normal hover process
-            // capabilities.supportsEvaluateForHovers = true;
+            capabilities.supportsEvaluateForHovers = true;
         }
 
         void Continue( Request request )
@@ -422,6 +419,10 @@ namespace ZXDebug
                     result = VSCode_OnEvaluate_REPL( request, expression );
                     break;
 
+                case "hover":
+                    result = VSCode_OnEvaluate_Hover( request, expression );
+                    break;
+
                 default:
                     result = VSCode_OnEvaluate_Variable( request, expression );
                     break;
@@ -431,6 +432,19 @@ namespace ZXDebug
         string VSCode_OnEvaluate_REPL( Request request, string expression )
         {
             return string.Join( "\n", _session.MachineConnection.CustomCommand( expression ) );
+        }
+
+        string VSCode_OnEvaluate_Hover( Request request, string expression )
+        {
+            var reg = _session.Machine.Registers;
+
+            if( reg.IsValidRegister( expression ) )
+                if( reg.Size( expression ) == 1 )
+                    return $"{expression} = {((byte)_session.Machine.Registers[expression]).ToHex()}";
+                else
+                    return $"{expression} = {((ushort)_session.Machine.Registers[expression]).ToHex()}";
+
+            return "?";
         }
 
         char[] _varSplitChar = new[] { ' ', ',' };
@@ -707,6 +721,11 @@ namespace ZXDebug
             Log.Write(
                 Log.Severity.Message,
                 $"GetHover: {file}:{line}:{column} [{symbol}] [{line}]"
+            );
+
+            _session.VSCode.Send( 
+                request,
+                new HoverResponseBody( "from .cs")
             );
         }
 

@@ -57,4 +57,14 @@ namespace ZXDebug
             }
         }
     }
+
+    public class HoverResponseBody : ResponseBody
+    {
+        public string result;
+
+        public HoverResponseBody( string result )
+        {
+            this.result = result;
+        }
+    }    
 }

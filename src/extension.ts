@@ -156,7 +156,7 @@ class HoverProvider implements vscode.HoverProvider {
             }
         ).then( reply => {
             return new vscode.Hover(
-                new vscode.MarkdownString( "hello" )
+                new vscode.MarkdownString( reply.result )
             );
         }, err => {
             throw err;
