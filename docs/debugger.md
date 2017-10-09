@@ -35,6 +35,9 @@ Additionally, whether paging is enabled or disabled is recorded using pMemory.Pa
 pMemory.PagingEnabled = true;
 ```
 
+
+---
+
 # Classes
 
 ## Meta
