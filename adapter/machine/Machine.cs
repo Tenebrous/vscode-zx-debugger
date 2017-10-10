@@ -557,9 +557,9 @@ namespace Spectrum
 
         public Maps.GetLabelsResult GetLabels( BankID bankId, ushort address )
         {
-            return SourceMaps.GetLabels( bankId, address )
-                ?? SourceMaps.GetLabels( BankID.Unpaged(), address )
-                ?? SourceMaps.GetLabels( Memory.GetMappedBank( address ), address );
+            return SourceMaps.GetLabelsAt( bankId, address )
+                ?? SourceMaps.GetLabelsAt( BankID.Unpaged(), address )
+                ?? SourceMaps.GetLabelsAt( Memory.GetMappedBank( address ), address );
         }
 
 

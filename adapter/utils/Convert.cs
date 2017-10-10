@@ -153,6 +153,10 @@ namespace ZXDebug
         {
             return $"{Settings.HexPrefix}{value:X2}{Settings.HexSuffix}";
         }
+        public static string ToBin( this byte value )
+        {
+            return $"{Settings.BinPrefix}{System.Convert.ToString( value, 2 ).PadLeft( 8, '0' )}{Settings.BinSuffix}";
+        }
 
         public static string ToHex( this ushort value )
         {
@@ -164,6 +168,9 @@ namespace ZXDebug
         {
             public string HexPrefix = "$";
             public string HexSuffix = "";
+
+            public string BinPrefix = "";
+            public string BinSuffix = "";
 
             [JsonConverter( typeof( StringEnumConverter ) )]
             public enum LabelPositionEnum

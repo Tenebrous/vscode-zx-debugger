@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using VSCode;
 using ZXDebug.SourceMapper;
 using StackFrame = VSCode.StackFrame;
@@ -436,15 +437,81 @@ namespace ZXDebug
 
         string VSCode_OnEvaluate_Hover( Request request, string expression )
         {
+            var s = new StringBuilder();
+            s.Append( expression );
+
             var reg = _session.Machine.Registers;
 
-            if( reg.IsValidRegister( expression ) )
-                if( reg.Size( expression ) == 1 )
-                    return $"{expression} = {((byte)_session.Machine.Registers[expression]).ToHex()}";
-                else
-                    return $"{expression} = {((ushort)_session.Machine.Registers[expression]).ToHex()}";
+            ushort value = 0;
+            var isAddress = false;
 
-            return "?";
+            if( reg.IsValidRegister( expression ) )
+            {
+                if( reg.Size( expression ) == 1 )
+                {
+                    value = _session.Machine.Registers[expression];
+
+                    s.Append( " = " );
+                    s.Append( ((byte)value).ToHex() );
+                }
+                else
+                {
+                    value = _session.Machine.Registers[expression];
+                    isAddress = true;
+
+                    s.Append( " = " );
+                    s.Append( value.ToHex() );
+                }
+            }
+            else
+            {
+                var sym = _session.Machine.SourceMaps.GetLabel(expression);
+
+                if( sym != null )
+                {
+                    value = sym.Address;
+
+                    s.Append( " = address " );
+                    s.Append( sym.BankID );
+                    s.Append( ' ' );
+                    s.Append( value.ToHex() );
+
+                    if( !string.IsNullOrWhiteSpace( sym.Comment ) )
+                    {
+                        s.Append( '\n' );
+                        s.Append( '"' );
+                        s.Append( sym.Comment );
+                        s.Append( '"' );
+                    }
+
+                    s.Append( '\n' );
+                    s.Append( "  from " );
+                    s.Append( Path.GetFileName( sym.Map.Filename ) ); 
+
+                    isAddress = true;
+                }
+            }
+
+            if( isAddress )
+            {
+                s.Append( '\n' );
+                s.Append( '\n' );
+
+                var bytes = new byte[8];
+                _session.Machine.Memory.Get( value, bytes, 0, bytes.Length );
+
+                for( int i = 0; i < bytes.Length; i++ )
+                {
+                    s.Append( ( (ushort)( value + i ) ).ToHex() );
+                    s.Append( ' ' );
+                    s.Append( bytes[i].ToHex() );
+                    s.Append( ' ' );
+                    s.Append( bytes[i].ToBin() );
+                    s.Append( '\n' );
+                }
+            }
+
+            return s.ToString();
         }
 
         char[] _varSplitChar = new[] { ' ', ',' };
@@ -718,9 +785,11 @@ namespace ZXDebug
 
         void Custom_GetHoverEvent( Request request, string file, int line, int column, string text, string symbol )
         {
+            var sym = text.Substring( column - 1, text.Length + 2 );
+
             Log.Write(
                 Log.Severity.Message,
-                $"GetHover: {file}:{line}:{column} [{symbol}] [{line}]"
+                $"GetHover: {file}:{line}:{column} [{symbol}] [{sym}] [{line}]"
             );
 
             _session.VSCode.Send( 

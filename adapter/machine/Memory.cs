@@ -77,8 +77,11 @@ namespace Spectrum
             return _banks[pID];
         }
 
-        public int Get( ushort address, byte[] bytes, int start, int length )
+        public int Get( ushort address, byte[] bytes, int start = 0, int length = 0)
         {
+            if( length == 0 )
+                length = bytes.Length - start;
+
             return _machine.Connection.ReadMemory( address, bytes, start, length );
         }
 

@@ -54,9 +54,10 @@ namespace ZXDebug
         /// </summary>
         /// <param name="address">Memory address</param>
         /// <param name="bytes">Byte array to be filled from the device</param>
+        /// <param name="start">Start position within byte array</param>
         /// <param name="length">Number of bytes to retrieve</param>
         /// <returns>Number of bytes which were successfully read</returns>
-        public virtual int ReadMemory( ushort address, byte[] bytes, int start, int length )
+        public virtual int ReadMemory( ushort address, byte[] bytes, int start = 0, int length = 0 )
         {
             return 0;
         }

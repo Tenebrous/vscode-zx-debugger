@@ -287,8 +287,11 @@ namespace ZEsarUX
             }
         }
 
-        public override int ReadMemory( ushort address, byte[] bytes, int start, int length )
+        public override int ReadMemory( ushort address, byte[] bytes, int start = 0, int length = 0 )
         {
+            if( length == 0 )
+                length = bytes.Length - start;
+
             var memory = SendAndReceiveSingle( "read-memory " + address + " " + length );
 
             for( var i = 0; i < length; i++ )

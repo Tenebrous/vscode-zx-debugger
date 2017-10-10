@@ -15,12 +15,11 @@ namespace ZXDebug.SourceMapper
             public List<Label> Labels;
         }
 
-
         public string SourceRoot;
         public Files Files = new Files();
 
 
-        public GetLabelsResult GetLabels( BankID bankId, ushort address, ushort maxDistance = 0 )
+        public GetLabelsResult GetLabelsAt( BankID bankId, ushort address, ushort maxDistance = 0 )
         {
             GetLabelsResult result = null;
 
@@ -86,6 +85,16 @@ namespace ZXDebug.SourceMapper
             base.Add( map );
 
             return map;
+        }
+
+        public LabelLocation GetLabel( string label )
+        {
+            foreach( var map in this )
+                if( map.ByLabel.TryGetValue( label, out var result ) )
+                    if( result.Count > 0 )
+                        return result[0];
+
+            return null;
         }
     }
 }
