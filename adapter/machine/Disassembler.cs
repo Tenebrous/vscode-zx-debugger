@@ -8,7 +8,7 @@ namespace ZXDebug
     /// <summary>
     /// Class to deal with disassembling z80 from bytes
     /// </summary>
-    public class Disassembler
+    public class Disassembler : Loggable
     {
         public DisassemblerSettings Settings = new DisassemblerSettings();
 
@@ -132,7 +132,7 @@ namespace ZXDebug
 
                         if( saveByte == -1 )
                         {
-                            Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {b} in table '" + tableName + "'" );
+                            Log( Logging.Severity.Debug, "Ran out of bytes decoding {b} in table '" + tableName + "'" );
                             return null;
                         }
 
@@ -209,7 +209,7 @@ namespace ZXDebug
 
                 if( lo == -1 || hi == -1 )
                 {
-                    Log.Write( Log.Severity.Debug, "Ran out of bytes decoding {" + specifier + "} in instruction '" + instruction.Text + "'" );
+                    Log( Logging.Severity.Debug, "Ran out of bytes decoding {" + specifier + "} in instruction '" + instruction.Text + "'" );
                     return;
                 }
 
@@ -353,6 +353,11 @@ namespace ZXDebug
             public byte[] Bytes;
             public string Text;
             public Operand[] Operands;
+        }
+
+        public override string LogPrefix
+        {
+            get { return "Disassembler"; }
         }
     }
 

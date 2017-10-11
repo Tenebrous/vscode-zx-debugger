@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Text;
 using ZXDebug;
@@ -10,15 +9,24 @@ using File = System.IO.File;
 
 namespace Spectrum
 {
-    public class Machine
+    public class Machine : Loggable
     {
-        public MachineConnection Connection;
+        public Connection Connection;
+
+        public delegate void ConnectedHandler();
+        public event ConnectedHandler ConnectedEvent;
+
+        public delegate void DisconnectedHandler();
+        public event DisconnectedHandler DisconnectedEvent;
 
         public delegate void PausedHandler();
         public event PausedHandler PausedEvent;
 
         public delegate void ContinuedHandler();
         public event ContinuedHandler ContinuedEvent;
+
+        public delegate void MachineCapsChangedHandler();
+        public event MachineCapsChangedHandler MachineCapsChangedEvent;
 
         public delegate void DisassemblyUpdatedHandler();
         public event DisassemblyUpdatedHandler DisassemblyUpdatedEvent;
@@ -28,20 +36,28 @@ namespace Spectrum
         public Maps SourceMaps { get; } = new Maps();
         public Disassembler Disassembler { get; } = new Disassembler();
         public Breakpoints Breakpoints { get; }
+        public MachineCaps Caps { get; }
 
-        public Machine( MachineConnection connection )
+        public Machine( Connection connection )
         {
             Connection  = connection;
             Registers   = new Registers(this);
             Memory      = new Memory(this);
             Breakpoints = new Breakpoints(this);
+            Caps        = new MachineCaps(this);
 
             Connection.PausedEvent    += Connection_OnPause;
             Connection.ContinuedEvent += Connection_OnContinue;
+            Connection.ConnectedEvent += Connection_OnConnectedEvent;
         }
 
         /////////////////
         // events from debugger connection
+
+        void Connection_OnConnectedEvent()
+        {
+            ConnectedEvent?.Invoke();
+        }
 
         void Connection_OnPause()
         {
@@ -141,7 +157,7 @@ namespace Spectrum
 
             if( updated || _disassemblyMemoryMap != Memory.ToString() )
             {
-                Log.Write( Log.Severity.Message, "Disasm: " + address + " -> " + string.Join( ", ", _disasmAddressesDone ) );
+                Log( Logging.Severity.Message, "Disasm: " + address + " -> " + string.Join( ", ", _disasmAddressesDone ) );
 
                 if( filename != null )
                     WriteDisassemblyFile( filename );
@@ -192,7 +208,7 @@ namespace Spectrum
             }
             catch( Exception e )
             {
-                Log.Write( Log.Severity.Error, e.ToString() );
+                Log( Logging.Severity.Error, e.ToString() );
             }
 
             if( _tempDisasm.Count == 0 )
@@ -656,6 +672,11 @@ namespace Spectrum
             {
                 return $"{Depth}:{Address}";
             }
+        }
+
+        public override string LogPrefix
+        {
+            get { return "Machine"; }
         }
     }
 }

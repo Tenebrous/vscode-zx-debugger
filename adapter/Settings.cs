@@ -40,6 +40,12 @@ namespace ZXDebug
         // within it is actually one level higher.
     */
 
+    public class ByCaps
+    {
+        public string[] SourceMaps;
+        public string[] OpcodeTables;
+    }
+
     public class Settings : VSCode.Settings
     {
         // from json

@@ -91,20 +91,35 @@
                                 "description": "Project folder",
                                 "default": "${workspaceRoot}"
                             },
-                            "sourceMaps": {
+                            "byCapabilities":
+                            {
                                 "type": "array",
-                                "default": [
-                                    "48k_rom.dbg"
-                                ],
+                                "items": {
+                                    "rule": {
+                                        "type": "string"
+                                    },
+                                    "maps": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "opcodes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "maps": {
+                                "type": "array",
                                 "items": {
                                     "type": "string"
                                 }
                             },
-                            "opcodeTables": {
+                            "opcodes": {
                                 "type": "array",
-                                "default": [
-                                    "z80.tbl"
-                                ],
                                 "items": {
                                     "type": "string"
                                 }

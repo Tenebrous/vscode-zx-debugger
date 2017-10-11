@@ -80,7 +80,7 @@ namespace ZXDebug
             }
             catch( Exception e )
             {
-                Log.Write( Log.Severity.Error, $"Can\'t parse \'{value}\': {e}" );
+                Logging.Write( Logging.Severity.Error, $"Can\'t parse \'{value}\': {e}" );
             }
 
             return result;

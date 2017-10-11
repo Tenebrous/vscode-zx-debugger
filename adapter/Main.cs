@@ -1,12 +1,4 @@
 using Spectrum;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using Newtonsoft.Json;
-using VSCode;
-using ZXDebug.SourceMapper;
-using File = System.IO.File;
-using VSCodeBreakpoint = VSCode.Breakpoint;
 
 namespace ZXDebug
 {
@@ -18,8 +10,8 @@ namespace ZXDebug
 
         static void Main(string[] argv)
         {
-            Log.MaxSeverityConsole = Log.Severity.Message;
-            Log.MaxSeverityLog     = Log.Severity.Debug;
+            Logging.MaxSeverityConsole = Logging.Severity.Message;
+            Logging.MaxSeverityLog     = Logging.Severity.Debug;
 
 
             // set up 
@@ -27,8 +19,8 @@ namespace ZXDebug
             _session.Values = new ValueTree();
             _session.Settings = new Settings();
             _session.VSCode = new VSCode.Connection();
-            _session.MachineConnection = new ZEsarUX.Connection();
-            _session.Machine = new Machine( _session.MachineConnection );
+            _session.Connection = new ZEsarUX.Connection();
+            _session.Machine = new Machine( _session.Connection );
 
             _session.HandleMachine = new HandleMachine( _session );
             _session.HandleVSCode = new HandleVSCode( _session );

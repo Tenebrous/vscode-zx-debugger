@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ZXDebug;
 using Convert = ZXDebug.Convert;
 
 namespace Spectrum
@@ -45,9 +44,9 @@ namespace Spectrum
         /// <summary>
         /// Request an update to the registers from the device
         /// </summary>
-        public void Get()
+        public void Read()
         {
-            _machine.Connection.RefreshRegisters( this );
+            _machine.Connection.ReadRegisters( this );
         }
 
 
@@ -89,7 +88,7 @@ namespace Spectrum
             "PC", "SP", "AF", "BC", "DE", "HL",  "AF'", "BC'", "DE'", "HL'", "IX", "IY"
         };
 
-        public int Size( string register )
+        public int SizeOf( string register )
         {
             return _wordRegs.Contains( register.ToUpper() ) ? 2 : 1;
         }
@@ -170,17 +169,17 @@ namespace Spectrum
                     case "B":   B     = (byte)value;          return;
                     case "C":   C     = (byte)value;          return;
                     case "BC":  B     = (byte)(value >> 8);     
-                        C     = (byte)(value & 0xFF); return;
+                                C     = (byte)(value & 0xFF); return;
 
                     case "D":   D     = (byte)value;          return;
                     case "E":   E     = (byte)value;          return;
                     case "DE":  D     = (byte)(value >> 8);     
-                        E     = (byte)(value & 0xFF); return;
+                                E     = (byte)(value & 0xFF); return;
 
                     case "H":   H     = (byte)value;          return;
                     case "L":   L     = (byte)value;          return;
                     case "HL":  H     = (byte)(value >> 8);     
-                        L     = (byte)(value & 0xFF); return;
+                                L     = (byte)(value & 0xFF); return;
 
                     //
                     case "A'":  AltA  = (byte)value;          return;
@@ -188,28 +187,28 @@ namespace Spectrum
                     case "B'":  AltB  = (byte)value;          return;
                     case "C'":  AltC  = (byte)value;          return;
                     case "BC'": AltB  = (byte)(value >> 8);     
-                        AltC  = (byte)(value & 0xFF); return;
+                                AltC  = (byte)(value & 0xFF); return;
 
                     case "D'":  AltD  = (byte)value;          return;
                     case "E'":  AltE  = (byte)value;          return;
                     case "DE'": AltD  = (byte)(value >> 8);     
-                        AltE  = (byte)(value & 0xFF); return;
+                                AltE  = (byte)(value & 0xFF); return;
 
                     case "H'":  AltH  = (byte)value;          return;
                     case "L'":  AltL  = (byte)value;          return;
                     case "HL'": AltH  = (byte)(value >> 8);     
-                        AltL  = (byte)(value & 0xFF); return;
+                                AltL  = (byte)(value & 0xFF); return;
 
                     //
                     case "IXH": IXH   = (byte)value;          return;
                     case "IXL": IXL   = (byte)value;          return;
                     case "IX":  IXH   = (byte)(value >> 8);     
-                        IXL   = (byte)(value & 0xFF); return;
+                                IXL   = (byte)(value & 0xFF); return;
 
                     case "IYH": IYH   = (byte)value;          return;
                     case "IYL": IYL   = (byte)value;          return;
                     case "IY":  IYH   = (byte)(value >> 8);     
-                        IYL   = (byte)(value & 0xFF); return;
+                                IYL   = (byte)(value & 0xFF); return;
 
                     //
                     case "PC":  PC    = value;                return;

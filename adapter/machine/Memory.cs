@@ -77,7 +77,7 @@ namespace Spectrum
             return _banks[pID];
         }
 
-        public int Get( ushort address, byte[] bytes, int start = 0, int length = 0)
+        public int Read( ushort address, byte[] bytes, int start = 0, int length = 0)
         {
             if( length == 0 )
                 length = bytes.Length - start;
@@ -85,9 +85,9 @@ namespace Spectrum
             return _machine.Connection.ReadMemory( address, bytes, start, length );
         }
 
-        public void GetMapping()
+        public void ReadConfiguration()
         {
-            _machine.Connection.RefreshMemoryPages( this );
+            _machine.Connection.ReadMemoryConfiguration( this );
         }
 
         StringBuilder _tempToString = new StringBuilder();

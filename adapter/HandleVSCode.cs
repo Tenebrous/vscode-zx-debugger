@@ -9,7 +9,7 @@ using StackFrame = VSCode.StackFrame;
 
 namespace ZXDebug
 {
-    public class HandleVSCode
+    public class HandleVSCode : Loggable
     {
         Session _session;
 
@@ -23,7 +23,7 @@ namespace ZXDebug
         public void Configure()
         {
             // add vscode output for logged events
-            Log.OnLog += SendLog;
+            Logging.OnLog += SendLog;
 
             
             // vscode events
@@ -57,13 +57,13 @@ namespace ZXDebug
             custom.SetNextStatementEvent += Custom_SetNextStatement;
         }
 
-        void Initialize( Request request, VSCode.Capabilities capabilities )
+        void Initialize( Request request, VSCode.Capabilities caps )
         {
             _linesStartAt1 = (bool)request.arguments.linesStartAt1;
 
-            capabilities.supportsConfigurationDoneRequest = true;
-            capabilities.supportsCompletionsRequest = true;
-            capabilities.supportsEvaluateForHovers = true;
+            caps.supportsConfigurationDoneRequest = true;
+            caps.supportsCompletionsRequest = true;
+            caps.supportsEvaluateForHovers = true;
         }
 
         void Continue( Request request )
@@ -81,7 +81,7 @@ namespace ZXDebug
         {
             _session.VSCode.Send( request );
 
-            if( _session.MachineConnection.Meta.CanStepOverSensibly )
+            if( _session.Connection.ConnectionCaps.CanStepOverSelectively )
             {
                 // debugger is well-behaved when it comes to stepping over jr,jp and ret
                 _session.Machine.StepOver();
@@ -90,7 +90,7 @@ namespace ZXDebug
 
             // deal with debuggers that don't deal with jr,jp and ret propertly when stepping over
 
-            var b = _session.Machine.Memory.Get( _session.Machine.Registers.PC, _tempMemStepOver, 0, 1 );
+            var b = _session.Machine.Memory.Read( _session.Machine.Registers.PC, _tempMemStepOver, 0, 1 );
 
             switch( _tempMemStepOver[0] )
             {
@@ -121,7 +121,7 @@ namespace ZXDebug
                 case 0xF0: // RET P
                 case 0xF8: // RET M
 
-                    Log.Write( Log.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
+                    Log( Logging.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
                     _session.Machine.Step();
                     return;
 
@@ -140,7 +140,7 @@ namespace ZXDebug
 
         void StepOut( Request request )
         {
-            if( _session.MachineConnection.Meta.CanStepOut )
+            if( _session.Connection.ConnectionCaps.CanStepOut )
             {
                 _session.VSCode.Send( request );
                 _session.Machine.StepOut();
@@ -161,6 +161,7 @@ namespace ZXDebug
 
         void Attach( Request request, string json )
         {
+            Log( Logging.Severity.Message, json );
             Initialise( json );
 
             _session.Machine.Start();
@@ -206,8 +207,8 @@ namespace ZXDebug
         List<StackFrame> _stackFrames = new List<StackFrame>();
         void GetStackTrace( Request request )
         {
-            _session.Machine.Registers.Get();
-            _session.Machine.Memory.GetMapping();
+            _session.Machine.Registers.Read();
+            _session.Machine.Memory.ReadConfiguration();
 
             // disassemble from current PC
             var disassemblyUpdated = _session.Machine.UpdateDisassembly( _session.Machine.Registers.PC );
@@ -226,7 +227,7 @@ namespace ZXDebug
             var maxBytes = Math.Min( 20, 0xFFFF - stackPos );
 
             // read bytes from SP onwards for analysis of the addresses
-            var bytes = _session.Machine.Memory.Get( _session.Machine.Registers.SP, stackBytes, 0, maxBytes );
+            var bytes = _session.Machine.Memory.Read( _session.Machine.Registers.SP, stackBytes, 0, maxBytes );
 
             // turn the bytes into ushorts
             for( var i = 0; i < bytes; i += 2 )
@@ -253,7 +254,7 @@ namespace ZXDebug
                 }
                 else
                 {
-                    _session.Machine.Memory.Get( (ushort)( addr - 3 ), caller, 0, 3 );
+                    _session.Machine.Memory.Read( (ushort)( addr - 3 ), caller, 0, 3 );
 
                     if( _callerOpcode3.Contains( caller[0] ) )
                     {
@@ -409,7 +410,7 @@ namespace ZXDebug
 
         void GetCompletions( Request request, int frameId, int line, int column, string text )
         {
-            //Log.Write( Log.Severity.Error, pRequest.arguments.ToString() );
+            //Log.Write( Logging.Severity.Error, pRequest.arguments.ToString() );
         }
 
         void Evaluate( Request request, int frameId, string context, string expression, bool wantHex, ref string result )
@@ -432,7 +433,7 @@ namespace ZXDebug
 
         string VSCode_OnEvaluate_REPL( Request request, string expression )
         {
-            return string.Join( "\n", _session.MachineConnection.CustomCommand( expression ) );
+            return string.Join( "\n", _session.Connection.CustomCommand( expression ) );
         }
 
         string VSCode_OnEvaluate_Hover( Request request, string expression )
@@ -447,7 +448,7 @@ namespace ZXDebug
 
             if( reg.IsValidRegister( expression ) )
             {
-                if( reg.Size( expression ) == 1 )
+                if( reg.SizeOf( expression ) == 1 )
                 {
                     value = _session.Machine.Registers[expression];
 
@@ -498,7 +499,7 @@ namespace ZXDebug
                 s.Append( '\n' );
 
                 var bytes = new byte[8];
-                _session.Machine.Memory.Get( value, bytes, 0, bytes.Length );
+                _session.Machine.Memory.Read( value, bytes, 0, bytes.Length );
 
                 for( int i = 0; i < bytes.Length; i++ )
                 {
@@ -560,7 +561,7 @@ namespace ZXDebug
                                 _tempVar[0] = (byte)( address >> 8 );
                             }
 
-                            length = _session.Machine.Registers.Size( text );
+                            length = _session.Machine.Registers.SizeOf( text );
                             gotLength = true;
                             gotData = true;
                         }
@@ -588,7 +589,7 @@ namespace ZXDebug
 
             if( gotAddress && gotLength && !gotData )
             {
-                _session.Machine.Memory.Get( address, _tempVar, 0, length );
+                _session.Machine.Memory.Read( address, _tempVar, 0, length );
             }
 
             result = Convert.ToHex( _tempVar, length );
@@ -650,7 +651,7 @@ namespace ZXDebug
             if( sourceName != DisassemblySource.name )
                 return;
 
-            var max = _session.MachineConnection.Meta.MaxBreakpoints;
+            var max = _session.Connection.ConnectionCaps.MaxBreakpoints;
 
             _tempBreakpointsResponse.Clear();
 
@@ -727,8 +728,8 @@ namespace ZXDebug
         {
             // note: line numbers are always 0-based and ignore _linesStartAt1
 
-            Log.Write( 
-                Log.Severity.Message, 
+            Log( 
+                Logging.Severity.Message, 
                 $"GetDef: {file}:{line}:{column} [{symbol}] [{line}]"
             );
 
@@ -787,8 +788,8 @@ namespace ZXDebug
         {
             var sym = text.Substring( column - 1, text.Length + 2 );
 
-            Log.Write(
-                Log.Severity.Message,
+            Log(
+                Logging.Severity.Message,
                 $"GetHover: {file}:{line}:{column} [{symbol}] [{sym}] [{line}]"
             );
 
@@ -822,9 +823,9 @@ namespace ZXDebug
             _session.VSCode.Refresh();
         }
 
-        public void SendLog( Log.Severity severity, string msg )
+        public void SendLog( Logging.Severity severity, string msg )
         {
-            var type = severity == Log.Severity.Error ? OutputEvent.OutputEventType.stderr : OutputEvent.OutputEventType.stdout;
+            var type = severity == Logging.Severity.Error ? OutputEvent.OutputEventType.stderr : OutputEvent.OutputEventType.stdout;
             _session.VSCode?.Send( new OutputEvent( type, msg + "\n" ) );
         }
 
@@ -832,6 +833,7 @@ namespace ZXDebug
         {
             return _linesStartAt1 ? line - 1 : line;
         }
+
         int LineToVSCode( int line )
         {
             return _linesStartAt1 ? line : line + 1;
@@ -844,11 +846,13 @@ namespace ZXDebug
             get { return _disassemblyFile = _disassemblyFile ?? Path.Combine( _session.Settings.TempFolder, "disasm.zdis" ); }
         }
 
+
         Source _stackSource;
         Source StackSource
         {
             get { return _stackSource = _stackSource ?? new Source( "#", "", 0, Source.SourcePresentationHintEnum.deemphasize ); }
         }
+
 
         Source _disassemblySource;
         Source DisassemblySource
@@ -857,5 +861,9 @@ namespace ZXDebug
         }
 
 
+        public override string LogPrefix
+        {
+            get { return "VSCodeHandler"; }
+        }
     }
 }

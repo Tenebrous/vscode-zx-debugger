@@ -8,25 +8,60 @@ namespace ZXDebug
     /// <summary>
     /// Abstraction of interface to a Spectrum debugger
     /// </summary>
-    public abstract class MachineConnection
+    public abstract class Connection : Loggable
     {
+        public delegate void ConnectedHandler();
+        public event ConnectedHandler ConnectedEvent;
+
+        public delegate void DisconnectedHandler();
+        public event DisconnectedHandler DisconnectedEvent;
+
         public delegate void PausedHandler();
         public event PausedHandler PausedEvent;
 
         public delegate void ContinuedHandler();
         public event ContinuedHandler ContinuedEvent;
 
+        public delegate void MachineCapsChangedHandler();
+        public event MachineCapsChangedHandler MachineCapsChangedEvent;
+
         /// <summary>
         /// Returns details on what this debugger provides
         /// </summary>
         /// <returns></returns>
-        public virtual Meta Meta => new Meta();
+        public virtual ConnectionCaps ConnectionCaps => new ConnectionCaps();
+
+        /// <summary>
+        /// Connect to the device
+        /// </summary>
+        /// <returns>true if connection was successful</returns>
+        public virtual bool Connect()
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// Disconnect from the device
+        /// </summary>
+        /// <returns>true if disconnection was successful</returns>
+        public virtual bool Disconnect()
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// Retrieve information about the connected hardware/emulator
+        /// </summary>
+        /// <param name="pCaps">Class to be updated</param>
+        public virtual void ReadMachineCaps( MachineCaps pCaps )
+        {
+        }
 
         /// <summary>
         /// Retrieve the current state of the registers and update the provided pRegisters class
         /// </summary>
         /// <param name="registers">Class to be updated</param>
-        public virtual void RefreshRegisters( Registers registers )
+        public virtual void ReadRegisters( Registers registers )
         {
         }
 
@@ -45,7 +80,7 @@ namespace ZXDebug
         /// e.g. which pages are in which slots
         /// </summary>
         /// <param name="memory">Memory class to be updated with the new configuration</param>
-        public virtual void RefreshMemoryPages( Memory memory )
+        public virtual void ReadMemoryConfiguration( Memory memory )
         {
         }
 
@@ -61,27 +96,7 @@ namespace ZXDebug
         {
             return 0;
         }
-
-
-        /// <summary>
-        /// Connect to the device
-        /// </summary>
-        /// <returns>true if connection was successful</returns>
-        public virtual bool Connect()
-        {
-            return false;
-        }
-
-
-        /// <summary>
-        /// Disconnect from the device
-        /// </summary>
-        /// <returns>true if disconnection was successful</returns>
-        public virtual bool Disconnect()
-        {
-            return false;
-        }
-
+        
         /// <summary>
         /// Process any incoming messages or other regular updates
         /// </summary>
@@ -192,6 +207,16 @@ namespace ZXDebug
             return results;
         }
 
+        public void OnConnected()
+        {
+            ConnectedEvent?.Invoke();
+        }
+
+        public void OnDisconnected()
+        {
+            DisconnectedEvent?.Invoke();
+        }
+
         public void OnPaused()
         {
             PausedEvent?.Invoke();
@@ -201,37 +226,11 @@ namespace ZXDebug
         {
             ContinuedEvent?.Invoke();
         }
-    }
 
-    /// <summary>
-    /// Describes capabilities, abilities and functionality supported by the debugger
-    /// </summary>
-    public class Meta
-    {
-        /// <summary>
-        /// The debugger can change the value of registers
-        /// </summary>
-        public bool CanSetRegisters;
-
-        /// <summary>
-        /// The debugger can evaluate an arbitrary string and return a result
-        /// </summary>
-        public bool CanEvaluate;
-
-        /// <summary>
-        /// The debugger supports stepping out
-        /// </summary>
-        public bool CanStepOut;
-
-        /// <summary>
-        /// The debugger will ignore step over for 'ret' and 'jp' and will instead do a normal step
-        /// </summary>
-        public bool CanStepOverSensibly;
-
-        /// <summary>
-        /// Maximum number of breakpoints enabled at any one time
-        /// </summary>
-        public int MaxBreakpoints;
+        public void OnMachineCapsChanged()
+        {
+            MachineCapsChangedEvent?.Invoke();
+        }
     }
 }
  

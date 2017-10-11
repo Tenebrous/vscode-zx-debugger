@@ -16,7 +16,7 @@ namespace ZXDebug
         public delegate void SetNextStatementHandler( Request request, string file, int line );
         public event SetNextStatementHandler SetNextStatementEvent;
 
-        public CustomRequests( Connection vscode )
+        public CustomRequests( VSCode.Connection vscode )
         {
             vscode.CustomRequestEvent += VSCode_CustomRequest;
         }

@@ -4,11 +4,11 @@ using ZXDebug;
 public class Session
 {
     public Settings Settings;
-    public MachineConnection MachineConnection;
 
     public VSCode.Connection VSCode;
     public HandleVSCode HandleVSCode;
 
+    public Connection Connection;
     public Machine Machine;
     public HandleMachine HandleMachine;
 
@@ -20,7 +20,7 @@ public class Session
     public bool EventLoop()
     {
         var vsactive = VSCode.Process();
-        var dbgactive = MachineConnection.Process();
+        var dbgactive = Connection.Process();
 
         if( !vsactive )
         {

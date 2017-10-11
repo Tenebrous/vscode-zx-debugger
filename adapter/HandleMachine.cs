@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace ZXDebug
 {
-    public class HandleMachine
+    public class HandleMachine : Loggable
     {
         Session _session;
 
@@ -18,9 +18,22 @@ namespace ZXDebug
             _session.Machine.PausedEvent             += Paused;
             _session.Machine.ContinuedEvent          += Continued;
             _session.Machine.DisassemblyUpdatedEvent += DisassemblyUpdated;
+            _session.Machine.ConnectedEvent          += Connected;
+            _session.Machine.MachineCapsChangedEvent += MachineCapsChangedEvent;
 
             _session.Settings.Disassembler = _session.Machine.Disassembler.Settings;
             _session.Settings.DeserializedEvent += SettingsUpdated;
+        }
+
+        void Connected()
+        {
+            _session.Machine.Caps.Read();
+            MachineCapsChangedEvent();
+        }
+
+        void MachineCapsChangedEvent()
+        {
+            Log( Logging.Severity.Message, _session.Machine.Caps.ToString() );
         }
 
         void Paused()
@@ -62,7 +75,7 @@ namespace ZXDebug
 
                 beforeSingle = GC.GetTotalMemory( true );
                 var map = _session.Machine.SourceMaps.Add( file );
-                Log.Write( Log.Severity.Message, "Loaded map: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                Log( Logging.Severity.Message, "Loaded map: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
 
                 var fileOnly = Path.GetFileName( filename );
                 File.WriteAllText(
@@ -76,7 +89,7 @@ namespace ZXDebug
                 );
             }
 
-            Log.Write( Log.Severity.Message, "Loaded maps (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            Log( Logging.Severity.Message, "Loaded maps (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
 
 
             // load opcode layers for the disassembler
@@ -90,12 +103,17 @@ namespace ZXDebug
 
                 beforeSingle = GC.GetTotalMemory( true );
                 _session.Machine.Disassembler.AddLayer( file );
-                Log.Write( Log.Severity.Message, "Loaded opcode layer: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                Log( Logging.Severity.Message, "Loaded opcode layer: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
             }
 
-            Log.Write( Log.Severity.Message, "Loaded opcode layers (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            Log( Logging.Severity.Message, "Loaded opcode layers (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
 
 
+        }
+
+        public override string LogPrefix
+        {
+            get { return "MachineHandler"; }
         }
     }
 }

@@ -5,11 +5,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Newtonsoft.Json;
+using ZXDebug;
 using Convert = ZXDebug.Convert;
 
 namespace VSCode
 {
-    public class Connection
+    public class Connection : Loggable
     {
         public delegate void EventHandler( Request request );
 
@@ -151,7 +152,7 @@ namespace VSCode
 
         void ProcessMessage( string msg )
         {
-            Log.Write( Log.Severity.Verbose, "vscode: (in)  " + msg );
+            Log( Logging.Severity.Verbose, "(in)  " + msg );
 
             Request request;
 
@@ -161,15 +162,15 @@ namespace VSCode
             }
             catch( Exception e )
             {
-                Log.Write( Log.Severity.Error, "The following message caused an error: [" + msg.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
-                Log.Write( Log.Severity.Error, e.ToString() );
+                Log( Logging.Severity.Error, "The following message caused an error: [" + msg.Replace( "\r", "\\r" ).Replace( "\n", "\\n" ) + "]" );
+                Log( Logging.Severity.Error, e.ToString() );
                 return;
             }
 
             if( request == null )
                 return;
 
-            Log.Write( Log.Severity.Debug, "vscode: (in)  " + request.type + " " + request.command );
+            Log( Logging.Severity.Debug, "(in)  " + request.type + " " + request.command );
 
             if( request.type == "request" )
             {
@@ -203,7 +204,7 @@ namespace VSCode
 
         void HandleMessage( string msg, dynamic args, Request request )
         {
-            Log.Write( Log.Severity.Verbose, "vscode: (in) [" + msg + "]" );
+            Log( Logging.Severity.Verbose, "(in) [" + msg + "]" );
 
             args = args ?? new { };
 
@@ -343,9 +344,9 @@ namespace VSCode
                         CustomRequestEvent?.Invoke( request );
 
                         if( !request.responded )
-                            Log.Write( 
-                                Log.Severity.Error,
-                                string.Format( "vscode: request not handled: '{0}' [{1}]", msg, Convert.Encode(request.arguments.ToString()) )
+                            Log( 
+                                Logging.Severity.Error,
+                                string.Format( "Request not handled: '{0}' [{1}]", msg, Convert.Encode(request.arguments.ToString()) )
                             );
 
                         break;
@@ -353,9 +354,9 @@ namespace VSCode
             }
             catch( Exception e )
             {
-                Log.Write(  
-                    Log.Severity.Error,
-                    $"vscode: error during request '{Convert.Encode( request.arguments.ToString() )}' [{msg}] (exception: {e.Message})\n{e}"
+                Log(  
+                    Logging.Severity.Error,
+                    $"Error during request '{Convert.Encode( request.arguments.ToString() )}' [{msg}] (exception: {e.Message})\n{e}"
                 );
 
                 Send( new Response( request, errorMsg: e.Message ) );
@@ -368,7 +369,7 @@ namespace VSCode
         {
             var message = new Response( request, response, errorMsg );
 
-            Log.Write( Log.Severity.Debug, "vscode: (out) response " +
+            Log( Logging.Severity.Debug, "(out) response " +
                         request.command
                         + (response == null ? "" : " response:" + response)
                         + (errorMsg == null ? "" : " error:'" + errorMsg + "'")
@@ -381,7 +382,7 @@ namespace VSCode
         // send event
         public void Send(Event evt)
         {
-            Log.Write( Log.Severity.Debug, "vscode: (out) event " + evt.eventType );
+            Log( Logging.Severity.Debug, "(out) event " + evt.eventType );
 
             Send((ProtocolMessage)evt);
         }
@@ -404,7 +405,7 @@ namespace VSCode
             }
         }
 
-        static byte[] ConvertToBytes( ProtocolMessage msg )
+        byte[] ConvertToBytes( ProtocolMessage msg )
         {
             var asJson = JsonConvert.SerializeObject( msg );
             var jsonBytes = Encoding.UTF8.GetBytes(asJson);
@@ -412,7 +413,7 @@ namespace VSCode
             var header = $"Content-Length: {jsonBytes.Length}\r\n\r\n";
             var headerBytes = Encoding.UTF8.GetBytes(header);
 
-            Log.Write( Log.Severity.Verbose, "vscode: (out) [" + asJson + "]" );
+            Log( Logging.Severity.Verbose, "(out) [" + asJson + "]" );
 
             var data = new byte[headerBytes.Length + jsonBytes.Length];
             Buffer.BlockCopy(headerBytes, 0, data, 0, headerBytes.Length);
@@ -425,6 +426,11 @@ namespace VSCode
         {
             Continued( true );
             Stopped( 1, "step", "step" );
+        }
+
+        public override string LogPrefix
+        {
+            get { return "VSCodeConnection"; }
         }
     }
 }
