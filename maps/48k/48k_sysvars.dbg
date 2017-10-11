@@ -1,0 +1,71 @@
+ALL 5c00h kstate                ; keyboard bytes
+ALL 5c08h last_k                ; last keypress
+ALL 5c09h repdel                ; delay until repeat starts (default 35)
+ALL 5c0ah repper                ; key repeat delay (default 5)
+ALL 5c0bh defadd                ; pointer to DEF FN params during eval
+ALL 5c0dh k_data                ; second byte of colour control from keyboard
+ALL 5c0eh tvdata                ; both bytes of colour, AT, TAB controls
+ALL 5c10h strms                 ; address of stream data
+ALL 5c36h chars                 ; address - 0100h of character definitions in ROM (3d00h)
+ALL 5c38h rasp                  ; duration of buzz (I.E. If No Mem For Input)
+ALL 5c39h pip                   ; duration of keyboard Click (Default 0)
+ALL 5c3ah errnr                 ; error report number -1 (iy points to here)
+ALL 5c3bh flags                 ; flags (bit 5=lastk is valid, bit 1=printer output)
+ALL 5c3ch tv_flag               ; flag bits
+ALL 5c3dh err_sp                ; pointer to top of stack for ret on error
+ALL 5c3fh list_sp               ; pointer to return from auto list
+ALL 5c41h mode                  ; keyword, extended, graphics or letter/caps
+ALL 5c42h newppc                ; next line number of program
+ALL 5c44h nsppc                 ; next statement offset (in next line)
+ALL 5c45h ppc                   ; current line number of program
+ALL 5c47h subppc                ; current statement offset (in current line)
+ALL 5c48h bordcr                ; bits 5, 4, 3 = border colour
+ALL 5c49h e_ppc                 ; program edit cursor line number
+ALL 5c4bh vars                  ; pointer to first variable
+ALL 5c4dh dest                  ; pointer to variable during assignment
+ALL 5c4fh chans                 ; pointer to first channel area
+ALL 5c51h curchl                ; pointer to current channel area
+ALL 5c53h prog                  ; pointer to first line in program
+ALL 5c55h nxtlin                ; pointer to next program line
+ALL 5c57h datadd                ; pointer to just past last data item read
+ALL 5c59h e_line                ; pointer to edit line
+ALL 5c5bh k_cur                 ; pointer to cursor
+ALL 5c5dh ch_add                ; pointer to next char
+ALL 5c5fh x_ptr                 ; pointer to syntax error
+ALL 5c61h worksp                ; pointer to workspace
+ALL 5c63h stkbot                ; pointer to calculator stack base
+ALL 5c65h stkend                ; pointer to topmost memory address used by Basic
+ALL 5c67h breg                  ; byte used for B register of calculator
+ALL 5c68h mem                   ; pointer to calculator memory
+ALL 5c6ah flags2                ; bit flags
+ALL 5c6bh df_sz                 ; lines in lower screen (default 2)
+ALL 5c6ch s_top                 ; line number of top line of auto list
+ALL 5c6eh oldppc                ; continuation line number
+ALL 5c70h ospcc                 ; continuation statement number
+ALL 5c71h flagx                 ; bit flags
+ALL 5c72h strlen                ; string length during assignment
+ALL 5c74h t_addr                ; pointer to next syntax table item
+ALL 5c76h seed                  ; word used by random number routines
+ALL 5c78h frames                ; frame counter low, med, high bytes
+ALL 5c79h frames1               ; med byte of frame counter
+ALL 5c7ah frames2               ; high byte of frame counter
+ALL 5c7bh udg                   ; pointer to bit patterns for user defined graphics
+ALL 5c7dh coords                ; PLOT x, y values
+ALL 5c7fh p_posn                ; printer position (range 33-02)
+ALL 5c80h pr_cc                 ; low byte of next address in printer buffer
+ALL 5c81h unused                ; unused
+ALL 5c82h echo_e                ; column, line for input buffer
+ALL 5c84h df_cc                 ; next screen location for PRINT
+ALL 5c86h dfccl                 ; next screen location for PRINT (lower screen)
+ALL 5c88h s_posn                ; screen column (32-02), screen row (24-01)
+ALL 5c8ah sposnl                ; screen column (32-02), screen row (24-01) (lower screen)
+ALL 5c8ch scr_ct                ; remaining scroll count + 1 (0 is maximum)
+ALL 5c8dh attr_p                ; screen colours
+ALL 5c8eh mask_p                ; defines the transparent screen colours
+ALL 5c8fh attr_t                ; temporary colours
+ALL 5c90h mask_t                ; defines the transparent temporary screen colours
+ALL 5c91h p_flag                ; bit flags
+ALL 5c92h membot                ; scratchpad area for calculator routines
+ALL 5cb0h nmiadd                ; pointer used by nmi routine at 0066
+ALL 5cb2h ramtop                ; pointer to highest stack byte (value 3e)
+ALL 5cb4h p_ramt                ; highest byte that passed RAM test

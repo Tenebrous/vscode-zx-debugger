@@ -1,0 +1,71 @@
+BANK_5 5c00h kstate   ; Used in reading the keyboard.
+BANK_5 5c08h lastk    ; Stores newly pressed key.
+BANK_5 5c09h repdel   ; Time (in 50ths of a second) that a key must be held down before it repeats. This starts off at 35.
+BANK_5 5c0ah repper   ; Delay (in 50ths of a second) between successive repeats of a key held down - initially 5.
+BANK_5 5c0bh defadd   ; Address of arguments of user defined function (if one is being evaluated), otherwise 0.
+BANK_5 5c0dh k_data   ; Stores second byte of colour controls entered from keyboard.
+BANK_5 5c0eh tvdata   ; Stores bytes of colour, AT and TAB controls going to TV.
+BANK_5 5c10h strms    ; Addresses of channels attached to streams.
+BANK_5 5c36h chars    ; 256 less than address of character set, which starts with ' ' and carries on to '(c)'.
+BANK_5 5c38h rasp     ; Length of warning buzz.
+BANK_5 5c39h pip      ; Length of keyboard click.
+BANK_5 5c3ah err_nr   ; 1 less than the report code. Starts off at 255 (for -1) so 'PEEK 23610' gives 255.
+BANK_5 5c3bh flags    ; Various flags to control the BASIC system:
+BANK_5 5c3ch tvflag   ; Flags associated with the TV:
+BANK_5 5c3dh err_sp   ; Address of item on machine stack to be used as error return.
+BANK_5 5c3fh listsp   ; Address of return address from automatic listing.
+BANK_5 5c41h mode     ; Specifies cursor type:
+BANK_5 5c42h newppc   ; Line to be jumped to.
+BANK_5 5c44h nsppc    ; Statement number in line to be jumped to.
+BANK_5 5c45h ppc      ; Line number of statement currently being executed.
+BANK_5 5c47h subppc   ; Number within line of statement currently being executed.
+BANK_5 5c48h bordcr   ; Border colour multiplied by 8; also contains the attributes normally used for the lower halfof the screen.
+BANK_5 5c49h e_ppc    ; Number of current line (with program cursor).
+BANK_5 5c4bh vars     ; Address of variables.
+BANK_5 5c4dh dest     ; Address of variable in assignment.
+BANK_5 5c4fh chans    ; Address of channel data.
+BANK_5 5c51h curchl   ; Address of information currently being used for input and output.
+BANK_5 5c53h prog     ; Address of BASIC program.
+BANK_5 5c55h nxtlin   ; Address of next line in program.
+BANK_5 5c57h datadd   ; Address of terminator of last DATA item.
+BANK_5 5c59h e_line   ; Address of command being typed in.
+BANK_5 5c5bh k_cur    ; Address of cursor.
+BANK_5 5c5dh ch_add   ; Address of the next character to be interpreted - the character after the argument of PEEK, or the NEWLINE at the end of a POKE statement.
+BANK_5 5c5fh x_ptr    ; Address of the character after the '?' marker.
+BANK_5 5c61h worksp   ; Address of temporary work space.
+BANK_5 5c63h stkbot   ; Address of bottom of calculator stack.
+BANK_5 5c65h stkend   ; Address of start of spare space.
+BANK_5 5c67h breg     ; Calculator's B register.
+BANK_5 5c68h mem      ; Address of area used for calculator's memory (usually MEMBOT, but not always).
+BANK_5 5c6ah flags2   ; Flags:
+BANK_5 5c6bh df_sz    ; The number of lines (including one blank line) in the lower part of the screen.
+BANK_5 5c6ch s_top    ; The number of the top program line in automatic listings.
+BANK_5 5c6eh oldppc   ; Line number to which CONTINUE jumps.
+BANK_5 5c70h osppc    ; Number within line of statement to which CONTINUE jumps.
+BANK_5 5c71h flagx    ; Flags:
+BANK_5 5c72h strlen   ; Length of string type destination in assignment.
+BANK_5 5c74h t_addr   ; Address of next item in syntax table.
+BANK_5 5c76h seed     ; The seed for RND. Set by RANDOMIZE.
+BANK_5 5c78h frames   ; low byte of frame counter
+BANK_5 5c79h frames1  ; med byte of frame counter
+BANK_5 5c7ah frames2  ; high byte of frame counter
+BANK_5 5c7bh udg      ; Address of first user-defined graphic. Can be changed to save space by having fewer user-defined characters.
+BANK_5 5c7dh coords_x ; X-coordinate of last point plotted.
+BANK_5 5c7eh coords_y ; Y-coordinate of last point plotted.
+BANK_5 5c7fh p_posn   ; 33-column number of printer position.
+BANK_5 5c80h pr_cc    ; Full address of next position for LPRINT to print at (in ZX Printer buffer). Legal values $5B00 - $5B1F. [Not used in 128K mode]
+BANK_5 5c82h echo_e   ; 33-column number and 24-line number (in lower half) of end of input buffer.
+BANK_5 5c84h df_cc    ; Address in display file of PRINT position.
+BANK_5 5c86h df_ccl   ; Like DF CC for lower part of screen.
+BANK_5 5c88h s_posn_c ; 33-column number for PRINT position.
+BANK_5 5c89h s_posn_l ; 24-line number for PRINT position.
+BANK_5 5c8ah sposnl   ; Like S_POSN for lower part.
+BANK_5 5c8ch scr_ct   ; Counts scrolls - it is always 1 more than the number of scrolls that will be done before stopping with 'scroll?'.
+BANK_5 5c8dh attr_p   ; Permanent current colours, etc, as set up by colour statements.
+BANK_5 5c8eh mask_p   ; Used for transparent colours, etc. Any bit that is 1 shows that the corresponding attribute bit is taken not from ATTR_P, but from what is already on the screen.
+BANK_5 5c8fh attr_t   ; Temporary current colours (as set up by colour items).
+BANK_5 5c90h mask_t   ; Like MASK_P, but temporary.
+BANK_5 5c91h p_flag   ; Flags:
+BANK_5 5c92h membot   ; Calculator's memory area - used to store numbers that cannot conveniently be put on the calculator stack.
+BANK_5 5cb2h ramtop   ; Address of last byte of BASIC system area.
+BANK_5 5cb4h p_ramt   ; Address of last byte of physical RAM.
