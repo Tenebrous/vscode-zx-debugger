@@ -51,7 +51,7 @@ namespace ZXDebug
             _session.VSCode.NeedRefresh = true;
         }
 
-        void SettingsUpdated( VSCode.Settings settings )
+        void SettingsUpdated()
         {
             // load source maps
 
@@ -69,7 +69,7 @@ namespace ZXDebug
             long beforeTotal = GC.GetTotalMemory(true);
             long beforeSingle = 0;
 
-            foreach( var filename in _session.Settings.SourceMaps )
+            foreach( var filename in _session.Settings.Maps )
             {
                 var file = _session.Settings.Locate( filename, "maps" );
 
@@ -97,7 +97,7 @@ namespace ZXDebug
 
             beforeTotal = GC.GetTotalMemory( true );
 
-            foreach( var table in _session.Settings.OpcodeTables )
+            foreach( var table in _session.Settings.Opcodes )
             {
                 var file = _session.Settings.Locate( table, "opcodes" );
 

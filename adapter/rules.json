@@ -1,0 +1,17 @@
+﻿{
+  "rules": [
+    {
+      "rule": "",
+      "setMaps": [ "48k\\48k_rom.dbg", "48k\\48k_sysvars.dbg" ],
+      "setOpcodes": [ "z80.tbl" ]
+    },
+    {
+      "rule": "128k",
+      "setMaps": [ "128k\\128k_rom0.dbg", "128k\\128k_rom1.dbg", "128k\\128k_sysvars.dbg" ]
+    },
+    {
+      "rule": "next",
+      "addOpcodes": [ "z80.tbl", "next.tbl" ]
+    }
+  ]
+}

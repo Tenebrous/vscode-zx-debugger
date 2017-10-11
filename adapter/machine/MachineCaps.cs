@@ -5,6 +5,10 @@ namespace Spectrum
 {
     public class SimpleHashSet<T> : HashSet<T>
     {
+        public SimpleHashSet() : base()
+        {
+        }
+
         public SimpleHashSet(IEqualityComparer<T> comparer) : base( comparer )
         {
         }

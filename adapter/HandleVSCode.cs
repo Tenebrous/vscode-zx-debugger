@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using VSCode;
@@ -151,7 +150,7 @@ namespace ZXDebug
 
         void Launch( Request request, string json )
         {
-            Initialise( json );
+            UpdateSettings( json );
 
             _session.Machine.Start();
 
@@ -162,7 +161,7 @@ namespace ZXDebug
         void Attach( Request request, string json )
         {
             Log( Logging.Severity.Message, json );
-            Initialise( json );
+            UpdateSettings( json );
 
             _session.Machine.Start();
 
@@ -170,10 +169,19 @@ namespace ZXDebug
                 _session.Machine.Pause();
         }
 
-        void Initialise( string json )
+        void UpdateSettings( string json )
         {
-            Debugger.Break();
-            _session.Settings.FromJSON( json );
+            _session.Settings.Clear();
+
+            var file = _session.Settings.Locate( "rules.json" );
+            if( file != null )
+                _session.Settings.Apply( System.IO.File.ReadAllText( file ) );
+
+            _session.Settings.Apply( json );
+
+            _session.Settings.SaveAsBase();
+
+            _session.Settings.Deserialized();
         }
 
         void ConfigurationDone( Request request )
@@ -418,25 +426,25 @@ namespace ZXDebug
             switch( context )
             {
                 case "repl":
-                    result = VSCode_OnEvaluate_REPL( request, expression );
+                    result = Evaluate_REPL( request, expression );
                     break;
 
                 case "hover":
-                    result = VSCode_OnEvaluate_Hover( request, expression );
+                    result = Evaluate_Hover( request, expression );
                     break;
 
                 default:
-                    result = VSCode_OnEvaluate_Variable( request, expression );
+                    result = Evaluate_Variable( request, expression );
                     break;
             }
         }
 
-        string VSCode_OnEvaluate_REPL( Request request, string expression )
+        string Evaluate_REPL( Request request, string expression )
         {
             return string.Join( "\n", _session.Connection.CustomCommand( expression ) );
         }
 
-        string VSCode_OnEvaluate_Hover( Request request, string expression )
+        string Evaluate_Hover( Request request, string expression )
         {
             var s = new StringBuilder();
             s.Append( expression );
@@ -517,7 +525,7 @@ namespace ZXDebug
 
         char[] _varSplitChar = new[] { ' ', ',' };
         byte[] _tempVar = new byte[1024];
-        string VSCode_OnEvaluate_Variable( Request request, string expression )
+        string Evaluate_Variable( Request request, string expression )
         {
             var result = "n/a";
 

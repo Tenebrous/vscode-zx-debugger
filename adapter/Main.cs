@@ -1,3 +1,4 @@
+using System.IO;
 using Spectrum;
 
 namespace ZXDebug
@@ -29,6 +30,23 @@ namespace ZXDebug
             _session.HandleMachine.Configure();
             _session.HandleVSCode.Configure();
             _session.HandleValueTree.Configure();
+
+
+            //
+
+            var x = new Settings();
+            x.Clear();
+
+            var file = _session.Settings.Locate( "rules.json" );
+            if( file != null )
+                x.AddLayer( File.ReadAllText( file ) );
+
+            x.AddLayer( "{\"stopOnEntry\": true}" );
+
+            var xx = new SimpleHashSet<string>() {"test", "128k"};
+            x.ResolveRules( xx );
+
+            //x.Apply( json );
 
             while( _session.EventLoop() )
                 ;

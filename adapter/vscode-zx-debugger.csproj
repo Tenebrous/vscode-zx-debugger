@@ -91,11 +91,13 @@
     <Compile Include="CustomRequests.cs" />
     <Compile Include="vscode\Protocol.cs" />
     <Compile Include="connections\ZEsarUX.cs" />
-    <Compile Include="vscode\Settings.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config">
       <SubType>Designer</SubType>
+    </None>
+    <None Include="rules.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
