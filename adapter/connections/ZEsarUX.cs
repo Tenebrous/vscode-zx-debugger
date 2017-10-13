@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Spectrum;
 using ZXDebug;
+using ZXDebug.SourceMapper;
 using Convert = ZXDebug.Convert;
 
 namespace ZEsarUX
@@ -46,7 +47,7 @@ namespace ZEsarUX
 
             try
             {
-                Log( Logging.Severity.Message, "Connecting..." );
+                LogMessage( "Connecting..." );
                 _client.Connect( "127.0.0.1", 10000 );
                 _stream = _client.GetStream();
                 _connected = true;
@@ -60,7 +61,7 @@ namespace ZEsarUX
             }
             catch( Exception e )
             {
-                Log( Logging.Severity.Error, "Connection error: " + e );
+                LogError( "Connection error: " + e );
                 throw new Exception( "Cannot connect to ZEsarUX", e );
             }
 
@@ -69,7 +70,7 @@ namespace ZEsarUX
 
         public override bool Disconnect()
         {
-            Log( Logging.Severity.Message, "Disconnecting..." );
+            LogMessage( "Disconnecting..." );
 
             if( _stream != null )
             {
@@ -89,12 +90,12 @@ namespace ZEsarUX
                 _client = null;
             }
 
-            Log( Logging.Severity.Message, "Disconnected" );
+            LogMessage( "Disconnected" );
 
             return true;
         }
 
-        Dictionary<string, string> _machineToType = new Dictionary<string, string>()
+        Dictionary<string, string> _machineToType = new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase )
         {
             { /* MK14     */ "MK14",                         "" },
             { /* ZX80     */ "ZX-80",                        "" },
@@ -126,6 +127,7 @@ namespace ZEsarUX
             { /* ZXUNO    */ "ZX-Uno",                       "" },
             { /* TSConf   */ "ZX-Evolution TS-Conf",         "" },
             { /* TBBlue   */ "TBBlue/ZX Spectrum Next",      "tbblue next" },
+            { /* TBBlue   */ "TBBlue",                       "tbblue next" },
             { /* ACE      */ "Jupiter Ace",                  "" },
             { /* CPC464   */ "Amstrad CPC 464",              "" }
         };
@@ -135,13 +137,16 @@ namespace ZEsarUX
 
             pCaps.Clear();
 
-            if( _machineToType.TryGetValue( hardware, out var capList ) )
+            if( !_machineToType.TryGetValue( hardware, out var capList ) )
             {
-                var split = capList.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
-
-                foreach( var item in split )
-                    pCaps.Has[item] = true;
+                Logging.Write( Logging.Severity.Error, "Unknown machine '" + hardware + "'" );
+                return;
             }
+
+            var split = capList.Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+
+            foreach( var item in split )
+                pCaps.Has[item] = true;
         }
 
         public override void ReadRegisters( Registers registers )
@@ -156,10 +161,18 @@ namespace ZEsarUX
         }
 
 
-        public override void ReadMemoryConfiguration( Memory memory )
+        string _lastMemoryConfiguration = null;
+        public override bool ReadMemoryConfiguration( Memory memory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
+
+            if( _lastMemoryConfiguration == pages )
+                return false;
+
+            _lastMemoryConfiguration = pages;
+
             // RO1 RA5 RA2 RA7 SCR5 PEN
+            // O0 O1 A10 A11 A4 A5 A14 A15 SCR
 
             if( string.IsNullOrWhiteSpace( pages ) )
             {
@@ -167,15 +180,16 @@ namespace ZEsarUX
                 memory.PagingEnabled = false;
                 var bank = memory.Bank( BankID.Unpaged() );
                 memory.SetAddressBank( 0x0000, 0xFFFF, bank );
-                return;
+                return true;
             }
 
             var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
 
-            ushort slotSize = memory.SlotSize;
-            ushort slotPos = 0;
+            ushort alignedAddress = 0;
 
             memory.PagingEnabled = true;
+
+            memory.ClearConfiguration();
 
             foreach( var part in split )
             {
@@ -185,17 +199,43 @@ namespace ZEsarUX
                     memory.PagingEnabled = false;
                 else if( part.StartsWith( "RO" ) )
                 {
-                    var bank = memory.Bank( BankID.ROM( int.Parse( part.Substring( 2 ) ) ) );
-                    memory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
-                    slotPos++;
+                    var all = BankID.ROM( int.Parse( part.Substring( 2 ) ) );
+                    var low = memory.Bank( all.Low );
+                    var high = memory.Bank( all.High );
+
+                    memory.SetAddressBank( alignedAddress, 0x2000, low );
+                    alignedAddress += 0x2000;
+
+                    memory.SetAddressBank( alignedAddress, 0x2000, high );
+                    alignedAddress += 0x2000;
                 }
                 else if( part.StartsWith( "RA" ) )
                 {
-                    var bank = memory.Bank( BankID.Bank( int.Parse( part.Substring( 2 ) ) ) );
-                    memory.SetAddressBank( (ushort)( slotPos * slotSize ), (ushort)( slotPos * slotSize + slotSize - 1 ), bank );
-                    slotPos++;
+                    var all = BankID.Bank( int.Parse( part.Substring( 2 ) ) );
+                    var low = memory.Bank( all.Low );
+                    var high = memory.Bank( all.High );
+
+                    memory.SetAddressBank( alignedAddress, 0x2000, low );
+                    alignedAddress += 0x2000;
+
+                    memory.SetAddressBank( alignedAddress, 0x2000, high );
+                    alignedAddress += 0x2000;
+                }
+                if( part.StartsWith( "O" ) )
+                {
+                    var bank = memory.Bank( BankID.ROM( int.Parse( part.Substring( 1 ) ) ) );
+                    memory.SetAddressBank( alignedAddress, 0x2000, bank );
+                    alignedAddress += 0x2000;
+                }
+                else if( part.StartsWith( "A" ) )
+                {
+                    var bank = memory.Bank( BankID.Bank( int.Parse( part.Substring( 1 ) ) ) );
+                    memory.SetAddressBank( alignedAddress, 0x2000, bank );
+                    alignedAddress += 0x2000;
                 }
             }
+
+            return true;
         }
 
 
@@ -383,7 +423,7 @@ namespace ZEsarUX
 
             if( !_stream.DataAvailable )
             {
-                Log( Logging.Severity.Message, "Timed out waiting for data" );
+                LogMessage( "Timed out waiting for data" );
 
                 if( pRaiseErrors )
                     throw new Exception( "ZEsarUX did not respond within 2 seconds" );
@@ -515,7 +555,7 @@ namespace ZEsarUX
         void GetVersion()
         {
             var version = SendAndReceiveSingle("get-version");
-            Log( Logging.Severity.Message, "Connected (" + version + ")" );
+            LogMessage( "Connected (" + version + ")" );
         }
 
         Regex _breakpointCounter = new Regex(
@@ -544,7 +584,7 @@ namespace ZEsarUX
         HashSet<int> _enabledBreakpoints = new HashSet<int>();
         void SetSingleBreakpoint( Breakpoint pBreakpoint )
         {
-            var addr = pBreakpoint.Bank.LastAddress + pBreakpoint.Line.Offset;
+            var addr = pBreakpoint.Bank.PagedAddress + pBreakpoint.Line.Offset;
             SendAndReceiveSingle( string.Format( $"set-breakpoint {pBreakpoint.Index + 1} PC={addr:X4}h" ) );
             SendAndReceiveSingle( "enable-breakpoint " + ( pBreakpoint.Index + 1 ), pRaiseErrors: false );
         }
@@ -562,7 +602,7 @@ namespace ZEsarUX
             }
         }
 
-        public override string LogPrefix
+        protected override string LogPrefix
         {
             get { return "ZEsarUX"; }
         }

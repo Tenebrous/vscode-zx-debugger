@@ -76,6 +76,8 @@ namespace ZXDebug.SourceMapper
                 }
             }
 
+            //Logging.Write( Logging.Severity.Message, result.ToString() );
+
             return result;
         }
 

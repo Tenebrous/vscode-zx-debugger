@@ -12,21 +12,18 @@ namespace ZXDebug.utils
     /// <typeparam name="TValue">Value type - each key is associated with a value</typeparam>
     public class SpatialDictionary<TPartition, TKey, TValue> : IEnumerable<KeyValuePair<TPartition, SpatialDictionary<TKey, TValue>>>
         where TKey : IComparable<TKey> 
-        where TValue : new()
     {
-        Dictionary<TPartition,SpatialDictionary<TKey, TValue>> _data 
-            = new Cache<TPartition, SpatialDictionary<TKey, TValue>>();
+        Dictionary<TPartition,SpatialDictionary<TKey, TValue>> _data;
 
         Func<TPartition, TKey, TValue> _factory;
-
-        public SpatialDictionary()
-        {
-            _factory = null;
-        }
 
         public SpatialDictionary( Func<TPartition, TKey, TValue> factory )
         {
             _factory = factory;
+
+            _data = new Cache<TPartition, SpatialDictionary<TKey, TValue>>( 
+                partition => new SpatialDictionary<TKey, TValue>( SubFactory( partition, _factory ) )
+            );
         }
 
         /// <summary>

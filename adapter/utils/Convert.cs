@@ -2,6 +2,7 @@ using System.Text;
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Spectrum;
 
 namespace ZXDebug
 {
@@ -162,7 +163,6 @@ namespace ZXDebug
         {
             return $"{Settings.HexPrefix}{value:X4}{Settings.HexSuffix}";
         }
-
 
         public class FormatSettings
         {

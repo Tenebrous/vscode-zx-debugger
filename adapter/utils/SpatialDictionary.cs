@@ -10,24 +10,16 @@ namespace ZXDebug
     /// <typeparam name="TValue">Value type - each key is associated with a value</typeparam>
     public class SpatialDictionary<TKey, TValue> : SortedList<TKey, TValue>
         where TKey : IComparable<TKey>
-        where TValue : new()
     {
         IList<TKey> _indices;
         IList<TValue> _values;
         Func<TKey, TValue> _factory;
 
-        public SpatialDictionary()
-        {
-            _indices = Keys;
-            _values = Values;
-            _factory = pKey => new TValue();
-        }
-
         public SpatialDictionary( Func<TKey, TValue> factory )
         {
             _indices = Keys;
             _values = Values;
-            _factory = factory ?? ( pKey => new TValue() );
+            _factory = factory;
         }
 
         /// <summary>

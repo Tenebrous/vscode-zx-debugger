@@ -120,7 +120,7 @@ namespace ZXDebug
                 case 0xF0: // RET P
                 case 0xF8: // RET M
 
-                    Log( Logging.Severity.Debug, "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
+                    LogDebug( "Doing step instead of step-over as current instr=" + _tempMemStepOver[0].ToHex() );
                     _session.Machine.Step();
                     return;
 
@@ -160,7 +160,6 @@ namespace ZXDebug
 
         void Attach( Request request, string json )
         {
-            Log( Logging.Severity.Message, json );
             UpdateSettings( json );
 
             _session.Machine.Start();
@@ -171,17 +170,8 @@ namespace ZXDebug
 
         void UpdateSettings( string json )
         {
-            _session.Settings.Clear();
-
-            var file = _session.Settings.Locate( "rules.json" );
-            if( file != null )
-                _session.Settings.Apply( System.IO.File.ReadAllText( file ) );
-
-            _session.Settings.Apply( json );
-
-            _session.Settings.SaveAsBase();
-
-            _session.Settings.Deserialized();
+            _session.Settings.SetLayer( Settings.LayerEnum.LaunchAttach, json );
+            _session.Settings.Resolve( _session.Machine.Caps );
         }
 
         void ConfigurationDone( Request request )
@@ -216,7 +206,9 @@ namespace ZXDebug
         void GetStackTrace( Request request )
         {
             _session.Machine.Registers.Read();
-            _session.Machine.Memory.ReadConfiguration();
+
+            if( _session.Machine.Memory.ReadConfiguration() )
+                _session.Machine.Memory.Log();
 
             // disassemble from current PC
             var disassemblyUpdated = _session.Machine.UpdateDisassembly( _session.Machine.Registers.PC );
@@ -296,6 +288,9 @@ namespace ZXDebug
 
                     _stackAddresses[i] = addr;
                 }
+
+                if( addressDetails?.Labels != null && addressDetails.LabelledAddress != addressDetails.Address )
+                    disassemblyUpdated |= _session.Machine.UpdateDisassembly( addressDetails.LabelledAddress );
 
                 var style = i == 0 ? "subtle" : "normal";
 
@@ -693,7 +688,7 @@ namespace ZXDebug
                         new VSCode.Breakpoint(
                             bp.Index,
                             true,
-                            $"{bp.Line.Bank.ID}+{bp.Line.Offset.ToHex()} ({( (ushort)( bp.Bank.LastAddress + bp.Line.Offset ) ).ToHex()})",
+                            $"{bp.Line.Bank.ID}+{bp.Line.Offset.ToHex()} ({( (ushort)( bp.Bank.PagedAddress + bp.Line.Offset ) ).ToHex()})",
                             DisassemblySource,
                             LineToVSCode( bp.Line.FileLine ),
                             0,
@@ -824,7 +819,7 @@ namespace ZXDebug
             if( !memBank.IsPagedIn )
                 throw new Exception( "Cannot set PC to that address as it isn't currently paged in." );
 
-            _session.Machine.Registers.Set( "PC", (ushort)( memBank.LastAddress + disasmLine.Offset ) );
+            _session.Machine.Registers.Set( "PC", (ushort)( memBank.PagedAddress + disasmLine.Offset ) );
 
             _session.VSCode.Send( request );
 
@@ -866,12 +861,6 @@ namespace ZXDebug
         Source DisassemblySource
         {
             get { return _disassemblySource = _disassemblySource ?? new Source( " ", DisassemblyFile, 0, Source.SourcePresentationHintEnum.normal ); }
-        }
-
-
-        public override string LogPrefix
-        {
-            get { return "VSCodeHandler"; }
         }
     }
 }

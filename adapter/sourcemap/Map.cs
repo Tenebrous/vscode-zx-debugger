@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Remoting.Messaging;
 using System.Text.RegularExpressions;
 using Spectrum;
 using ZXDebug.utils;
@@ -30,9 +31,18 @@ namespace ZXDebug.SourceMapper
         public string Filename;
         public Maps Maps;
 
-        public SpatialDictionary<BankID, ushort, FileLine> Source = new SpatialDictionary<BankID, ushort, FileLine>();
-        public SpatialDictionary<BankID, ushort, List<Label>> Labels = new SpatialDictionary<BankID, ushort, List<Label>>();
-        public Cache<string,List<LabelLocation>> ByLabel = new Cache<string,List<LabelLocation>>(StringComparer.OrdinalIgnoreCase);
+        public SpatialDictionary<BankID, ushort, FileLine> Source = new SpatialDictionary<BankID, ushort, FileLine>( 
+            factory : ( bank, address ) => new FileLine()
+        );
+
+        public SpatialDictionary<BankID, ushort, List<Label>> Labels = new SpatialDictionary<BankID, ushort, List<Label>>(
+            factory : ( bank, address ) => new List<Label>()
+        );
+
+        public Cache<string,List<LabelLocation>> ByLabel = new Cache<string,List<LabelLocation>>(
+            factory : s => new List<LabelLocation>(),
+            comparer : StringComparer.OrdinalIgnoreCase
+        );
 
         Regex _regexDbg = new Regex(
                 @"(?i)^(?'bank'(ROM|RAM|BANK|DIV|ALL)(_)?(\d*)?) (?'addr'[0-9a-f]+h?)( (?'file'"".*?""):(?'line'\d*))?(?'labels'(?'label' [a-z0-9_]+)*)( *;(?'comment'.*?))?$",
@@ -145,7 +155,7 @@ namespace ZXDebug.SourceMapper
 
                 Maps.Files.TryAdd( normalisedFileStr, out var file );
 
-                if( !Source.TryAdd( bank, address, out var sym,
+                if( Source.TryAdd( bank, address, out var sym,
                         ( pBank, pAddress ) => new FileLine(file, line)
                     )
                 )

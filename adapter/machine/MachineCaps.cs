@@ -26,23 +26,16 @@ namespace Spectrum
         }
     }
 
-    public class MachineCaps
+    public class MachineCaps : SimpleHashSet<string>
     {
         Machine _machine;
-        public MachineCaps( Machine machine )
+        public MachineCaps( Machine machine ) : base(StringComparer.OrdinalIgnoreCase)
         {
             _machine = machine;
         }
 
-        SimpleHashSet<string> _caps = new SimpleHashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        public SimpleHashSet<string> Has => _caps;
-        public SimpleHashSet<string> Is  => _caps;
-
-        public void Clear()
-        {
-            _caps.Clear();
-        }
+        public SimpleHashSet<string> Has => this;
+        public SimpleHashSet<string> Is  => this;
 
         public void Read()
         {
@@ -51,7 +44,7 @@ namespace Spectrum
 
         public override string ToString()
         {
-            return string.Join( ", ", _caps );
+            return string.Join( ", ", this );
         }
     }
 }

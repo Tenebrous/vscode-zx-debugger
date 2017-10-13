@@ -46,9 +46,10 @@ namespace Spectrum
             Breakpoints = new Breakpoints(this);
             Caps        = new MachineCaps(this);
 
-            Connection.PausedEvent    += Connection_OnPause;
-            Connection.ContinuedEvent += Connection_OnContinue;
-            Connection.ConnectedEvent += Connection_OnConnectedEvent;
+            Connection.ConnectedEvent    += Connection_OnConnectedEvent;
+            Connection.PausedEvent       += Connection_OnPause;
+            Connection.ContinuedEvent    += Connection_OnContinue;
+            Connection.DisconnectedEvent += Connection_OnDisconnectedEvent;
         }
 
         /////////////////
@@ -67,6 +68,11 @@ namespace Spectrum
         void Connection_OnContinue()
         {
             ContinuedEvent?.Invoke();
+        }
+
+        void Connection_OnDisconnectedEvent()
+        {
+            DisconnectedEvent?.Invoke();
         }
 
 
@@ -137,35 +143,31 @@ namespace Spectrum
         List<DisasmLine> _tempDisasm = new List<DisasmLine>();
         string _disassemblyMemoryMap = "";
 
-        Stack<DisasmRequest> _disasmAddresses = new Stack<DisasmRequest>();
-        HashSet<ushort> _disasmAddressesDone = new HashSet<ushort>();
+        Stack<DisasmRequest> _disasmToDo = new Stack<DisasmRequest>();
+        HashSet<ushort> _disasmDone = new HashSet<ushort>();
         public bool UpdateDisassembly( ushort address, string filename = null )
         {
-            _disasmAddresses.Clear();
-            _disasmAddresses.Push( new DisasmRequest( 2, address ) );
+            _disasmToDo.Clear();
+            _disasmDone.Clear();
 
-            _disasmAddressesDone.Clear();
+            _disasmToDo.Push( new DisasmRequest( 2, address ) );
 
             var updated = false;
 
-            while( _disasmAddresses.Count > 0 )
+            while( _disasmToDo.Count > 0 )
             {
-                var item = _disasmAddresses.Pop();
-                if( _disasmAddressesDone.Add( item.Address ) )
-                    updated |= UpdateDisassemblyInternal( item.Address, _disasmAddresses, item.Depth );
+                var item = _disasmToDo.Pop();
+                if( _disasmDone.Add( item.Address ) )
+                    updated |= UpdateDisassemblyInternal( item.Address, _disasmToDo, item.Depth );
             }
 
-            if( updated || _disassemblyMemoryMap != Memory.ToString() )
-            {
-                Log( Logging.Severity.Message, "Disasm: " + address + " -> " + string.Join( ", ", _disasmAddressesDone ) );
+            if( !updated && _disassemblyMemoryMap == Memory.ToString() )
+                return false;
 
-                if( filename != null )
-                    WriteDisassemblyFile( filename );
+            if( filename != null )
+                WriteDisassemblyFile( filename );
 
-                return true;
-            }
-
-            return false;
+            return true;
         }
 
         byte[] _tempBytes = new byte[50];
@@ -208,7 +210,7 @@ namespace Spectrum
             }
             catch( Exception e )
             {
-                Log( Logging.Severity.Error, e.ToString() );
+                LogError( e.ToString() );
             }
 
             if( _tempDisasm.Count == 0 )
@@ -262,7 +264,7 @@ namespace Spectrum
             return false;
         }
 
-        private void PreloadDisassembly( DisasmLine pDisasm, Stack<DisasmRequest> pAddressStack, int pDepth )
+        void PreloadDisassembly( DisasmLine pDisasm, Stack<DisasmRequest> pAddressStack, int pDepth )
         {
             if( pDisasm.Instruction.Operands == null )
                 return;
@@ -296,16 +298,16 @@ namespace Spectrum
                         continue;
 
                     var memBank = Memory.Bank( slot.Bank.ID );
-                    memBank.LastAddress = slot.Min;
+                    memBank.PagedAddress = slot.Min;
                     memBank.IsPagedIn = true;
 
                     if( bank.Lines.Count == 0 )
                         continue;
 
-                    if( slot.ID >= 0 )
+                    if( slot.Max > slot.Min )
                     {
                         lineNumber++;
-                        stream.WriteLine( "Slot_{0} ({1}-{2}):", slot.ID, slot.Min.ToHex(), slot.Max.ToHex() );
+                        stream.WriteLine( "Slot {0:X4}-{1:X4}:", slot.Min, slot.Max );
                     }
 
                     _tempBankDone.Add( slot.Bank.ID );
@@ -339,7 +341,7 @@ namespace Spectrum
                     }
 
                     disasmBank.SortedLines.Sort( ( pLeft, pRight ) => pLeft.Offset.CompareTo( pRight.Offset ) );
-                    WriteDisasmLines( stream, disasmBank, memBank.LastAddress, ref lineNumber );
+                    WriteDisasmLines( stream, disasmBank, memBank.PagedAddress, ref lineNumber );
                 }
             }
 
@@ -360,7 +362,7 @@ namespace Spectrum
                 if( memBank.IsPagedIn )
                     stream.WriteLine( "  {0}:", memBank.ID );
                 else
-                    stream.WriteLine( "  {0} ({1}):", memBank.ID, memBank.LastAddress.ToHex() );
+                    stream.WriteLine( "  {0} ({1}):", memBank.ID, memBank.PagedAddress.ToHex() );
             }
 
             var prev = bank.SortedLines[0].Offset;
@@ -539,6 +541,9 @@ namespace Spectrum
             _tempAddressDetails.Clear();
             _tempAddressDetails.Add( SourceMaps.GetAddressDetails( bankId, address, maxLabelDistance ) );
 
+            if( bankId.Part != BankID.PartEnum.All )
+                _tempAddressDetails.Add( SourceMaps.GetAddressDetails( bankId.All, address, maxLabelDistance ) );
+
             if( bankId != BankID.Unpaged() )
                 _tempAddressDetails.Add( SourceMaps.GetAddressDetails( BankID.Unpaged(), address, maxLabelDistance ) );
 
@@ -568,12 +573,13 @@ namespace Spectrum
         public AddressDetails GetAddressDetails( ushort pAddress, ushort pMaxLabelDistance = 0x800 )
         {
             var slot = Memory.GetSlot( pAddress );
-            return GetAddressDetails( slot.Bank.ID, pAddress, 0x800 );
+            return GetAddressDetails( slot.Bank.ID, pAddress, pMaxLabelDistance );
         }
 
         public Maps.GetLabelsResult GetLabels( BankID bankId, ushort address )
         {
             return SourceMaps.GetLabelsAt( bankId, address )
+                ?? SourceMaps.GetLabelsAt( bankId.All, address )
                 ?? SourceMaps.GetLabelsAt( BankID.Unpaged(), address )
                 ?? SourceMaps.GetLabelsAt( Memory.GetMappedBank( address ), address );
         }
@@ -615,7 +621,7 @@ namespace Spectrum
                 bank = GetDisasmBank( slot.Bank.ID );
             }
 
-            var offset = address - Memory.Bank( bankId ).LastAddress;
+            var offset = address - Memory.Bank( bankId ).PagedAddress;
 
             bank.Lines.TryGetValue( (ushort)offset, out var line );
 
@@ -672,11 +678,6 @@ namespace Spectrum
             {
                 return $"{Depth}:{Address}";
             }
-        }
-
-        public override string LogPrefix
-        {
-            get { return "Machine"; }
         }
     }
 }

@@ -80,8 +80,10 @@ namespace ZXDebug
         /// e.g. which pages are in which slots
         /// </summary>
         /// <param name="memory">Memory class to be updated with the new configuration</param>
-        public virtual void ReadMemoryConfiguration( Memory memory )
+        /// <returns>true if the memory configuration has changed, false if it hasn't</returns>
+        public virtual bool ReadMemoryConfiguration( Memory memory )
         {
+            return false;
         }
 
         /// <summary>

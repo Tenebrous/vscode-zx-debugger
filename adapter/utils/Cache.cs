@@ -8,29 +8,20 @@ namespace ZXDebug
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TValue"></typeparam>
-    public class Cache<TKey, TValue> : Dictionary<TKey, TValue> where TValue : new()
+    public class Cache<TKey, TValue> : Dictionary<TKey, TValue> 
     {
         Func<TKey, TValue> _factory;
-
-        public Cache()
-        {
-            _factory = pKey => new TValue();
-        }
 
         public Cache( Func<TKey, TValue> factory )
         {
             _factory = factory;
         }
 
-        public Cache( IEqualityComparer<TKey> comparer ) : base( comparer )
-        {
-            _factory = pKey => new TValue();
-        }
-
         public Cache( Func<TKey, TValue> factory, IEqualityComparer<TKey> comparer = null ) : base( comparer )
         {
             _factory = factory;
         }
+
 
         /// <summary>
         /// 
@@ -43,24 +34,24 @@ namespace ZXDebug
             if( TryGetValue( index, out var result ) )
             {
                 value = result;
-                return true;
+                return false;
             }
 
             result = _factory(index);
             Add( index, result );
             value = result;
-            return false;
+            return true;
         }
 
         public new TValue this[ TKey index ]
         {
             get
             {
-                if( !TryGetValue( index, out var result ) )
-                {
-                    result = _factory( index );
-                    base[index] = result;
-                }
+                if( TryGetValue( index, out var result ) )
+                    return result;
+
+                result = _factory( index );
+                base[index] = result;
 
                 return result;
             }

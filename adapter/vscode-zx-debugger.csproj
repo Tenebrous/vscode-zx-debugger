@@ -50,7 +50,6 @@
       <HintPath>external\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="connection\ConnectionCaps.cs" />
@@ -58,6 +57,8 @@
     <Compile Include="HandleValueTree.cs" />
     <Compile Include="machine\Machine.cs" />
     <Compile Include="machine\MachineCaps.cs" />
+    <Compile Include="disassembler\OpcodeTable.cs" />
+    <Compile Include="disassembler\OpcodeTables.cs" />
     <Compile Include="Session.cs" />
     <Compile Include="sourcemap\AddressDetails.cs" />
     <Compile Include="sourcemap\Bank.cs" />
@@ -79,12 +80,13 @@
     <Compile Include="utils\Logging.cs" />
     <Compile Include="sourcemap\Map.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="utils\MultiCache.cs" />
     <Compile Include="utils\PartitionedSpatialDictionary.cs" />
     <Compile Include="utils\SpatialDictionary.cs" />
     <Compile Include="utils\RangeDictionary.cs" />
     <Compile Include="utils\ValueTree.cs" />
     <Compile Include="connection\Connection.cs" />
-    <Compile Include="machine\Disassembler.cs" />
+    <Compile Include="disassembler\Disassembler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="HandleVSCode.cs" />
     <Compile Include="vscode\Connection.cs" />

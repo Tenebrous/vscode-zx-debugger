@@ -15,10 +15,12 @@ namespace ZXDebug
 
         public void Configure()
         {
+            _session.Machine.ConnectedEvent          += Connected;
             _session.Machine.PausedEvent             += Paused;
             _session.Machine.ContinuedEvent          += Continued;
+            _session.Machine.DisconnectedEvent       += Disconnected;
+
             _session.Machine.DisassemblyUpdatedEvent += DisassemblyUpdated;
-            _session.Machine.ConnectedEvent          += Connected;
             _session.Machine.MachineCapsChangedEvent += MachineCapsChangedEvent;
 
             _session.Settings.Disassembler = _session.Machine.Disassembler.Settings;
@@ -31,11 +33,6 @@ namespace ZXDebug
             MachineCapsChangedEvent();
         }
 
-        void MachineCapsChangedEvent()
-        {
-            Log( Logging.Severity.Message, _session.Machine.Caps.ToString() );
-        }
-
         void Paused()
         {
             _session.VSCode.Stopped( 1, "step", "step" );
@@ -44,6 +41,16 @@ namespace ZXDebug
         void Continued()
         {
             _session.VSCode.Continued( true );
+        }
+
+        void Disconnected()
+        {
+        }
+
+        void MachineCapsChangedEvent()
+        {
+            LogMessage( "Updated capabilities: " + _session.Machine.Caps.ToString() );
+            _session.Settings.Resolve( _session.Machine.Caps );
         }
 
         void DisassemblyUpdated()
@@ -75,7 +82,7 @@ namespace ZXDebug
 
                 beforeSingle = GC.GetTotalMemory( true );
                 var map = _session.Machine.SourceMaps.Add( file );
-                Log( Logging.Severity.Message, "Loaded map: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                LogMessage( "Loaded map: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
 
                 var fileOnly = Path.GetFileName( filename );
                 File.WriteAllText(
@@ -89,7 +96,7 @@ namespace ZXDebug
                 );
             }
 
-            Log( Logging.Severity.Message, "Loaded maps (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            LogMessage( "Loaded maps (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
 
 
             // load opcode layers for the disassembler
@@ -103,17 +110,12 @@ namespace ZXDebug
 
                 beforeSingle = GC.GetTotalMemory( true );
                 _session.Machine.Disassembler.AddLayer( file );
-                Log( Logging.Severity.Message, "Loaded opcode layer: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
+                LogMessage( "Loaded opcode layer: " + file + " (~" + ( GC.GetTotalMemory( true ) - beforeSingle ) + ")" );
             }
 
-            Log( Logging.Severity.Message, "Loaded opcode layers (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
+            LogMessage( "Loaded opcode layers (~" + ( GC.GetTotalMemory( true ) - beforeTotal ) + ")" );
 
 
-        }
-
-        public override string LogPrefix
-        {
-            get { return "MachineHandler"; }
         }
     }
 }

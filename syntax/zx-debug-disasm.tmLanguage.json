@@ -4,16 +4,15 @@
   "fileTypes": ["zdis"],
   "patterns": [
     {
-        "match": "(?i)^(Slot_)(.*?) [(](.*?)[)]",
+        "match": "(?i)^\\s*(Slot) (.*?):$",
         "captures": {
             "1": { "comment": "Slot text",     "name": "punctuation.definition.tag" },
-            "2": { "comment": "Slot number",   "name": "punctuation.definition.tag" },
-            "3": { "comment": "Address range", "name": "punctuation.definition.tag" }
+            "2": { "comment": "Address range", "name": "punctuation.definition.tag" }
         },
         "comment": "Slot"    
     },
     {
-        "match": "(?i)^\\s*((ROM|RAM|BANK)_.*)$",
+        "match": "(?i)^\\s*((ROM|RAM|BANK|DIV)_.*):$",
         "captures": {
             "1": { "comment": "Bank", "name": "punctuation.definition.tag" }
         },

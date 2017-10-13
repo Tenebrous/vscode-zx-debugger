@@ -98,13 +98,25 @@
                                     "rule": {
                                         "type": "string"
                                     },
-                                    "maps": {
+                                    "setMaps": {
                                         "type": "array",
                                         "items": {
                                             "type": "string"
                                         }
                                     },
-                                    "opcodes": {
+                                    "setOpcodes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "addMaps": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "addOpcodes": {
                                         "type": "array",
                                         "items": {
                                             "type": "string"

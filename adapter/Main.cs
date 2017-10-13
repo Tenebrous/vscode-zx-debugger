@@ -14,7 +14,6 @@ namespace ZXDebug
             Logging.MaxSeverityConsole = Logging.Severity.Message;
             Logging.MaxSeverityLog     = Logging.Severity.Debug;
 
-
             // set up 
             _session = new Session();
             _session.Values = new ValueTree();
@@ -27,26 +26,13 @@ namespace ZXDebug
             _session.HandleVSCode = new HandleVSCode( _session );
             _session.HandleValueTree = new HandleValueTree( _session );
 
+            var file = _session.Settings.Locate( "rules.json" );
+            if( file != null )
+                _session.Settings.SetLayer( Settings.LayerEnum.Base, File.ReadAllText( file ) );
+
             _session.HandleMachine.Configure();
             _session.HandleVSCode.Configure();
             _session.HandleValueTree.Configure();
-
-
-            //
-
-            var x = new Settings();
-            x.Clear();
-
-            var file = _session.Settings.Locate( "rules.json" );
-            if( file != null )
-                x.AddLayer( File.ReadAllText( file ) );
-
-            x.AddLayer( "{\"stopOnEntry\": true}" );
-
-            var xx = new SimpleHashSet<string>() {"test", "128k"};
-            x.ResolveRules( xx );
-
-            //x.Apply( json );
 
             while( _session.EventLoop() )
                 ;

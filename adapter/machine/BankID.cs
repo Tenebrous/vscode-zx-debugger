@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Spectrum
@@ -16,6 +17,13 @@ namespace Spectrum
             Div  = 3
         }
 
+        public enum PartEnum : byte
+        {
+            All  = 0,
+            Low  = 1,
+            High = 2
+        }
+
         /// <summary>
         /// Type of memory bank - All, ROM, Bank, DIV
         /// </summary>
@@ -27,14 +35,20 @@ namespace Spectrum
         public readonly int Number;
 
         /// <summary>
+        /// Part of memory bank, Low or High
+        /// </summary>
+        public readonly PartEnum Part;
+
+        /// <summary>
         /// Create a new memory bank of the provided type & id
         /// </summary>
         /// <param name="type"></param>
         /// <param name="number"></param>
-        public BankID( TypeEnum type, int number = 0 )
+        public BankID( TypeEnum type, int number = 0, PartEnum part = PartEnum.All )
         {
             Type = type;
             Number = number;
+            Part = part;
         }
 
         static Regex _parseBank = new Regex( @"(?'type'BANK|DIV)_(?'number'\d*)(_(?'part'L|H))?" );
@@ -46,6 +60,7 @@ namespace Spectrum
         {
             Type = TypeEnum.All;
             Number = 0;
+            Part = PartEnum.All;
 
             var match = _parseBank.Match( bank );
             if( match.Success )
@@ -61,6 +76,13 @@ namespace Spectrum
                     Type = TypeEnum.Bank;
                 else if( type == "DIV" )
                     Type = TypeEnum.Div;
+
+                if( part == "L" )
+                    Part = PartEnum.Low;
+                else if( part == "H" )
+                    Part = PartEnum.High;
+                else 
+                    Part = PartEnum.All;
             }
         }
 
@@ -72,6 +94,7 @@ namespace Spectrum
         public BankID( string type, int number )
         {
             Type = TypeEnum.All;
+            Part = PartEnum.All;
 
             if( string.Compare( type, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.ROM;
@@ -83,20 +106,7 @@ namespace Spectrum
             Number = number;
         }
 
-        public override string ToString()
-        {
-            if( Type == TypeEnum.ROM )
-                return "ROM_" + Number;
-
-            if( Type == TypeEnum.Bank )
-                return "BANK_" + Number;
-
-            if( Type == TypeEnum.Div )
-                return "DIV_" + Number;
-
-            return "ALL";
-        }
-
+        
         /// <summary>
         /// Create a BankID for the specified ROM number
         /// </summary>
@@ -107,6 +117,7 @@ namespace Spectrum
             return new BankID( BankID.TypeEnum.ROM, number );
         }
 
+
         /// <summary>
         /// Create a BankID for the specified BANK number
         /// </summary>
@@ -116,6 +127,7 @@ namespace Spectrum
         {
             return new BankID( BankID.TypeEnum.Bank, number );
         }
+
 
         /// <summary>
         /// Create a BankID for unpaged memory
@@ -139,18 +151,88 @@ namespace Spectrum
                 int hash = 17;
                 hash = hash * 23 + Type.GetHashCode();
                 hash = hash * 23 + Number.GetHashCode();
+                hash = hash * 23 + Part.GetHashCode();
                 return hash;
             }
         }
 
         public static bool operator ==( BankID left, BankID right )
         {
-            return left.Type == right.Type && left.Number == right.Number;
+            return left.Type == right.Type && left.Number == right.Number && left.Part == right.Part;
         }
 
         public static bool operator !=( BankID left, BankID right )
         {
             return !( left == right );
+        }
+
+        public BankID Low
+        {
+            get
+            {
+                if( Part == PartEnum.All )
+                    return new BankID( Type, Number, PartEnum.Low );
+
+                return this;
+            }
+        }
+
+        public BankID High
+        {
+            get
+            {
+                if( Part == PartEnum.All )
+                    return new BankID( Type, Number, PartEnum.High );
+
+                return this;
+            }
+        }
+
+        public BankID All
+        {
+            get
+            {
+                if( Part == PartEnum.Low || Part == PartEnum.High )
+                    return new BankID( Type, Number, PartEnum.All );
+
+                return this;
+            }
+        }
+
+        static StringBuilder _temp = new StringBuilder();
+        public override string ToString()
+        {
+            if( Type == TypeEnum.All )
+                return "ALL";
+
+            _temp.Clear();
+
+            if( Type == BankID.TypeEnum.ROM )
+                _temp.Append( "ROM_" );
+            else if( Type == TypeEnum.Bank )
+                _temp.Append( "BANK_" );
+            else if( Type == TypeEnum.Div )
+                _temp.Append( "DIV_" );
+
+            if( Part == PartEnum.Low )
+            {
+                _temp.Append( Number * 2 );
+                _temp.Append( "[" );
+            }
+            else if( Part == PartEnum.High )
+            {
+                _temp.Append( Number * 2 + 1 );
+                _temp.Append( "[" );
+            }
+
+            _temp.Append( Number );
+
+            if( Part == PartEnum.Low )
+                _temp.Append( "L]" );
+            else if( Part == PartEnum.High )
+                _temp.Append( "H]" );
+
+            return _temp.ToString();
         }
     }
 }

@@ -36,5 +36,13 @@ namespace ZXDebug.SourceMapper
             else
                 return $"{Address.ToHex()} {text}{offset}";
         }
+
+        public override string ToString()
+        {
+            if( Labels != null )
+                return $"{Bank,10}:{Address:X4} {LabelledAddress:X4}={Labels?[0]}";
+
+            return $"{Bank,10}:{Address:X4} not found";
+        }
     }
 }

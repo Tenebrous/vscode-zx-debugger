@@ -5,9 +5,36 @@ namespace ZXDebug
 {
     public abstract class Loggable
     {
-        public abstract string LogPrefix { get; }
+        string _prefix;
 
-        public void Log( Logging.Severity severity, string message )
+        protected Loggable()
+        {
+            _prefix = GetType().Name;
+        }
+
+        protected virtual string LogPrefix => _prefix;
+
+        protected void LogMessage( string message )
+        {
+            ZXDebug.Logging.Write( Logging.Severity.Message, $"{LogPrefix}: {message}" );
+        }
+
+        protected void LogDebug( string message )
+        {
+            ZXDebug.Logging.Write( Logging.Severity.Debug, $"{LogPrefix}: {message}" );
+        }
+
+        protected void LogError( string message )
+        {
+            ZXDebug.Logging.Write( Logging.Severity.Error, $"{LogPrefix}: {message}" );
+        }
+
+        protected void LogVerbose( string message )
+        {
+            ZXDebug.Logging.Write( Logging.Severity.Verbose, $"{LogPrefix}: {message}" );
+        }
+
+        protected void Log( Logging.Severity severity, string message )
         {
             ZXDebug.Logging.Write( severity, $"{LogPrefix}: {message}" );
         }
@@ -50,9 +77,9 @@ namespace ZXDebug
         static Logging()
         {
             Filename = Path.Combine(
-                                    Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location ) ?? "",
-                                    "debug.log"
-                                   );
+                Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location ) ?? "",
+                "debug.log"
+            );
 
             if( File.Exists( Filename + ".prev" ) )
                 File.Delete( Filename + ".prev" );
