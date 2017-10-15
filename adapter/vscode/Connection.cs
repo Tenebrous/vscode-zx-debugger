@@ -170,8 +170,6 @@ namespace VSCode
             if( request == null )
                 return;
 
-            LogDebug( "(in)  " + request.type + " " + request.command );
-
             if( request.type == "request" )
             {
                 HandleMessage( request.command, request.arguments, request );
@@ -204,7 +202,8 @@ namespace VSCode
 
         void HandleMessage( string msg, dynamic args, Request request )
         {
-            LogVerbose( "(in) [" + msg + "]" );
+            LogDebug( "(in)  " + request.type + " " + msg );
+            LogVerbose( "... " + JsonConvert.SerializeObject( request ) );
 
             args = args ?? new { };
 
@@ -381,9 +380,11 @@ namespace VSCode
 
             LogDebug( "(out) response " +
                         request.command
-                        + (response == null ? "" : " response:" + response)
-                        + (errorMsg == null ? "" : " error:'" + errorMsg + "'")
+                        + ( response == null ? "" : " response=" + response.ToString() )
+                        + ( errorMsg == null ? "" : " error='" + errorMsg + "'" )
                      );
+
+            LogVerbose( "... " + JsonConvert.SerializeObject( response ) );
 
             request.responded = true;
             Send( message );

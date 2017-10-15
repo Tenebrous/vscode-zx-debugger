@@ -29,7 +29,7 @@ namespace ZEsarUX
             StepOverInterrupt = 32
         }
 
-        public override ConnectionCaps ConnectionCaps => new ConnectionCaps()
+        public override ConnectionCaps ConnectionCaps { get; } = new ConnectionCaps()
         {
             CanSetRegisters = true,
             CanEvaluate = true,
@@ -345,6 +345,23 @@ namespace ZEsarUX
                 SetSingleBreakpoint( b );
             }
 
+            ReadBreakpoints();
+
+            return true;
+        }
+
+        public override bool SetBreakpoint( Breakpoints breakpoints, Breakpoint breakpoint )
+        {
+            return true;
+        }
+
+        public override bool RemoveBreakpoints( Breakpoints breakpoints )
+        {
+            return true;
+        }
+
+        public override bool RemoveBreakpoint( Breakpoints breakpoints, Breakpoint breakpoint )
+        {
             return true;
         }
 
@@ -522,33 +539,28 @@ namespace ZEsarUX
             return pDestination;
         }
 
-        public bool InitBreakpoints()
+        public bool RemoveBreakpoints( HashSet<int> list )
         {
-            _enabledBreakpoints.Clear();
-
-            for( int i = 1; i < ConnectionCaps.MaxBreakpoints; i++ )
-                SendAndReceiveSingle( "disable-breakpoint " + i );
+            foreach( var bp in list )
+                SendAndReceiveSingle( "disable-breakpoint " + bp );
+            
+            list.Clear();
 
             return true;
-        }
-
-
-        void ReadBreakpoints()
-        {
-            SendAndReceive( "get-breakpoints" );
         }
 
         public void Setup()
         {
             GetVersion();
-            GetBreakpointCount();
+
+            ReadBreakpoints();
+            RemoveBreakpoints( _enabledBreakpoints );
 
             var debugSettings = DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt;
             SendAndReceiveSingle( "set-debug-settings " + (int)debugSettings );
             SendAndReceiveSingle( "set-memory-zone -1" );
             SendAndReceiveSingle( "enable-breakpoints", pRaiseErrors: false );
 
-            InitBreakpoints();
             ReadBreakpoints();
         }
 
@@ -559,12 +571,14 @@ namespace ZEsarUX
         }
 
         Regex _breakpointCounter = new Regex(
-            @"(?'number'\d+):",
+            @"(?'state'Enabled|Disabled)\s(?'number'\d+):",
             RegexOptions.Compiled
         );
 
-        void GetBreakpointCount()
+        void ReadBreakpoints()
         {
+            LogDebug( "Getting enabled breakpoints ..." );
+
             var count = 0;
             var breakpoints = SendAndReceive( "get-breakpoints" );
 
@@ -575,8 +589,16 @@ namespace ZEsarUX
                 {
                     var num = int.Parse( match.Groups["number"].Value );
                     if( num > count ) count = num;
+
+                    if( match.Groups["state"].Value == "Enabled" )
+                    {
+                        _enabledBreakpoints.Add( num );
+                        LogDebug( "  " + breakpoint );
+                    }
                 }
             }
+
+            LogDebug( "... done" );
 
             ConnectionCaps.MaxBreakpoints = count;
         }

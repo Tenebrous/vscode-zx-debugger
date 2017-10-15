@@ -17,7 +17,9 @@ namespace ZXDebug
             _session = session;
         }
 
-        bool _linesStartAt1;
+        int _vscLineBase;
+        int _internalLineBase;
+        int _sourcemapLineBase;
 
         public void Configure()
         {
@@ -59,7 +61,9 @@ namespace ZXDebug
 
         void Initialize( Request request, VSCode.Capabilities caps )
         {
-            _linesStartAt1 = (bool)request.arguments.linesStartAt1;
+            _vscLineBase = (bool)request.arguments.linesStartAt1 ? 1 : 0;
+            _internalLineBase = 0;
+            _sourcemapLineBase = 1;
 
             caps.supportsConfigurationDoneRequest = true;
             caps.supportsCompletionsRequest = true;
@@ -671,10 +675,13 @@ namespace ZXDebug
             foreach( var breakpoint in request.arguments.breakpoints )
             {
                 string error = null;
-                int lineNumber = breakpoint.line;
+
+                int vscLineNumber = breakpoint.line;
+                int internalLineNumber = RebaseLineNumber( vscLineNumber, _vscLineBase, _internalLineBase );
+
                 Spectrum.Breakpoint bp = null;
 
-                var line = _session.Machine.GetLineFromDisassemblyFile( LineFromVSCode( lineNumber ) );
+                var line = _session.Machine.GetLineFromDisassemblyFile( internalLineNumber );
 
                 if( line != null )
                 {
@@ -694,9 +701,9 @@ namespace ZXDebug
                             true,
                             $"{bp.Line.Bank.ID}+{bp.Line.Offset.ToHex()} ({( (ushort)( bp.Bank.PagedAddress + bp.Line.Offset ) ).ToHex()})",
                             DisassemblySource,
-                            LineToVSCode( bp.Line.FileLine ),
+                            vscLineNumber,
                             0,
-                            LineToVSCode( bp.Line.FileLine ),
+                            vscLineNumber,
                             0
                         )
                     );
@@ -707,9 +714,9 @@ namespace ZXDebug
                             false,
                             error,
                             DisassemblySource,
-                            LineToVSCode( lineNumber ),
+                            vscLineNumber,
                             0,
-                            LineToVSCode( lineNumber ),
+                            vscLineNumber,
                             0
                         )
                     );
@@ -936,16 +943,10 @@ namespace ZXDebug
             _session.VSCode?.Send( new OutputEvent( type, msg + "\n" ) );
         }
 
-        int LineFromVSCode( int line )
+        int RebaseLineNumber( int line, int fromStart, int toStart )
         {
-            return _linesStartAt1 ? line - 1 : line;
+            return line - fromStart + toStart;
         }
-
-        int LineToVSCode( int line )
-        {
-            return _linesStartAt1 ? line : line + 1;
-        }
-
 
         string _disassemblyFile;
         string DisassemblyFile
