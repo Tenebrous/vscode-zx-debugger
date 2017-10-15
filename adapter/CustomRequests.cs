@@ -16,6 +16,9 @@ namespace ZXDebug
         public delegate void SetNextStatementHandler( Request request, string file, int line );
         public event SetNextStatementHandler SetNextStatementEvent;
 
+        public delegate void WatchMemoryHandler( Request request, string id, string address, string length );
+        public event WatchMemoryHandler WatchMemoryEvent;
+
         public CustomRequests( VSCode.Connection vscode )
         {
             vscode.CustomRequestEvent += VSCode_CustomRequest;
@@ -23,6 +26,8 @@ namespace ZXDebug
 
         void VSCode_CustomRequest( Request request )
         {
+            Logging.Write( Logging.Severity.Message, request.arguments.ToString() );
+
             switch( request.command )
             {
                 case "getDefinition":
@@ -52,6 +57,15 @@ namespace ZXDebug
                         request, 
                         (string)request.arguments.file, 
                         (int)request.arguments.line 
+                    );
+                    break;
+
+                case "watchMemory":
+                    WatchMemoryEvent?.Invoke(
+                        request,
+                        (string)request.arguments.id,
+                        (string)request.arguments.address,
+                        (string)request.arguments.length
                     );
                     break;
             }

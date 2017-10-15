@@ -54,6 +54,7 @@ namespace ZXDebug
             custom.GetDefinitionEvent    += Custom_GetDefinition;
             custom.GetHoverEvent         += Custom_GetHoverEvent;
             custom.SetNextStatementEvent += Custom_SetNextStatement;
+            custom.WatchMemoryEvent      += Custom_WatchMemory;
         }
 
         void Initialize( Request request, VSCode.Capabilities caps )
@@ -375,6 +376,9 @@ namespace ZXDebug
                     _stackFrames
                 )
             );
+
+            foreach( var m in _memWatches )
+                Check_MemoryWatch( m.Value );
         }
 
         void GetScopes( Request request, int frameId )
@@ -824,6 +828,106 @@ namespace ZXDebug
             _session.VSCode.Send( request );
 
             _session.VSCode.Refresh();
+        }
+
+        class MemWatch
+        {
+            public string ID;
+            public ushort Address;
+            public int Length;
+            public byte[] Data;
+        }
+
+        Dictionary<string, MemWatch> _memWatches = new Dictionary<string, MemWatch>();
+        void Custom_WatchMemory( Request request, string id, string address, string length )
+        {
+            _session.VSCode.Ack( request );
+
+            var watch = new MemWatch()
+            {
+                ID = id,
+                Address = Convert.Parse( address ),
+                Length = Convert.Parse( length )
+            };
+
+            _memWatches[id] = watch;
+            Check_MemoryWatch( watch );
+        }
+
+        void Check_MemoryWatch( MemWatch watch )
+        {
+            var bytes = new byte[watch.Length];
+            _session.Machine.Memory.Read( watch.Address, bytes );
+
+            bool changed = false;
+
+            if( watch.Data == null )
+            {
+                changed = true;
+            }
+            else
+            {
+                for( int i = 0; i < bytes.Length; i++ )
+                {
+                    if( watch.Data[i] != bytes[i] )
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if( !changed )
+                return;
+
+            var s = new StringBuilder();
+
+            if( watch.Data != null )
+            {
+                s.Append( watch.Address.ToHex() );
+                s.Append( ": " );
+
+                bool inChange = false;
+
+                for( int i = 0; i < bytes.Length; i++ )
+                {
+                    var prechanged = i > 0 && bytes[i - 1] != watch.Data[i - 1];
+                    var thischanged = bytes[i] != watch.Data[i];
+                    var postchanged = i < bytes.Length - 1 && bytes[i + 1] != watch.Data[i + 1];
+
+                    if( !prechanged && thischanged )
+                        s.Append( "<" );
+                    else if( !prechanged && !thischanged )
+                        s.Append( " " );
+
+                    s.Append( $"{bytes[i]:X2}" );
+
+                    if( thischanged && postchanged )
+                        s.Append( "-" );
+                    else if( thischanged && !postchanged )
+                        s.Append( ">" );
+                }
+
+                s.Append( "\n" );
+            }
+            else
+            {
+                s.Append( watch.Address.ToHex() );
+                s.Append( ":  " );
+                s.Append( Convert.ToHex( bytes, " " ) );
+                s.Append( "\n" );
+            }
+
+            watch.Data = bytes;
+
+            _session.VSCode.Send(
+                new Event( "memoryWatchUpdated", 
+                new
+                {
+                    id = watch.ID,
+                    data = s.ToString()
+                } )
+            );
         }
 
         public void SendLog( Logging.Severity severity, string msg )

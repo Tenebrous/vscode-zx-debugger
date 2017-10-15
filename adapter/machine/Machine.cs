@@ -578,10 +578,12 @@ namespace Spectrum
 
         public Maps.GetLabelsResult GetLabels( BankID bankId, ushort address )
         {
+            BankID mapped;
             return SourceMaps.GetLabelsAt( bankId, address )
                 ?? SourceMaps.GetLabelsAt( bankId.All, address )
                 ?? SourceMaps.GetLabelsAt( BankID.Unpaged(), address )
-                ?? SourceMaps.GetLabelsAt( Memory.GetMappedBank( address ), address );
+                ?? SourceMaps.GetLabelsAt( mapped=Memory.GetMappedBank( address ), address )
+                ?? SourceMaps.GetLabelsAt( mapped.All, address );
         }
 
 

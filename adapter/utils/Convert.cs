@@ -18,12 +18,12 @@ namespace ZXDebug
             return System.Convert.ToByte( value.Content ).ToHex();
         }
 
-        public static string ToHex( byte[] bytes )
+        public static string ToHex( byte[] bytes, string split = "" )
         {
-            return BitConverter.ToString( bytes ).Replace( "-", "" );
+            return BitConverter.ToString( bytes ).Replace( "-", split );
         }
 
-        public static string ToHex( byte[] bytes, int length )
+        public static string ToHex( byte[] bytes, int length, string split = "" )
         {
             return BitConverter.ToString( bytes, 0, length ).Replace( "-", "" );
         }

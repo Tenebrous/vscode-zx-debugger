@@ -2,32 +2,38 @@
 
 import * as vscode from 'vscode';
 
+import ConfigurationProvider from './config';
+import HoverProvider from './hoverProvider'
+import DefinitionProvider from './definitionProvider'
+
 export function activate( context: vscode.ExtensionContext ) 
 {
     context.subscriptions.push(
         
         vscode.debug.registerDebugConfigurationProvider(
             'zxdebug',
-            new ZXDebugConfigurationProvider()
+            new ConfigurationProvider()
+        ),
+
+        vscode.debug.onDidTerminateDebugSession( e => {
+                cleanup();
+            }
         ),
 
         vscode.debug.onDidReceiveDebugSessionCustomEvent(e => {
-            if( e.event == 'setDisassemblyLine' ) {
-                setDisassemblyLine( e.body );
-            }
+            handleDebugEvent( e.event, e.body );
         }),
 
-        // vscode.window.onDidChangeVisibleTextEditors( e => {
-        //     vscode.window.visibleTextEditors.forEach(element => {
-        //         if( element.document.fileName.endsWith("disasm.zdis") )
-        //             element.viewColumn = vscode.ViewColumn.One;
-        //         else if( element.viewColumn == vscode.ViewColumn.One)
-        //             element.viewColumn = vscode.ViewColumn.Two;
-        //     });
-        // }),
-        
 		vscode.commands.registerCommand('extension.zxdebug.setNextStatement',
             args => setNextStatement(args)
+        ),
+
+        // vscode.commands.registerCommand('extension.zxdebug.inspectMemory',
+        //     args => inspectMemory(args)
+        // ),
+
+        vscode.commands.registerCommand('extension.zxdebug.watchMemory',
+            args => watchMemory(args)
         ),
 
         vscode.languages.registerHoverProvider(
@@ -40,6 +46,69 @@ export function activate( context: vscode.ExtensionContext )
             new DefinitionProvider()
         )
     )
+}
+
+function cleanup()
+{
+    Object.keys(memoryWatches).forEach(key => {
+        let value = memoryWatches[key];
+        value.hide();
+        value.dispose();
+      });
+}
+
+function handleDebugEvent( event, body )
+{
+    switch( event )
+    {
+        case 'setDisassemblyLine':
+            setDisassemblyLine( body );
+            break;
+
+        case 'memoryWatchUpdated':
+            memoryWatchUpdated( body.id, body.data );
+            break;
+    } 
+}
+
+let memoryWatches: { [key: string]: vscode.OutputChannel } = {};
+function watchMemory( args ) 
+{
+    vscode.window.showInputBox({prompt: "Address?"})
+        .then( address => {
+            
+            if( address == undefined )
+                return;
+
+            vscode.window.showInputBox({prompt: "Length?"})
+                .then( length => {
+
+                    if( vscode.debug.activeDebugSession === undefined )
+                        return;
+
+                    var id = "OC" + (Object.keys(memoryWatches).length+1);
+                    var channel = vscode.window.createOutputChannel("Watch " + address);
+                    channel.show();
+
+                    memoryWatches[id] = channel;
+
+                    vscode.debug.activeDebugSession.customRequest(
+                        "watchMemory",
+                        {
+                            id: id,
+                            address: address,
+                            length: length || ''
+                        }
+                    );
+
+                })
+        }
+    )
+}
+function memoryWatchUpdated( id, data )
+{
+    var ch = memoryWatches[id];
+    ch.appendLine( data );
 }
 
 function setNextStatement( args ) : Thenable<any> {
@@ -98,109 +167,3 @@ function setDisassemblyLine( args ) {
     });
 }
 
-class DefinitionProvider implements vscode.DefinitionProvider {
-    provideDefinition(
-        document: vscode.TextDocument,
-        position: vscode.Position,
-        token: vscode.CancellationToken) : vscode.ProviderResult<vscode.Definition>
-    {
-        if( vscode.debug.activeDebugSession === undefined )
-            return undefined;
-       
-        let wordRange = document.getWordRangeAtPosition(position);
-        let lineRange = new vscode.Range( position.line, 0, position.line, 9999 );
-        
-        return vscode.debug.activeDebugSession.customRequest(
-            "getDefinition",
-            { 
-                file:   document.fileName, 
-                line:   position.line,
-                column: position.character,
-                text:   document.getText( lineRange ),
-                symbol: document.getText( wordRange ),
-            }
-        ).then( reply => {
-            return new vscode.Location(
-                vscode.Uri.file( reply.file ),
-                new vscode.Range(
-                    reply.startLine, 0,
-                    reply.endLine, 9999
-                )
-            );
-        }, err => {
-            throw err;
-        });
-    }
-}
-
-class HoverProvider implements vscode.HoverProvider {
-    provideHover(
-        document: vscode.TextDocument, 
-        position: vscode.Position, 
-        token: vscode.CancellationToken): vscode.ProviderResult<vscode.Hover> {
-        
-        if( vscode.debug.activeDebugSession === undefined )
-            return undefined;
-       
-        let wordRange = document.getWordRangeAtPosition(position);
-        let lineRange = new vscode.Range( position.line, 0, position.line, 9999 );
-        
-        return vscode.debug.activeDebugSession.customRequest(
-            "getHover",
-            { 
-                file:   document.fileName, 
-                line:   position.line,
-                column: position.character,
-                text:   document.getText( lineRange ),
-                symbol: document.getText( wordRange ),
-            }
-        ).then( reply => {
-            return new vscode.Hover(
-                new vscode.MarkdownString( reply.result )
-            );
-        }, err => {
-            throw err;
-        });
-
-    }
-}
-
-class ZXDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
-    
-      /**
-       * returns initial debug configurations.
-       */
-      provideDebugConfigurations(
-          folder: vscode.WorkspaceFolder | undefined, 
-          token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
-    
-        const config = {
-            "type": "zxdebug",
-            "name": "ZX Debugger",
-            "request": "attach",
-            "projectFolder": "${workspaceRoot}",
-            "sourceMaps": [
-                "48k_rom.dbg"
-            ],
-            "opcodeTables": [
-                "z80.tbl"
-            ],
-            "stopOnEntry": true
-        }
-        
-        return [ config ];
-      }
-    
-      /**
-       * "massage" launch configuration before starting the session.
-       */
-      resolveDebugConfiguration(
-          folder: vscode.WorkspaceFolder | undefined, 
-          config: vscode.DebugConfiguration, 
-          token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
-
-        config.workspaceConfiguration = vscode.workspace.getConfiguration('zxdebug');
-        
-        return config;
-      }
-    }

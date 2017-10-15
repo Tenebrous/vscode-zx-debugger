@@ -365,6 +365,16 @@ namespace VSCode
 
 
         // send response to request
+
+        public void Ack( Request request )
+        {
+            var message = new Response( request );
+            LogDebug( "(out) ack " );
+            request.responded = true;
+            Send( message );
+        }
+
+
         public void Send( Request request, ResponseBody response = null, string errorMsg = null )
         {
             var message = new Response( request, response, errorMsg );

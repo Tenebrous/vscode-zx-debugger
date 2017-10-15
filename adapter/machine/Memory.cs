@@ -154,11 +154,11 @@ namespace Spectrum
                 temp.Clear();
 
                 if( row == 0 )
-                    temp.Append( "    " );
+                    temp.Append( "       | " );
                 else if( row == 1 )
-                    temp.Append( "in  " );
+                    temp.Append( "active | " );
                 else
-                    temp.Append( "out " );
+                    temp.Append( "       | " );
 
                 row++;
 
@@ -173,12 +173,12 @@ namespace Spectrum
                             slots.Remove( i );
                     }
 
-                    temp.Append( text.PadRight( 15 ) );
+                    temp.Append( text.PadRight( 12 ) );
+                    temp.Append( " | " );
                 }
 
                 LogMessage( temp.ToString() );
             }
-            LogMessage( "" );
         }
     }
 }

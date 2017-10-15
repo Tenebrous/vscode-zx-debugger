@@ -166,13 +166,18 @@
         ],
         "commands": [
             {
-                "command": "extension.zxdebug.testCommand",
-                "title": "Test command",
+                "command": "extension.zxdebug.setNextStatement",
+                "title": "Set Next Statement",
                 "category": "ZX Debugger"
             },
             {
-                "command": "extension.zxdebug.setNextStatement",
-                "title": "Set Next Statement",
+                "command": "extension.zxdebug.inspectMemory",
+                "title": "Inspect Memory",
+                "category": "ZX Debugger"
+            },
+            {
+                "command": "extension.zxdebug.watchMemory",
+                "title": "Watch Memory",
                 "category": "ZX Debugger"
             }
         ],
@@ -181,6 +186,10 @@
                 {
                     "command": "extension.zxdebug.setNextStatement",
                     "when": "resourceLangId == zx-debug-disasm && inDebugMode"
+                },
+                {
+                    "command": "extension.zxdebug.inspectMemory",
+                    "when": "false && resourceLangId == zx-debug-disasm && inDebugMode"
                 }
             ]
         }
