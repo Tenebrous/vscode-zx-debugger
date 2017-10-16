@@ -17,8 +17,6 @@ namespace ZEsarUX
         NetworkStream _stream;
         bool _connected;
 
-        Logging.Severity _protocolLogLevel = Logging.Severity.Verbose;
-
         [Flags] enum DebugSettings // from https://sourceforge.net/p/zesarux/code/ci/master/tree/remote.c#l766
         {
             ShowAllRegistersAfterStep = 1,
@@ -539,7 +537,7 @@ namespace ZEsarUX
             return pDestination;
         }
 
-        public bool RemoveBreakpoints( HashSet<int> list )
+        bool RemoveBreakpoints( HashSet<int> list )
         {
             foreach( var bp in list )
                 SendAndReceiveSingle( "disable-breakpoint " + bp );
@@ -549,15 +547,14 @@ namespace ZEsarUX
             return true;
         }
 
-        public void Setup()
+        void Setup()
         {
             GetVersion();
 
             ReadBreakpoints();
             RemoveBreakpoints( _enabledBreakpoints );
 
-            var debugSettings = DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt;
-            SendAndReceiveSingle( "set-debug-settings " + (int)debugSettings );
+            SendAndReceiveSingle( "set-debug-settings " + (int)( DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt ) );
             SendAndReceiveSingle( "set-memory-zone -1" );
             SendAndReceiveSingle( "enable-breakpoints", pRaiseErrors: false );
 
@@ -611,18 +608,7 @@ namespace ZEsarUX
             SendAndReceiveSingle( "enable-breakpoint " + ( pBreakpoint.Index + 1 ), pRaiseErrors: false );
         }
 
-        public Logging.Severity ProtocolLogLevel
-        {
-            get
-            {
-                return _protocolLogLevel;
-            }
-
-            set
-            {
-                _protocolLogLevel = value;
-            }
-        }
+        Logging.Severity ProtocolLogLevel { get; set; } = Logging.Severity.Verbose;
 
         protected override string LogPrefix
         {

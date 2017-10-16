@@ -218,8 +218,7 @@ namespace ZXDebug
             // disassemble from current PC
             var disassemblyUpdated = _session.Machine.UpdateDisassembly( _session.Machine.Registers.PC );
 
-            var stackBytes = new byte[20];
-            var caller = new byte[4];
+            var originBytes = new byte[4];
 
             _stackAddresses.Clear();
             _stackFrames.Clear();
@@ -227,11 +226,11 @@ namespace ZXDebug
             // add current PC as an entry to the stack frame
             _stackAddresses.Add( _session.Machine.Registers.PC );
 
-            // get stack pos and limit how many bytes we read if we would go higher than 0xFFFF
             var stackPos = _session.Machine.Registers.SP;
-            var maxBytes = Math.Min( 20, 0xFFFF - stackPos );
 
             // read bytes from SP onwards for analysis of the addresses
+            var stackBytes = new byte[20];
+            var maxBytes = Math.Min( stackBytes.Length, 0xFFFF - stackPos );
             var bytes = _session.Machine.Memory.Read( _session.Machine.Registers.SP, stackBytes, 0, maxBytes );
 
             // turn the bytes into ushorts
@@ -259,9 +258,9 @@ namespace ZXDebug
                 }
                 else
                 {
-                    _session.Machine.Memory.Read( (ushort)( addr - 3 ), caller, 0, 3 );
+                    _session.Machine.Memory.Read( (ushort)( addr - 3 ), originBytes, 0, 3 );
 
-                    if( _callerOpcode3.Contains( caller[0] ) )
+                    if( _callerOpcode3.Contains( originBytes[0] ) )
                     {
                         addr -= 3;
                         addressDetails = _session.Machine.GetAddressDetails( addr );
@@ -277,13 +276,13 @@ namespace ZXDebug
                         //         _stackFrames[_stackFrames.Count - 1].name = callDestSymbol + " -> " + _stackFrames[_stackFrames.Count - 1].name;
                         // }
                     }
-                    else if( _callerOpcode3.Contains( caller[1] ) )
+                    else if( _callerOpcode3.Contains( originBytes[1] ) )
                     {
                         addr -= 2;
                         addressDetails = _session.Machine.GetAddressDetails( addr );
                         isCode = true;
                     }
-                    else if( _callerOpcode1.Contains( caller[2] ) )
+                    else if( _callerOpcode1.Contains( originBytes[2] ) )
                     {
                         addr -= 1;
                         addressDetails = _session.Machine.GetAddressDetails( addr );

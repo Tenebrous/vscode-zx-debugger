@@ -55,17 +55,17 @@ namespace ZXDebug
                 case "setNextStatement":
                     SetNextStatementEvent?.Invoke( 
                         request, 
-                        (string)request.arguments.file, 
-                        (int)request.arguments.line 
+                        (string) request.arguments.file, 
+                        (int)    request.arguments.line 
                     );
                     break;
 
                 case "watchMemory":
                     WatchMemoryEvent?.Invoke(
                         request,
-                        (string)request.arguments.id,
-                        (string)request.arguments.address,
-                        (string)request.arguments.length
+                        (string) request.arguments.id,
+                        (string) request.arguments.address,
+                        (string) request.arguments.length
                     );
                     break;
             }
