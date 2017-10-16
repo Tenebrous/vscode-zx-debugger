@@ -4,6 +4,7 @@
 !package.json
 !bin/*.exe
 !bin/*.dll
+!bin/*.json
 !maps/**
 !syntax/*.json
 !opcodes/*.tbl
