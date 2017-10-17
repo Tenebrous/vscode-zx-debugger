@@ -206,7 +206,19 @@ namespace ZXDebug
         HashSet<byte> _callerOpcode1 = new HashSet<byte>()
         { 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF };
 
-        List<ushort> _stackAddresses = new List<ushort>();
+        class StackInfo
+        {
+            public ushort Address;
+            public string SourceFilename;
+            public int    SourceLine;
+
+            public StackInfo( ushort address )
+            {
+                Address = address;
+            }
+        }
+
+        List<StackInfo> _stackInfo = new List<StackInfo>();
         List<StackFrame> _stackFrames = new List<StackFrame>();
         void GetStackTrace( Request request )
         {
@@ -220,11 +232,11 @@ namespace ZXDebug
 
             var originBytes = new byte[4];
 
-            _stackAddresses.Clear();
+            _stackInfo.Clear();
             _stackFrames.Clear();
 
             // add current PC as an entry to the stack frame
-            _stackAddresses.Add( _session.Machine.Registers.PC );
+            _stackInfo.Add( new StackInfo( _session.Machine.Registers.PC ) );
 
             var stackPos = _session.Machine.Registers.SP;
 
@@ -235,15 +247,15 @@ namespace ZXDebug
 
             // turn the bytes into ushorts
             for( var i = 0; i < bytes; i += 2 )
-                _stackAddresses.Add( (ushort)( ( stackBytes[i + 1] << 8 ) | stackBytes[i] ) );
+                _stackInfo.Add( new StackInfo( (ushort)( ( stackBytes[i + 1] << 8 ) | stackBytes[i] ) ) );
 
             // now check out each address
-            for( var i = 0; i < _stackAddresses.Count; i++ )
+            for( var i = 0; i < _stackInfo.Count; i++ )
             {
                 // note: entry at i=0 is PC, so we don't need to get mem and we always show it
 
                 var stackFrameId = i + 1;
-                var addr = _stackAddresses[i];
+                var addr = _stackInfo[i].Address;
 
                 AddressDetails addressDetails = null;
                 bool isCode = false;
@@ -290,7 +302,7 @@ namespace ZXDebug
                         symbolIcon += " ↖";
                     }
 
-                    _stackAddresses[i] = addr;
+                    _stackInfo[i].Address = addr;
                 }
 
                 if( addressDetails?.Labels != null && addressDetails.LabelledAddress != addressDetails.Address )
@@ -300,26 +312,17 @@ namespace ZXDebug
 
                 var text = addressDetails?.Labels?[0].Name ?? addr.ToHex();
 
-                // no stepping through source at the moment
-                if( addressDetails?.Source != null && 1 == 0 )
+                if( addressDetails?.Source != null )
                 {
                     // got source 
-                    
-                    _stackFrames.Add(
-                        new StackFrame(
-                            stackFrameId,
-                            addressDetails.GetRelativeText() + " " + symbolIcon,
-                            new Source(
-                                null,
-                                Path.GetFullPath( Path.Combine( _session.Settings.ProjectFolder, addressDetails.Source.File.Filename ) )
-                            ),
-                            addressDetails.Source.Line,
-                            0,
-                            style
-                        )
-                    );
+                    // highlight the source line separately
+                    // we always trace through the disassembly
+
+                    _stackInfo[i].SourceFilename = addressDetails.Source.File.Filename;
+                    _stackInfo[i].SourceLine = addressDetails.Source.Line;
                 }
-                else if( addressDetails != null )
+
+                if( addressDetails != null )
                 {
                     // no source, but probably labels
 
@@ -371,7 +374,7 @@ namespace ZXDebug
 
             foreach( var frame in _stackFrames )
                 if( frame.source == DisassemblySource && frame.line == 0 )
-                    frame.line = _session.Machine.GetLineOfAddressInDisassembly( _stackAddresses[frame.id - 1] ) + 1;
+                    frame.line = _session.Machine.GetLineOfAddressInDisassembly( _stackInfo[frame.id - 1].Address ) + 1;
 
             _session.VSCode.Send(
                 request,
@@ -386,8 +389,8 @@ namespace ZXDebug
 
         void GetScopes( Request request, int frameId )
         {
-            var addr = _stackAddresses[frameId - 1];
-            _session.Machine.UpdateDisassembly( addr, DisassemblyFile );
+            var frame = _stackInfo[frameId - 1];
+            _session.Machine.UpdateDisassembly( frame.Address, DisassemblyFile );
 
             var scopes = new List<Scope>();
 
@@ -403,18 +406,21 @@ namespace ZXDebug
 
             _session.VSCode.Send( request, new ScopesResponseBody( scopes ) );
 
-            if( _stackFrames[frameId - 1].source != DisassemblySource )
+            if( frame.SourceFilename != null )
             {
-                var disasmLine = _session.Machine.GetLineOfAddressInDisassembly( addr );
-                if( disasmLine > 0 )
-                {
-                    _session.VSCode.Send(
-                        new Event(
-                            "setDisassemblyLine",
-                            new { line = disasmLine }
-                        )
-                    );
-                }
+                var vscline = RebaseLineNumber( frame.SourceLine, _sourcemapLineBase, _internalLineBase );
+
+                _session.VSCode.Send(
+                    new Event(
+                        "linkSource",
+                        new
+                        {
+                            file = Path.Combine( _session.Settings.ProjectFolder, frame.SourceFilename ),
+                            startLine = vscline,
+                            endLine = vscline
+                        }
+                    )
+                );
             }
         }
 

@@ -61,8 +61,8 @@ function handleDebugEvent( event, body )
 {
     switch( event )
     {
-        case 'setDisassemblyLine':
-            setDisassemblyLine( body );
+        case 'linkSource':
+            linkSource( body.file, body.startLine, body.endLine );
             break;
 
         case 'memoryWatchUpdated':
@@ -132,38 +132,34 @@ function setNextStatement( args ) : Thenable<any> {
 }
 
 var decorators : vscode.TextEditorDecorationType[] = [];
-function setDisassemblyLine( args ) {
+function linkSource( filename, startLine, endLine ) {
 
     decorators.forEach(decorator => {
         decorator.dispose();
     });
 
-    vscode.window.visibleTextEditors.forEach( editor => {
+    vscode.workspace.openTextDocument( filename ).then( document => {
         
-        var document = editor.document;
-        
-        if( document.fileName.endsWith('disasm.zdis') )
-        {
+        vscode.window.showTextDocument( document, {preserveFocus: true, preview: true, viewColumn: vscode.ViewColumn.Two} ).then( editor => {
+
             var decorator = vscode.window.createTextEditorDecorationType(
             {
                 isWholeLine: true,
                 backgroundColor: new vscode.ThemeColor('debugExceptionWidget.background')
             });
-                
-            var decRange = new vscode.Range(args.line,0,args.line,0);
-            var revealRange = new vscode.Range(args.line-3,0,args.line+3,0);
-            
+    
+            var decRange = new vscode.Range( startLine, 0, endLine, 99999 );
+            //var revealRange = new vscode.Range( startLine-3,0, endLine+3, 99999 );
+
             editor.setDecorations(
                 decorator,
                 [decRange]
             );
 
-            editor.revealRange( revealRange );
-            editor.selection = new vscode.Selection(args.line,0, args.line, 99999);
+            //editor.revealRange( revealRange );
 
             decorators.push( decorator );
-        }
-
+        });
     });
 }
 

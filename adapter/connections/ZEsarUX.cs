@@ -551,12 +551,12 @@ namespace ZEsarUX
         {
             GetVersion();
 
-            ReadBreakpoints();
-            RemoveBreakpoints( _enabledBreakpoints );
-
             SendAndReceiveSingle( "set-debug-settings " + (int)( DebugSettings.ShowOpcodeBytes | DebugSettings.StepOverInterrupt ) );
             SendAndReceiveSingle( "set-memory-zone -1" );
             SendAndReceiveSingle( "enable-breakpoints", pRaiseErrors: false );
+
+            ReadBreakpoints();
+            RemoveBreakpoints( _enabledBreakpoints );
 
             ReadBreakpoints();
         }
