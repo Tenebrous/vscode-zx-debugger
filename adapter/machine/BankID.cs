@@ -44,6 +44,7 @@ namespace Spectrum
         /// </summary>
         /// <param name="type"></param>
         /// <param name="number"></param>
+        /// <param name="part"></param>
         public BankID( TypeEnum type, int number = 0, PartEnum part = PartEnum.All )
         {
             Type = type;
@@ -91,14 +92,17 @@ namespace Spectrum
         /// </summary>
         /// <param name="type"></param>
         /// <param name="number"></param>
-        public BankID( string type, int number )
+        /// <param name="part"></param>
+        public BankID( string type, int number, PartEnum part = PartEnum.All )
         {
             Type = TypeEnum.All;
-            Part = PartEnum.All;
+            Part = part;
 
             if( string.Compare( type, "ROM", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.ROM;
             else if( string.Compare( type, "BANK", StringComparison.OrdinalIgnoreCase ) == 0 )
+                Type = TypeEnum.Bank;
+            else if( string.Compare( type, "RAM", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.Bank;
             else if( string.Compare( type, "DIV", StringComparison.OrdinalIgnoreCase ) == 0 )
                 Type = TypeEnum.Div;

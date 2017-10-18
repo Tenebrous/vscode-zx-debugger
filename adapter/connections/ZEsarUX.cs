@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using Spectrum;
 using ZXDebug;
-using ZXDebug.SourceMapper;
 using Convert = ZXDebug.Convert;
 
 namespace ZEsarUX
@@ -16,6 +16,39 @@ namespace ZEsarUX
         TcpClient _client;
         NetworkStream _stream;
         bool _connected;
+
+        // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
+        //  ^^^^^^^ ^^^^^^^ ^^^^^^^ ^^^^ ^^^^^^^ ^^^^^^^ ^^^^^^^ ^^^^^^^ ^^^^^ ^^^^^^^^ ^^^^^^^^ ^^^^^^^^ ^^^^ ^^^^                         ^^^^^^^^^^^
+        Regex _regexRegisters = new Regex(
+            @"(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)",
+            RegexOptions.Compiled
+        );
+
+        // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
+        //                                                                                                           ^^^^^^^^^^ ^^^^^^^^^^^
+        Regex _regexFlags = new Regex(
+            @"(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})",
+            RegexOptions.Compiled
+        );
+
+        // Segment 1
+        // Long name: ROM 0
+        // Short name: O0
+        // Start: 0H
+        // End: 1FFFH
+        Regex _regexPages = new Regex(
+            @"(Segment (?'index'\d*))|(Long name: (?'type'.*?)\s(?'number'\d*))|(Short name: (?'shortname'.*))|(Start: (?'startaddr'.*))|(End: (?'endaddr'.*))",
+            RegexOptions.Compiled
+        );
+        
+        // Breakpoints: On
+        // Enabled 1: PC=000Dh
+        // Disabled 2: None
+        Regex _regexBreakpoints = new Regex(
+            @"(?'state'Enabled|Disabled)\s(?'number'\d+):",
+            RegexOptions.Compiled
+        );
+
 
         [Flags] enum DebugSettings // from https://sourceforge.net/p/zesarux/code/ci/master/tree/remote.c#l766
         {
@@ -158,9 +191,8 @@ namespace ZEsarUX
             ParseRegisters( registers, result );
         }
 
-
         string _lastMemoryConfiguration = null;
-        public override bool ReadMemoryConfiguration( Memory memory )
+        public bool ReadMemoryConfiguration2( Memory memory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
 
@@ -236,6 +268,86 @@ namespace ZEsarUX
             return true;
         }
 
+        List<string> _tempMemoryConfig;
+        public override bool ReadMemoryConfiguration( Memory memory )
+        {
+            //ReadMemoryConfiguration2( memory );
+
+            memory.PagingEnabled = true;
+
+            var lines = SendAndReceive( "get-memory-pages verbose", _tempMemoryConfig );
+
+            int count = 0;
+            string indexStr = null;
+            string typeStr = null;
+            string numberStr = null;
+            string shortnameStr = null;
+            string startAddrStr = null;
+            string endAddrStr = null;
+
+            foreach( var line in lines )
+            {
+                var match = _regexPages.Match( line );
+
+                if( !match.Success )
+                    continue;
+
+                count += UpdateFromRegexGroup( match.Groups, "index",     ref indexStr     );
+                count += UpdateFromRegexGroup( match.Groups, "type",      ref typeStr      );
+                count += UpdateFromRegexGroup( match.Groups, "number",    ref numberStr    );
+                count += UpdateFromRegexGroup( match.Groups, "shortname", ref shortnameStr );
+                count += UpdateFromRegexGroup( match.Groups, "startaddr", ref startAddrStr );
+                count += UpdateFromRegexGroup( match.Groups, "endaddr",   ref endAddrStr   );
+
+                if( count != 6 )
+                    continue;
+
+                var number = int.Parse( numberStr );
+                var startAddr = Convert.Parse( startAddrStr );
+                var endAddr = Convert.Parse( endAddrStr );
+                var length = (ushort)(endAddr - startAddr + 1);
+
+                BankID bank;
+
+                if( length == 0x2000 )
+                {
+                    bank = new BankID( 
+                        typeStr, 
+                        number/2, 
+                        ( startAddr & 0x2000 ) == 0 ? BankID.PartEnum.Low : BankID.PartEnum.High 
+                    );
+
+                    memory.SetAddressBank( startAddr, length, memory.Bank( bank ) );
+                }
+                else if( length == 0x4000 )
+                {
+                    bank = new BankID( typeStr, number, BankID.PartEnum.All );
+
+                    memory.SetAddressBank( startAddr, 0x2000, memory.Bank( bank.Low ) );
+                    memory.SetAddressBank( (ushort)(startAddr + 0x2000), 0x2000, memory.Bank( bank.High ) );
+                }
+                else
+                {
+                    throw new Exception( $"Unhandled memory bank size: {length:X4}" );
+                }
+
+                indexStr = typeStr = numberStr = shortnameStr = startAddrStr = endAddrStr = null;
+                count = 0;
+            }
+
+            return true;
+        }
+
+        int UpdateFromRegexGroup( GroupCollection group, string groupName, ref string value )
+        {
+            if( group[groupName].Success && value == null )
+            {
+                value = group[groupName].Value;
+                return 1;
+            }
+
+            return 0;
+        }
 
         public override int ReadMemory( ushort address, byte[] bytes, int start = 0, int length = 0 )
         {
@@ -364,12 +476,9 @@ namespace ZEsarUX
         }
 
 
-        // [PC=0038 SP=ff4a BC=174b A=00 HL=107f DE=0006 IX=ffff IY=5c3a A'=00 BC'=0b21 HL'=ffff DE'=5cb9 I=3f R=22  F= Z P3H   F'= Z P     MEMPTR=15e6 DI IM1 VPS: 0 ]
-        Regex _matchRegisters = new Regex(@"(?i)(?'register'[a-z']*)=(?'value'[0-9a-f].*?)(?:\s)");
-        Regex _matchFlags = new Regex(@"(?i)(?'register'F\'?)=(?'s'.{1})(?'z'.{1})(?'bit5'.{1})(?'pv'.{1})(?'bit3'.{1})(?'h'.{1})(?'n'.{1})(?'c'.{1})");
         void ParseRegisters( Registers pRegisters, string pString )
         {
-            var matches = _matchRegisters.Matches(pString);
+            var matches = _regexRegisters.Matches(pString);
             foreach( Match match in matches )
             {
                 try
@@ -382,7 +491,7 @@ namespace ZEsarUX
                 }
             }
 
-            matches = _matchFlags.Matches(pString);
+            matches = _regexFlags.Matches(pString);
             foreach( Match match in matches )
             {
                 // match.Groups["register"].Value
@@ -412,8 +521,7 @@ namespace ZEsarUX
 
         public override List<string> CustomCommand( string cmd, List<string> results = null )
         {
-            var result = SendAndReceive( cmd, results );
-            return result;
+            return SendAndReceive( cmd, results );
         }
 
         List<string> SendAndReceive( string pCommand, List<string> pResults = null, bool pRaiseErrors = true )
@@ -567,21 +675,17 @@ namespace ZEsarUX
             LogMessage( "Connected (" + version + ")" );
         }
 
-        Regex _breakpointCounter = new Regex(
-            @"(?'state'Enabled|Disabled)\s(?'number'\d+):",
-            RegexOptions.Compiled
-        );
-
+        List<string> _tempReadBreakpoints;
         void ReadBreakpoints()
         {
             LogDebug( "Getting enabled breakpoints ..." );
 
             var count = 0;
-            var breakpoints = SendAndReceive( "get-breakpoints" );
+            _tempReadBreakpoints = SendAndReceive( "get-breakpoints", _tempReadBreakpoints );
 
-            foreach( var breakpoint in breakpoints )
+            foreach( var breakpoint in _tempReadBreakpoints )
             {
-                var match = _breakpointCounter.Match( breakpoint );
+                var match = _regexBreakpoints.Match( breakpoint );
                 if( match.Success )
                 {
                     var num = int.Parse( match.Groups["number"].Value );
