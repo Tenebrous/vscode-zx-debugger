@@ -37,7 +37,7 @@ namespace ZEsarUX
         // Start: 0H
         // End: 1FFFH
         Regex _regexPages = new Regex(
-            @"(Segment (?'index'\d*))|(Long name: (?'type'.*?)\s(?'number'\d*))|(Short name: (?'shortname'.*))|(Start: (?'startaddr'.*))|(End: (?'endaddr'.*))",
+            @"(Segment (?'index'\d*))|(Long name: (?'type'.*?)\s(?'number'.*))|(Short name: (?'shortname'.*))|(Start: (?'startaddr'.*))|(End: (?'endaddr'.*))",
             RegexOptions.Compiled
         );
         
@@ -302,33 +302,40 @@ namespace ZEsarUX
                 if( count != 6 )
                     continue;
 
+                if( typeStr == "System" )
+                {
+                    typeStr = numberStr;
+                    numberStr = "0";
+                }
+
                 var number = int.Parse( numberStr );
                 var startAddr = Convert.Parse( startAddrStr );
                 var endAddr = Convert.Parse( endAddrStr );
                 var length = (ushort)(endAddr - startAddr + 1);
 
-                BankID bank;
+                BankID bankID;
 
                 if( length == 0x2000 )
                 {
-                    bank = new BankID( 
+                    bankID = new BankID( 
                         typeStr, 
                         number/2, 
                         ( startAddr & 0x2000 ) == 0 ? BankID.PartEnum.Low : BankID.PartEnum.High 
                     );
 
-                    memory.SetAddressBank( startAddr, length, memory.Bank( bank ) );
+                    memory.SetAddressBank( startAddr, length, memory.Bank( bankID ) );
                 }
                 else if( length == 0x4000 )
                 {
-                    bank = new BankID( typeStr, number, BankID.PartEnum.All );
+                    bankID = new BankID( typeStr, number, BankID.PartEnum.All );
 
-                    memory.SetAddressBank( startAddr, 0x2000, memory.Bank( bank.Low ) );
-                    memory.SetAddressBank( (ushort)(startAddr + 0x2000), 0x2000, memory.Bank( bank.High ) );
+                    memory.SetAddressBank( startAddr, 0x2000, memory.Bank( bankID.Low ) );
+                    memory.SetAddressBank( (ushort)(startAddr + 0x2000), 0x2000, memory.Bank( bankID.High ) );
                 }
                 else
                 {
-                    throw new Exception( $"Unhandled memory bank size: {length:X4}" );
+                    bankID = new BankID( typeStr, number, BankID.PartEnum.All );
+                    memory.SetAddressBank( startAddr, endAddr, memory.Bank(bankID) );
                 }
 
                 indexStr = typeStr = numberStr = shortnameStr = startAddrStr = endAddrStr = null;
