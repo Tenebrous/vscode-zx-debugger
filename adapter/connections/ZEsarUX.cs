@@ -191,15 +191,16 @@ namespace ZEsarUX
             ParseRegisters( registers, result );
         }
 
-        string _lastMemoryConfiguration = null;
+        string _lastGetMemoryPages = null;
+        string _lastGetPagingState = null;
         public bool ReadMemoryConfiguration2( Memory memory )
         {
             var pages = SendAndReceiveSingle( "get-memory-pages" );
 
-            if( _lastMemoryConfiguration == pages )
+            if( _lastGetMemoryPages == pages )
                 return false;
 
-            _lastMemoryConfiguration = pages;
+            _lastGetMemoryPages = pages;
 
             // RO1 RA5 RA2 RA7 SCR5 PEN
             // O0 O1 A10 A11 A4 A5 A14 A15 SCR
@@ -271,10 +272,20 @@ namespace ZEsarUX
         List<string> _tempMemoryConfig;
         public override bool ReadMemoryConfiguration( Memory memory )
         {
-            //ReadMemoryConfiguration2( memory );
+            var currentPages = SendAndReceiveSingle( "get-memory-pages" );
+            var currentPagingState = SendAndReceiveSingle( "get-paging-state" );
+
+            // don't get verbose page list if the simple page lists haven't changed
+            //if( _lastGetMemoryPages == currentPages && _lastGetPagingState == currentPagingState )
+            //    return false;
+
+            _lastGetMemoryPages = currentPages;
+            _lastGetPagingState = currentPagingState;
+
 
             memory.PagingEnabled = true;
 
+            // now get the verbose page lists
             var lines = SendAndReceive( "get-memory-pages verbose", _tempMemoryConfig );
 
             int count = 0;

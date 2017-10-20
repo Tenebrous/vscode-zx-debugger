@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using ZXDebug;
 
@@ -65,7 +66,7 @@ namespace Spectrum
 
         public BankID GetMappedBank( ushort address )
         {
-            return GetSlot( address )?.Bank.ID ?? BankID.Unpaged();
+            return GetSlot( address )?.Bank?.ID ?? BankID.Unpaged();
         }
 
         public void SetAddressBank( ushort alignedAddress, ushort size, Bank bank )
@@ -120,64 +121,81 @@ namespace Spectrum
             return _tempToString.ToString();
         }
 
+
+        const int _logChars = 128;
+        const int _logDivWidth = 10;
+        const int _logMemPerChar = 65536 / _logChars;
+
         public void Log()
         {
-            var temp = new StringBuilder();
-
             var sorted = new List<Bank>( _banks.Values );
-            sorted.Sort(( left, right ) => left.PagedAddress.CompareTo( right.PagedAddress ));
+            sorted.Sort( ( left, right ) => left.PagedAddress.CompareTo( right.PagedAddress ) );
 
-            var slots = new Dictionary<int, Queue<string>>();
-            for( var i = 0; i < 8; i++ )
+            string empty = new string( ' ', _logChars + _logDivWidth );
+            string data = empty;
+
+            var addresses = new HashSet<ushort>();
+            foreach( var bank in _banks.Values )
+                addresses.Add( bank.PagedAddress );
+
+            var addressesToDo = new HashSet<ushort>( addresses );
+            while( addressesToDo.Count > 0 )
             {
-                var addr = (ushort)( i * 0x2000 );
-                slots[i] = new Queue<string>();
-
-                var s = GetSlot( addr );
-                slots[i].Enqueue( $"{s.Min:X4}" );
-
-                if( s.Bank.IsPagedIn )
-                    slots[i].Enqueue( $"{s.Bank.ID}" );
-                else
-                    slots[i].Enqueue( "?" );
-
-                foreach( var b in _banks )
-                    if( !b.Value.IsPagedIn )
-                        if( b.Value.PagedAddress == addr )
-                            slots[i].Enqueue( $"{b.Value.ID}" );
-            }
-
-            var row = 0;
-            while( slots.Count > 0 )
-            {
-                temp.Clear();
-
-                if( row == 0 )
-                    temp.Append( "       | " );
-                else if( row == 1 )
-                    temp.Append( "active | " );
-                else
-                    temp.Append( "       | " );
-
-                row++;
-
-                for( var i = 0; i < 8; i++ )
+                foreach( var address in addresses )
                 {
-                    var text = "";
-                    if( slots.TryGetValue( i, out var q ) )
-                    {
-                        text = q.Dequeue();
+                    if( !addressesToDo.Contains( address ) )
+                        continue;
 
-                        if( q.Count == 0 )
-                            slots.Remove( i );
-                    }
+                    var x = address / _logMemPerChar;
+                    var text = $"+{address:X4} ";
 
-                    temp.Append( text.PadRight( 12 ) );
-                    temp.Append( " | " );
+                    if( !ReplacePart( ref data, x, text ) )
+                        continue;
+
+                    addressesToDo.Remove( address );
                 }
 
-                LogMessage( temp.ToString() );
+                LogMessage( data );
+                data = empty;
+            }
+
+            var banksToDo = new HashSet<Bank>();
+            foreach( var pagedIn in new [] { true, false } )
+            {
+                foreach( var bank in _banks.Values )
+                    if( bank.IsPagedIn == pagedIn )
+                        banksToDo.Add( bank );
+
+                while( banksToDo.Count > 0 )
+                {
+                    foreach( var bank in _banks.Values )
+                    {
+                        if( !banksToDo.Contains( bank ) )
+                            continue;
+
+                        var x = bank.PagedAddress / _logMemPerChar;
+                        var text = $"+{bank.ID,-_logDivWidth} ";
+                        
+                        if( !ReplacePart( ref data, x, text ) )
+                            continue;
+
+                        banksToDo.Remove( bank );
+                    }
+
+                    LogMessage( data );
+                    data = empty;
+                }
             }
         }
+
+        bool ReplacePart( ref string str, int start, string replacement )
+        {
+            if( !string.IsNullOrWhiteSpace( str.Substring( start, replacement.Length ) ) )
+                return false;
+
+            str = $"{str.Substring( 0, start )}{replacement}{str.Substring( start + replacement.Length )}";
+            return true;
+        }
+
     }
 }

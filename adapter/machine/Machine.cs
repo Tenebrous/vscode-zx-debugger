@@ -573,7 +573,11 @@ namespace Spectrum
         public AddressDetails GetAddressDetails( ushort pAddress, ushort pMaxLabelDistance = 0x800 )
         {
             var slot = Memory.GetSlot( pAddress );
-            return GetAddressDetails( slot.Bank.ID, pAddress, pMaxLabelDistance );
+
+            if( slot.Bank != null )
+                return GetAddressDetails( slot.Bank.ID, pAddress, pMaxLabelDistance );
+
+            return null;
         }
 
         public Maps.GetLabelsResult GetLabels( BankID bankId, ushort address )
@@ -605,6 +609,10 @@ namespace Spectrum
         public int GetLineOfAddressInDisassembly( ushort address )
         {
             var slot = Memory.GetSlot( address );
+
+            if( slot.Bank == null )
+                return 0;
+
             var bank = GetDisasmBank( slot.Bank.ID );
             var offset = address - slot.Min;
 
