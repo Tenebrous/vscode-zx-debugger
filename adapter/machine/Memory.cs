@@ -69,10 +69,11 @@ namespace Spectrum
             return GetSlot( address )?.Bank?.ID ?? BankID.Unpaged();
         }
 
-        public void SetAddressBank( ushort alignedAddress, ushort size, Bank bank )
+        public void SetAddressBank( ushort alignedAddress, ushort length, Bank bank )
         {
             GetSlot( alignedAddress ).Bank = bank;
             bank.PagedAddress = alignedAddress;
+            bank.Length = length;
             bank.IsPagedIn = true;
         }
 
@@ -123,7 +124,6 @@ namespace Spectrum
 
 
         const int _logChars = 128;
-        const int _logDivWidth = 10;
         const int _logMemPerChar = 65536 / _logChars;
 
         public void Log()
@@ -131,23 +131,33 @@ namespace Spectrum
             var sorted = new List<Bank>( _banks.Values );
             sorted.Sort( ( left, right ) => left.PagedAddress.CompareTo( right.PagedAddress ) );
 
-            string empty = new string( ' ', _logChars + _logDivWidth );
+            string empty = new string( ' ', _logChars );
             string data = empty;
 
-            var addresses = new HashSet<ushort>();
+            var uniqueAddresses = new HashSet<ushort>();
             foreach( var bank in _banks.Values )
-                addresses.Add( bank.PagedAddress );
+            {
+                uniqueAddresses.Add( bank.PagedAddress );
+                uniqueAddresses.Add( (ushort)(bank.PagedAddress + bank.Length) );
+            }
 
-            var addressesToDo = new HashSet<ushort>( addresses );
+            var addresses = new List<ushort>( uniqueAddresses );
+            addresses.Sort();
+
+            var addressesToDo = new HashSet<ushort>( uniqueAddresses );
             while( addressesToDo.Count > 0 )
             {
-                foreach( var address in addresses )
+                for( int i = 0; i < addresses.Count; i++ )
                 {
+                    var address = addresses[i];
+                    var length = (i < uniqueAddresses.Count - 1) ? (addresses[i + 1] - address) : (65536 - address);
+
                     if( !addressesToDo.Contains( address ) )
                         continue;
 
                     var x = address / _logMemPerChar;
-                    var text = $"+{address:X4} ";
+                    var dx = length / _logMemPerChar;
+                    var text = "<=" + address.ToString("X4").PadRight(dx-3,'=') + ">";
 
                     if( !ReplacePart( ref data, x, text ) )
                         continue;
@@ -155,7 +165,7 @@ namespace Spectrum
                     addressesToDo.Remove( address );
                 }
 
-                LogMessage( data );
+                LogMessage( "|" + data + "|" );
                 data = empty;
             }
 
@@ -174,7 +184,8 @@ namespace Spectrum
                             continue;
 
                         var x = bank.PagedAddress / _logMemPerChar;
-                        var text = $"+{bank.ID,-_logDivWidth} ";
+                        var dx = bank.Length / _logMemPerChar;
+                        var text = "<-" + bank.ID.ToString().PadRight(dx-3,'-') + ">";
                         
                         if( !ReplacePart( ref data, x, text ) )
                             continue;
@@ -182,7 +193,7 @@ namespace Spectrum
                         banksToDo.Remove( bank );
                     }
 
-                    LogMessage( data );
+                    LogMessage( "|" + data + "|" );
                     data = empty;
                 }
             }

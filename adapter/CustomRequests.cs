@@ -1,4 +1,5 @@
-﻿using VSCode;
+﻿using System;
+using VSCode;
 
 namespace ZXDebug
 {
@@ -19,8 +20,11 @@ namespace ZXDebug
         public delegate void WatchMemoryHandler( Request request, string id, string address, string length );
         public event WatchMemoryHandler WatchMemoryEvent;
 
+        VSCode.Connection _vscode;
+
         public CustomRequests( VSCode.Connection vscode )
         {
+            _vscode = vscode;
             vscode.CustomRequestEvent += VSCode_CustomRequest;
         }
 
@@ -42,14 +46,23 @@ namespace ZXDebug
                     break;
 
                 case "getHover":
-                    GetHoverEvent?.Invoke(
-                        request,
-                        (string) request.arguments.file,
-                        (int)    request.arguments.line,
-                        (int)    request.arguments.column,
-                        (string) request.arguments.text,
-                        (string) request.arguments.symbol
-                    );
+                    try
+                    {
+                        GetHoverEvent?.Invoke(
+                            request,
+                            (string)request.arguments.file,
+                            (int)request.arguments.line,
+                            (int)request.arguments.column,
+                            (string)request.arguments.text,
+                            (string)request.arguments.symbol
+                        );
+                    }
+                    catch( Exception e )
+                    {
+                        // this isn't ready so ignore errors
+                        _vscode.Ack( request );
+                    }
+
                     break;
 
                 case "setNextStatement":

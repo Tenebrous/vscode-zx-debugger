@@ -7,6 +7,7 @@ namespace Spectrum
         public BankID ID;
         public bool   IsPagedIn;
         public ushort PagedAddress;
+        public ushort Length;
         public string Name => ID.ToString();
 
         public override string ToString()

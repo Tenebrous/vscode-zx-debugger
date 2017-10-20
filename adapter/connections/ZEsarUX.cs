@@ -191,84 +191,8 @@ namespace ZEsarUX
             ParseRegisters( registers, result );
         }
 
-        string _lastGetMemoryPages = null;
-        string _lastGetPagingState = null;
-        public bool ReadMemoryConfiguration2( Memory memory )
-        {
-            var pages = SendAndReceiveSingle( "get-memory-pages" );
-
-            if( _lastGetMemoryPages == pages )
-                return false;
-
-            _lastGetMemoryPages = pages;
-
-            // RO1 RA5 RA2 RA7 SCR5 PEN
-            // O0 O1 A10 A11 A4 A5 A14 A15 SCR
-
-            if( string.IsNullOrWhiteSpace( pages ) )
-            {
-                // no mapping info, so probably 16k/48k etc
-                memory.PagingEnabled = false;
-                var bank = memory.Bank( BankID.Unpaged() );
-                memory.SetAddressBank( 0x0000, 0xFFFF, bank );
-                return true;
-            }
-
-            var split = pages.Split( new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
-
-            ushort alignedAddress = 0;
-
-            memory.PagingEnabled = true;
-
-            memory.ClearConfiguration();
-
-            foreach( var part in split )
-            {
-                if( part == "PEN" )
-                    memory.PagingEnabled = true;
-                else if( part == "PDI" )
-                    memory.PagingEnabled = false;
-                else if( part.StartsWith( "RO" ) )
-                {
-                    var all = BankID.ROM( int.Parse( part.Substring( 2 ) ) );
-                    var low = memory.Bank( all.Low );
-                    var high = memory.Bank( all.High );
-
-                    memory.SetAddressBank( alignedAddress, 0x2000, low );
-                    alignedAddress += 0x2000;
-
-                    memory.SetAddressBank( alignedAddress, 0x2000, high );
-                    alignedAddress += 0x2000;
-                }
-                else if( part.StartsWith( "RA" ) )
-                {
-                    var all = BankID.Bank( int.Parse( part.Substring( 2 ) ) );
-                    var low = memory.Bank( all.Low );
-                    var high = memory.Bank( all.High );
-
-                    memory.SetAddressBank( alignedAddress, 0x2000, low );
-                    alignedAddress += 0x2000;
-
-                    memory.SetAddressBank( alignedAddress, 0x2000, high );
-                    alignedAddress += 0x2000;
-                }
-                if( part.StartsWith( "O" ) )
-                {
-                    var bank = memory.Bank( BankID.ROM( int.Parse( part.Substring( 1 ) ) ) );
-                    memory.SetAddressBank( alignedAddress, 0x2000, bank );
-                    alignedAddress += 0x2000;
-                }
-                else if( part.StartsWith( "A" ) )
-                {
-                    var bank = memory.Bank( BankID.Bank( int.Parse( part.Substring( 1 ) ) ) );
-                    memory.SetAddressBank( alignedAddress, 0x2000, bank );
-                    alignedAddress += 0x2000;
-                }
-            }
-
-            return true;
-        }
-
+        string _lastGetMemoryPages;
+        string _lastGetPagingState;
         List<string> _tempMemoryConfig;
         public override bool ReadMemoryConfiguration( Memory memory )
         {
@@ -276,13 +200,13 @@ namespace ZEsarUX
             var currentPagingState = SendAndReceiveSingle( "get-paging-state" );
 
             // don't get verbose page list if the simple page lists haven't changed
-            //if( _lastGetMemoryPages == currentPages && _lastGetPagingState == currentPagingState )
-            //    return false;
+            if( _lastGetMemoryPages == currentPages && _lastGetPagingState == currentPagingState )
+                return false;
 
             _lastGetMemoryPages = currentPages;
             _lastGetPagingState = currentPagingState;
 
-
+            memory.ClearConfiguration();
             memory.PagingEnabled = true;
 
             // now get the verbose page lists
@@ -324,30 +248,8 @@ namespace ZEsarUX
                 var endAddr = Convert.Parse( endAddrStr );
                 var length = (ushort)(endAddr - startAddr + 1);
 
-                BankID bankID;
-
-                if( length == 0x2000 )
-                {
-                    bankID = new BankID( 
-                        typeStr, 
-                        number/2, 
-                        ( startAddr & 0x2000 ) == 0 ? BankID.PartEnum.Low : BankID.PartEnum.High 
-                    );
-
-                    memory.SetAddressBank( startAddr, length, memory.Bank( bankID ) );
-                }
-                else if( length == 0x4000 )
-                {
-                    bankID = new BankID( typeStr, number, BankID.PartEnum.All );
-
-                    memory.SetAddressBank( startAddr, 0x2000, memory.Bank( bankID.Low ) );
-                    memory.SetAddressBank( (ushort)(startAddr + 0x2000), 0x2000, memory.Bank( bankID.High ) );
-                }
-                else
-                {
-                    bankID = new BankID( typeStr, number, BankID.PartEnum.All );
-                    memory.SetAddressBank( startAddr, endAddr, memory.Bank(bankID) );
-                }
+                var bankID = new BankID( typeStr, number, BankID.PartEnum.All );
+                memory.SetAddressBank( startAddr, length, memory.Bank(bankID) );
 
                 indexStr = typeStr = numberStr = shortnameStr = startAddrStr = endAddrStr = null;
                 count = 0;
